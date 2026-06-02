@@ -1,29 +1,287 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import {
+  AudioEngine,
+  ENVIRONMENTS,
+  type EnvironmentPreset,
+} from "@/lib/audio-engine";
+import { Ear, Mic, MicOff, Headphones, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "OyeBien — Amplificador de sonido para conversaciones" },
+      {
+        name: "description",
+        content:
+          "App web para amplificar conversaciones, TV, restaurante y calle usando los auriculares del móvil. Pensada para personas con pérdida auditiva leve o moderada.",
+      },
+      { property: "og:title", content: "OyeBien — Amplificador de sonido" },
+      {
+        property: "og:description",
+        content:
+          "Amplifica las voces a tu alrededor con tu móvil y tus auriculares.",
+      },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  const engineRef = useRef<AudioEngine | null>(null);
+  const [running, setRunning] = useState(false);
+  const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
+  const [volumeDb, setVolumeDb] = useState(6);
+  const [balance, setBalance] = useState(0);
+  const [level, setLevel] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Audio level meter loop
+  useEffect(() => {
+    if (!running) return;
+    let raf = 0;
+    const tick = () => {
+      const e = engineRef.current;
+      if (e) setLevel(e.getLevel());
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [running]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      engineRef.current?.stop();
+    };
+  }, []);
+
+  const start = async () => {
+    setError(null);
+    try {
+      const engine = engineRef.current ?? new AudioEngine();
+      engineRef.current = engine;
+      await engine.start({ preset, masterDb: volumeDb, balance });
+      setRunning(true);
+    } catch (e) {
+      console.error(e);
+      setError(
+        "No se pudo acceder al micrófono. Permite el acceso en tu navegador y vuelve a intentarlo.",
+      );
+    }
+  };
+
+  const stop = async () => {
+    await engineRef.current?.stop();
+    setRunning(false);
+    setLevel(0);
+  };
+
+  const handlePreset = (p: EnvironmentPreset) => {
+    setPreset(p);
+    engineRef.current?.applyPreset(p);
+  };
+
+  const handleVolume = (db: number) => {
+    setVolumeDb(db);
+    engineRef.current?.setMasterDb(db);
+  };
+
+  const handleBalance = (b: number) => {
+    setBalance(b);
+    engineRef.current?.setBalance(b);
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="min-h-dvh bg-background text-foreground">
+      <div className="mx-auto max-w-2xl px-5 py-8 sm:py-12">
+        {/* Header */}
+        <header className="mb-8 flex items-center gap-3">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+            <Ear className="h-8 w-8" aria-hidden />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold leading-tight">OyeBien</h1>
+            <p className="text-base text-muted-foreground">
+              Amplificador de sonido para conversaciones
+            </p>
+          </div>
+        </header>
+
+        {/* Headphone warning */}
+        <div
+          role="note"
+          className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-warning/40 bg-warning/10 p-4 text-warning-foreground"
+        >
+          <Headphones className="mt-1 h-6 w-6 shrink-0 text-warning" aria-hidden />
+          <p className="text-base leading-relaxed">
+            <strong>Usa auriculares.</strong> Si escuchas por el altavoz del
+            móvil mientras el micrófono está activo, se producirá un pitido
+            molesto (acople).
+          </p>
+        </div>
+
+        {/* Main start/stop button */}
+        <section aria-labelledby="control" className="mb-8">
+          <h2 id="control" className="sr-only">
+            Control principal
+          </h2>
+          <button
+            onClick={running ? stop : start}
+            className={[
+              "flex w-full items-center justify-center gap-4 rounded-3xl px-6 py-8 text-2xl font-bold shadow-lg transition-all",
+              "min-h-[120px] focus-visible:scale-[1.01]",
+              running
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : "bg-primary text-primary-foreground hover:bg-primary/90",
+            ].join(" ")}
+            aria-pressed={running}
+          >
+            {running ? (
+              <>
+                <MicOff className="h-10 w-10" aria-hidden />
+                Detener escucha
+              </>
+            ) : (
+              <>
+                <Mic className="h-10 w-10" aria-hidden />
+                Empezar a escuchar
+              </>
+            )}
+          </button>
+
+          {/* Level meter */}
+          <div className="mt-4">
+            <div
+              className="h-4 w-full overflow-hidden rounded-full bg-muted"
+              role="meter"
+              aria-label="Nivel de sonido"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(level * 100)}
+            >
+              <div
+                className="h-full rounded-full bg-success transition-[width] duration-75"
+                style={{ width: `${Math.min(100, level * 180)}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {running ? "Escuchando…" : "Pulsa el botón para empezar."}
+            </p>
+          </div>
+
+          {error && (
+            <div
+              role="alert"
+              className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-4"
+            >
+              <AlertTriangle
+                className="mt-1 h-6 w-6 shrink-0 text-destructive"
+                aria-hidden
+              />
+              <p className="text-base text-foreground">{error}</p>
+            </div>
+          )}
+        </section>
+
+        {/* Environment presets */}
+        <section aria-labelledby="entornos" className="mb-8">
+          <h2 id="entornos" className="mb-3 text-xl font-bold">
+            Tipo de ambiente
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {ENVIRONMENTS.map((p) => {
+              const active = p.id === preset.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => handlePreset(p)}
+                  aria-pressed={active}
+                  className={[
+                    "rounded-2xl border-2 p-4 text-left transition-all min-h-[88px]",
+                    active
+                      ? "border-primary bg-primary/10 ring-2 ring-primary"
+                      : "border-border bg-card hover:border-primary/40",
+                  ].join(" ")}
+                >
+                  <div className="text-lg font-bold">{p.label}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {p.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Volume */}
+        <section aria-labelledby="volumen" className="mb-6 rounded-2xl bg-card p-5 shadow-sm">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 id="volumen" className="text-xl font-bold">
+              Volumen
+            </h2>
+            <span className="text-lg font-semibold tabular-nums text-muted-foreground">
+              {volumeDb > 0 ? "+" : ""}
+              {volumeDb} dB
+            </span>
+          </div>
+          <input
+            type="range"
+            min={-10}
+            max={20}
+            step={1}
+            value={volumeDb}
+            onChange={(e) => handleVolume(Number(e.target.value))}
+            aria-label="Volumen general"
+            className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+          />
+          <div className="mt-2 flex justify-between text-sm text-muted-foreground">
+            <span>Más bajo</span>
+            <span>Más alto</span>
+          </div>
+        </section>
+
+        {/* Balance L/R */}
+        <section aria-labelledby="balance" className="mb-6 rounded-2xl bg-card p-5 shadow-sm">
+          <div className="mb-3 flex items-baseline justify-between">
+            <h2 id="balance" className="text-xl font-bold">
+              Balance
+            </h2>
+            <span className="text-lg font-semibold tabular-nums text-muted-foreground">
+              {balance === 0
+                ? "Centro"
+                : balance < 0
+                  ? `Izq ${Math.round(Math.abs(balance) * 100)}%`
+                  : `Der ${Math.round(balance * 100)}%`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={-1}
+            max={1}
+            step={0.1}
+            value={balance}
+            onChange={(e) => handleBalance(Number(e.target.value))}
+            aria-label="Balance izquierda y derecha"
+            className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+          />
+          <div className="mt-2 flex justify-between text-sm text-muted-foreground">
+            <span>Izquierdo</span>
+            <span>Derecho</span>
+          </div>
+        </section>
+
+        {/* Safety note */}
+        <section className="rounded-2xl border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
+          <p className="mb-2 font-semibold text-foreground">Seguridad auditiva</p>
+          <p>
+            La app incluye un <strong>limitador de picos</strong> para evitar
+            sonidos demasiado fuertes. Aun así, escucha al volumen mínimo
+            cómodo y haz descansos cada 30–60 minutos. Esta app no sustituye a
+            un audífono médico ni a la consulta con tu otorrino.
+          </p>
+        </section>
+      </div>
+    </main>
   );
 }
