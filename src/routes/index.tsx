@@ -139,8 +139,8 @@ function Index() {
           <button
             onClick={running ? stop : start}
             className={[
-              "flex w-full items-center justify-center gap-4 rounded-3xl px-6 py-8 text-2xl font-bold shadow-lg transition-all",
-              "min-h-[120px] focus-visible:scale-[1.01]",
+              "flex w-full items-center justify-center gap-3 rounded-3xl px-4 py-8 text-xl sm:text-2xl font-bold shadow-lg transition-all text-center leading-tight select-none",
+              "min-h-[120px] active:scale-[0.98] active:shadow-inner",
               running
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -208,14 +208,18 @@ function Index() {
                   onClick={() => handlePreset(p)}
                   aria-pressed={active}
                   className={[
-                    "rounded-2xl border-2 p-4 text-left transition-all min-h-[88px]",
+                    "rounded-2xl border-2 p-4 text-left transition-all min-h-[88px] select-none",
+                    "active:scale-[0.97] active:shadow-inner",
                     active
-                      ? "border-primary bg-primary/10 ring-2 ring-primary"
-                      : "border-border bg-card hover:border-primary/40",
+                      ? "border-primary bg-primary text-primary-foreground shadow-inner ring-2 ring-primary translate-y-px"
+                      : "border-border bg-card shadow-sm hover:border-primary/40",
                   ].join(" ")}
                 >
-                  <div className="text-lg font-bold">{p.label}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
+                  <div className="text-lg font-bold leading-tight">{p.label}</div>
+                  <div className={[
+                    "mt-1 text-sm leading-snug",
+                    active ? "text-primary-foreground/85" : "text-muted-foreground",
+                  ].join(" ")}>
                     {p.description}
                   </div>
                 </button>
@@ -254,14 +258,17 @@ function Index() {
             onClick={toggleBoost}
             aria-pressed={boost}
             className={[
-              "mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border-2 px-5 py-4 text-lg font-bold transition-all min-h-[64px]",
+              "mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-4 py-4 text-base sm:text-lg font-bold transition-all min-h-[64px] select-none text-center leading-tight",
+              "active:scale-[0.97] active:shadow-inner",
               boost
-                ? "border-warning bg-warning text-warning-foreground ring-2 ring-warning"
-                : "border-border bg-card hover:border-warning/50",
+                ? "border-warning bg-warning text-warning-foreground shadow-inner ring-2 ring-warning translate-y-px"
+                : "border-border bg-card shadow-sm hover:border-warning/50",
             ].join(" ")}
           >
-            <Zap className="h-6 w-6" aria-hidden />
-            {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
+            <Zap className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" aria-hidden />
+            <span className="break-words">
+              {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
+            </span>
           </button>
           <p className="mt-2 text-sm text-muted-foreground">
             Úsalo solo en momentos puntuales cuando necesites oír mucho más fuerte. Puede ser molesto si el ambiente ya es ruidoso.
