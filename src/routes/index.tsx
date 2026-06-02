@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, Headphones, AlertTriangle } from "lucide-react";
+import { Ear, Mic, MicOff, Headphones, AlertTriangle, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,8 +33,12 @@ function Index() {
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
   const [balance, setBalance] = useState(0);
+  const [boost, setBoost] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const BOOST_DB = 15;
+  const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
 
   // Audio level meter loop
   useEffect(() => {
@@ -61,7 +65,7 @@ function Index() {
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
-      await engine.start({ preset, masterDb: volumeDb, balance });
+      await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
       setRunning(true);
     } catch (e) {
       console.error(e);
@@ -84,12 +88,18 @@ function Index() {
 
   const handleVolume = (db: number) => {
     setVolumeDb(db);
-    engineRef.current?.setMasterDb(db);
+    engineRef.current?.setMasterDb(effectiveDb(db, boost));
   };
 
   const handleBalance = (b: number) => {
     setBalance(b);
     engineRef.current?.setBalance(b);
+  };
+
+  const toggleBoost = () => {
+    const next = !boost;
+    setBoost(next);
+    engineRef.current?.setMasterDb(effectiveDb(volumeDb, next));
   };
 
   return (
