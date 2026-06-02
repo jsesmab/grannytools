@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, Headphones, AlertTriangle } from "lucide-react";
+import { Ear, Mic, MicOff, Headphones, AlertTriangle, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -33,8 +33,12 @@ function Index() {
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
   const [balance, setBalance] = useState(0);
+  const [boost, setBoost] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const BOOST_DB = 15;
+  const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
 
   // Audio level meter loop
   useEffect(() => {
@@ -61,7 +65,7 @@ function Index() {
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
-      await engine.start({ preset, masterDb: volumeDb, balance });
+      await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
       setRunning(true);
     } catch (e) {
       console.error(e);
@@ -84,12 +88,18 @@ function Index() {
 
   const handleVolume = (db: number) => {
     setVolumeDb(db);
-    engineRef.current?.setMasterDb(db);
+    engineRef.current?.setMasterDb(effectiveDb(db, boost));
   };
 
   const handleBalance = (b: number) => {
     setBalance(b);
     engineRef.current?.setBalance(b);
+  };
+
+  const toggleBoost = () => {
+    const next = !boost;
+    setBoost(next);
+    engineRef.current?.setMasterDb(effectiveDb(volumeDb, next));
   };
 
   return (
@@ -239,6 +249,23 @@ function Index() {
             <span>Más bajo</span>
             <span>Más alto</span>
           </div>
+
+          <button
+            onClick={toggleBoost}
+            aria-pressed={boost}
+            className={[
+              "mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border-2 px-5 py-4 text-lg font-bold transition-all min-h-[64px]",
+              boost
+                ? "border-warning bg-warning text-warning-foreground ring-2 ring-warning"
+                : "border-border bg-card hover:border-warning/50",
+            ].join(" ")}
+          >
+            <Zap className="h-6 w-6" aria-hidden />
+            {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
+          </button>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Úsalo solo en momentos puntuales cuando necesites oír mucho más fuerte. Puede ser molesto si el ambiente ya es ruidoso.
+          </p>
         </section>
 
         {/* Balance L/R */}
