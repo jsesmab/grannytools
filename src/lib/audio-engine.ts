@@ -93,11 +93,13 @@ export class AudioEngine {
   async start(opts: EngineOptions) {
     if (this.running) return;
 
-    // Request mic with hints to disable browser DSP that fights ours
+    // Request mic with all browser DSP off — echo cancellation in particular
+    // mutes the amplified signal because it detects it coming back through the
+    // headphones/speaker and treats it as feedback.
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
+        echoCancellation: false,
+        noiseSuppression: false,
         autoGainControl: false,
         channelCount: 1,
       },
@@ -109,6 +111,9 @@ export class AudioEngine {
       (window as unknown as { webkitAudioContext: typeof AudioContext })
         .webkitAudioContext;
     this.ctx = new Ctx({ latencyHint: "interactive" });
+    if (this.ctx.state === "suspended") {
+      try { await this.ctx.resume(); } catch { /* ignore */ }
+    }
 
     this.source = this.ctx.createMediaStreamSource(this.stream);
 
