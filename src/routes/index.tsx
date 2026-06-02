@@ -139,8 +139,8 @@ function Index() {
           <button
             onClick={running ? stop : start}
             className={[
-              "flex w-full items-center justify-center gap-4 rounded-3xl px-6 py-8 text-2xl font-bold shadow-lg transition-all",
-              "min-h-[120px] focus-visible:scale-[1.01]",
+              "flex w-full items-center justify-center gap-3 rounded-3xl px-4 py-8 text-xl sm:text-2xl font-bold shadow-lg transition-all text-center leading-tight select-none",
+              "min-h-[120px] active:scale-[0.98] active:shadow-inner",
               running
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary/90",
