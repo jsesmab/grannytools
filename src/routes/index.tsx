@@ -249,6 +249,23 @@ function Index() {
             <span>Más bajo</span>
             <span>Más alto</span>
           </div>
+
+          <button
+            onClick={toggleBoost}
+            aria-pressed={boost}
+            className={[
+              "mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border-2 px-5 py-4 text-lg font-bold transition-all min-h-[64px]",
+              boost
+                ? "border-warning bg-warning text-warning-foreground ring-2 ring-warning"
+                : "border-border bg-card hover:border-warning/50",
+            ].join(" ")}
+          >
+            <Zap className="h-6 w-6" aria-hidden />
+            {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
+          </button>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Úsalo solo en momentos puntuales cuando necesites oír mucho más fuerte. Puede ser molesto si el ambiente ya es ruidoso.
+          </p>
         </section>
 
         {/* Balance L/R */}
