@@ -258,14 +258,17 @@ function Index() {
             onClick={toggleBoost}
             aria-pressed={boost}
             className={[
-              "mt-5 flex w-full items-center justify-center gap-3 rounded-2xl border-2 px-5 py-4 text-lg font-bold transition-all min-h-[64px]",
+              "mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-4 py-4 text-base sm:text-lg font-bold transition-all min-h-[64px] select-none text-center leading-tight",
+              "active:scale-[0.97] active:shadow-inner",
               boost
-                ? "border-warning bg-warning text-warning-foreground ring-2 ring-warning"
-                : "border-border bg-card hover:border-warning/50",
+                ? "border-warning bg-warning text-warning-foreground shadow-inner ring-2 ring-warning translate-y-px"
+                : "border-border bg-card shadow-sm hover:border-warning/50",
             ].join(" ")}
           >
-            <Zap className="h-6 w-6" aria-hidden />
-            {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
+            <Zap className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" aria-hidden />
+            <span className="break-words">
+              {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
+            </span>
           </button>
           <p className="mt-2 text-sm text-muted-foreground">
             Úsalo solo en momentos puntuales cuando necesites oír mucho más fuerte. Puede ser molesto si el ambiente ya es ruidoso.
