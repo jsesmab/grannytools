@@ -31,7 +31,7 @@ function Index() {
   const engineRef = useRef<AudioEngine | null>(null);
   const [running, setRunning] = useState(false);
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
-  const [volumeDb, setVolumeDb] = useState(6);
+  const [volumeDb, setVolumeDb] = useState(12);
   const [balance, setBalance] = useState(0);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -228,7 +228,7 @@ function Index() {
           <input
             type="range"
             min={-10}
-            max={20}
+            max={40}
             step={1}
             value={volumeDb}
             onChange={(e) => handleVolume(Number(e.target.value))}
