@@ -29,6 +29,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const engineRef = useRef<AudioEngine | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const [running, setRunning] = useState(false);
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
