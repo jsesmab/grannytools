@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, AlertTriangle } from "lucide-react";
+import { Ear, Mic, MicOff, AlertTriangle, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,8 +34,12 @@ function Index() {
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
   const [balance, setBalance] = useState(0);
+  const [boost, setBoost] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const BOOST_DB = 15;
+  const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
 
   // Audio level meter loop
   useEffect(() => {
@@ -85,7 +89,7 @@ function Index() {
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
-      await engine.start({ preset, masterDb: volumeDb, balance });
+      await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
       await requestWakeLock();
       setRunning(true);
     } catch (e) {
@@ -111,7 +115,13 @@ function Index() {
 
   const handleVolume = (db: number) => {
     setVolumeDb(db);
-    engineRef.current?.setMasterDb(db);
+    engineRef.current?.setMasterDb(effectiveDb(db, boost));
+  };
+
+  const toggleBoost = () => {
+    const next = !boost;
+    setBoost(next);
+    engineRef.current?.setMasterDb(effectiveDb(volumeDb, next));
   };
 
   const handleBalance = (b: number) => {
@@ -211,17 +221,34 @@ function Index() {
               {volumeDb > 0 ? "+" : ""}{volumeDb} dB
             </span>
           </div>
-          <input
-            type="range"
-            min={-10}
-            max={40}
-            step={1}
-            value={volumeDb}
-            onChange={(e) => handleVolume(Number(e.target.value))}
-            aria-label="Volumen general"
-            className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min={-10}
+              max={40}
+              step={1}
+              value={volumeDb}
+              onChange={(e) => handleVolume(Number(e.target.value))}
+              aria-label="Volumen general"
+              className="h-3 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+            />
+            <button
+              onClick={toggleBoost}
+              aria-pressed={boost}
+              className={[
+                "flex items-center gap-1 rounded-lg border-2 px-2 py-1.5 text-sm font-bold transition-all select-none",
+                "active:scale-[0.95] active:shadow-inner",
+                boost
+                  ? "border-warning bg-warning text-warning-foreground shadow-inner ring-2 ring-warning translate-y-px"
+                  : "border-border bg-secondary text-secondary-foreground",
+              ].join(" ")}
+            >
+              <Zap className="h-4 w-4" aria-hidden />
+              Turbo
+            </button>
+          </div>
         </div>
+
 
         {/* Balance L/R */}
         <div className="rounded-xl bg-card p-3 shadow-sm">
