@@ -61,12 +61,37 @@ function Index() {
     };
   }, []);
 
+  const requestWakeLock = async () => {
+    try {
+      const nav = navigator as Navigator & {
+        wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> };
+      };
+      if (nav.wakeLock) {
+        wakeLockRef.current = await nav.wakeLock.request("screen");
+      }
+    } catch (e) {
+      console.warn("wakeLock failed", e);
+    }
+  };
+
+  // Reacquire wake lock if the page becomes visible again
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible" && running) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [running]);
+
   const start = async () => {
     setError(null);
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
       await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
+      await requestWakeLock();
       setRunning(true);
     } catch (e) {
       console.error(e);
@@ -78,6 +103,8 @@ function Index() {
 
   const stop = async () => {
     await engineRef.current?.stop();
+    try { await wakeLockRef.current?.release(); } catch { /* ignore */ }
+    wakeLockRef.current = null;
     setRunning(false);
     setLevel(0);
   };
