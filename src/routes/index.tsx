@@ -29,6 +29,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const engineRef = useRef<AudioEngine | null>(null);
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const [running, setRunning] = useState(false);
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
@@ -60,12 +61,37 @@ function Index() {
     };
   }, []);
 
+  const requestWakeLock = async () => {
+    try {
+      const nav = navigator as Navigator & {
+        wakeLock?: { request: (type: "screen") => Promise<WakeLockSentinel> };
+      };
+      if (nav.wakeLock) {
+        wakeLockRef.current = await nav.wakeLock.request("screen");
+      }
+    } catch (e) {
+      console.warn("wakeLock failed", e);
+    }
+  };
+
+  // Reacquire wake lock if the page becomes visible again
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible" && running) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [running]);
+
   const start = async () => {
     setError(null);
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
       await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
+      await requestWakeLock();
       setRunning(true);
     } catch (e) {
       console.error(e);
@@ -77,6 +103,8 @@ function Index() {
 
   const stop = async () => {
     await engineRef.current?.stop();
+    try { await wakeLockRef.current?.release(); } catch { /* ignore */ }
+    wakeLockRef.current = null;
     setRunning(false);
     setLevel(0);
   };
@@ -208,20 +236,14 @@ function Index() {
                   onClick={() => handlePreset(p)}
                   aria-pressed={active}
                   className={[
-                    "rounded-2xl border-2 p-4 text-left transition-all min-h-[88px] select-none",
+                    "rounded-2xl border-2 p-4 text-center transition-all min-h-[72px] select-none flex items-center justify-center",
                     "active:scale-[0.97] active:shadow-inner",
                     active
                       ? "border-primary bg-primary text-primary-foreground shadow-inner ring-2 ring-primary translate-y-px"
-                      : "border-border bg-card shadow-sm hover:border-primary/40",
+                      : "border-border bg-secondary text-secondary-foreground shadow-sm hover:border-primary/40",
                   ].join(" ")}
                 >
                   <div className="text-lg font-bold leading-tight">{p.label}</div>
-                  <div className={[
-                    "mt-1 text-sm leading-snug",
-                    active ? "text-primary-foreground/85" : "text-muted-foreground",
-                  ].join(" ")}>
-                    {p.description}
-                  </div>
                 </button>
               );
             })}
