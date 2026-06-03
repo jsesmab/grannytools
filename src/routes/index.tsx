@@ -236,20 +236,14 @@ function Index() {
                   onClick={() => handlePreset(p)}
                   aria-pressed={active}
                   className={[
-                    "rounded-2xl border-2 p-4 text-left transition-all min-h-[88px] select-none",
+                    "rounded-2xl border-2 p-4 text-center transition-all min-h-[72px] select-none flex items-center justify-center",
                     "active:scale-[0.97] active:shadow-inner",
                     active
                       ? "border-primary bg-primary text-primary-foreground shadow-inner ring-2 ring-primary translate-y-px"
-                      : "border-border bg-card shadow-sm hover:border-primary/40",
+                      : "border-border bg-secondary text-secondary-foreground shadow-sm hover:border-primary/40",
                   ].join(" ")}
                 >
                   <div className="text-lg font-bold leading-tight">{p.label}</div>
-                  <div className={[
-                    "mt-1 text-sm leading-snug",
-                    active ? "text-primary-foreground/85" : "text-muted-foreground",
-                  ].join(" ")}>
-                    {p.description}
-                  </div>
                 </button>
               );
             })}
