@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, AlertTriangle } from "lucide-react";
+import { Ear, Mic, MicOff, AlertTriangle, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
