@@ -89,7 +89,7 @@ function Index() {
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
-      await engine.start({ preset, masterDb: volumeDb, balance });
+      await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
       await requestWakeLock();
       setRunning(true);
     } catch (e) {
