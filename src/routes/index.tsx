@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, Headphones, AlertTriangle, Zap } from "lucide-react";
+import { Ear, Mic, MicOff, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,12 +34,8 @@ function Index() {
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
   const [balance, setBalance] = useState(0);
-  const [boost, setBoost] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
-
-  const BOOST_DB = 15;
-  const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
 
   // Audio level meter loop
   useEffect(() => {
@@ -74,7 +70,6 @@ function Index() {
     }
   };
 
-  // Reacquire wake lock if the page becomes visible again
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === "visible" && running) {
@@ -90,7 +85,7 @@ function Index() {
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
-      await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
+      await engine.start({ preset, masterDb: volumeDb, balance });
       await requestWakeLock();
       setRunning(true);
     } catch (e) {
@@ -116,7 +111,7 @@ function Index() {
 
   const handleVolume = (db: number) => {
     setVolumeDb(db);
-    engineRef.current?.setMasterDb(effectiveDb(db, boost));
+    engineRef.current?.setMasterDb(db);
   };
 
   const handleBalance = (b: number) => {
@@ -124,141 +119,96 @@ function Index() {
     engineRef.current?.setBalance(b);
   };
 
-  const toggleBoost = () => {
-    const next = !boost;
-    setBoost(next);
-    engineRef.current?.setMasterDb(effectiveDb(volumeDb, next));
-  };
-
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto max-w-2xl px-5 py-8 sm:py-12">
+      <div className="mx-auto max-w-2xl px-3 py-3">
         {/* Header */}
-        <header className="mb-8 flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <Ear className="h-8 w-8" aria-hidden />
+        <header className="mb-3 flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Ear className="h-6 w-6" aria-hidden />
           </div>
-          <div>
-            <h1 className="text-3xl font-bold leading-tight">OyeBien</h1>
-            <p className="text-base text-muted-foreground">
-              Amplificador de sonido para conversaciones
-            </p>
-          </div>
+          <h1 className="text-xl font-bold leading-tight">OyeBien</h1>
         </header>
 
-        {/* Headphone warning */}
-        <div
-          role="note"
-          className="mb-6 flex items-start gap-3 rounded-2xl border-2 border-warning/40 bg-warning/10 p-4 text-warning-foreground"
+        {/* Main start/stop button */}
+        <button
+          onClick={running ? stop : start}
+          className={[
+            "mb-3 flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-lg font-bold shadow-lg transition-all select-none",
+            "active:scale-[0.98] active:shadow-inner",
+            running
+              ? "bg-destructive text-destructive-foreground"
+              : "bg-primary text-primary-foreground",
+          ].join(" ")}
+          aria-pressed={running}
         >
-          <Headphones className="mt-1 h-6 w-6 shrink-0 text-warning" aria-hidden />
-          <p className="text-base leading-relaxed">
-            <strong>Usa auriculares.</strong> Si escuchas por el altavoz del
-            móvil mientras el micrófono está activo, se producirá un pitido
-            molesto (acople).
-          </p>
+          {running ? (
+            <>
+              <MicOff className="h-6 w-6" aria-hidden />
+              Detener
+            </>
+          ) : (
+            <>
+              <Mic className="h-6 w-6" aria-hidden />
+              Empezar a escuchar
+            </>
+          )}
+        </button>
+
+        {/* Level meter */}
+        <div
+          className="mb-3 h-2 w-full overflow-hidden rounded-full bg-muted"
+          role="meter"
+          aria-label="Nivel de sonido"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(level * 100)}
+        >
+          <div
+            className="h-full rounded-full bg-success transition-[width] duration-75"
+            style={{ width: `${Math.min(100, level * 180)}%` }}
+          />
         </div>
 
-        {/* Main start/stop button */}
-        <section aria-labelledby="control" className="mb-8">
-          <h2 id="control" className="sr-only">
-            Control principal
-          </h2>
-          <button
-            onClick={running ? stop : start}
-            className={[
-              "flex w-full items-center justify-center gap-3 rounded-3xl px-4 py-8 text-xl sm:text-2xl font-bold shadow-lg transition-all text-center leading-tight select-none",
-              "min-h-[120px] active:scale-[0.98] active:shadow-inner",
-              running
-                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                : "bg-primary text-primary-foreground hover:bg-primary/90",
-            ].join(" ")}
-            aria-pressed={running}
+        {error && (
+          <div
+            role="alert"
+            className="mb-3 flex items-start gap-2 rounded-xl border-2 border-destructive/40 bg-destructive/10 p-2"
           >
-            {running ? (
-              <>
-                <MicOff className="h-10 w-10" aria-hidden />
-                Detener escucha
-              </>
-            ) : (
-              <>
-                <Mic className="h-10 w-10" aria-hidden />
-                Empezar a escuchar
-              </>
-            )}
-          </button>
-
-          {/* Level meter */}
-          <div className="mt-4">
-            <div
-              className="h-4 w-full overflow-hidden rounded-full bg-muted"
-              role="meter"
-              aria-label="Nivel de sonido"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(level * 100)}
-            >
-              <div
-                className="h-full rounded-full bg-success transition-[width] duration-75"
-                style={{ width: `${Math.min(100, level * 180)}%` }}
-              />
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {running ? "Escuchando…" : "Pulsa el botón para empezar."}
-            </p>
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
+            <p className="text-sm text-foreground">{error}</p>
           </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="mt-4 flex items-start gap-3 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-4"
-            >
-              <AlertTriangle
-                className="mt-1 h-6 w-6 shrink-0 text-destructive"
-                aria-hidden
-              />
-              <p className="text-base text-foreground">{error}</p>
-            </div>
-          )}
-        </section>
+        )}
 
         {/* Environment presets */}
-        <section aria-labelledby="entornos" className="mb-8">
-          <h2 id="entornos" className="mb-3 text-xl font-bold">
-            Tipo de ambiente
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {ENVIRONMENTS.map((p) => {
-              const active = p.id === preset.id;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => handlePreset(p)}
-                  aria-pressed={active}
-                  className={[
-                    "rounded-2xl border-2 p-4 text-center transition-all min-h-[72px] select-none flex items-center justify-center",
-                    "active:scale-[0.97] active:shadow-inner",
-                    active
-                      ? "border-primary bg-primary text-primary-foreground shadow-inner ring-2 ring-primary translate-y-px"
-                      : "border-border bg-secondary text-secondary-foreground shadow-sm hover:border-primary/40",
-                  ].join(" ")}
-                >
-                  <div className="text-lg font-bold leading-tight">{p.label}</div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {ENVIRONMENTS.map((p) => {
+            const active = p.id === preset.id;
+            return (
+              <button
+                key={p.id}
+                onClick={() => handlePreset(p)}
+                aria-pressed={active}
+                className={[
+                  "rounded-xl border-2 p-2 text-center transition-all min-h-[44px] select-none flex items-center justify-center font-bold",
+                  "active:scale-[0.97] active:shadow-inner",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground shadow-inner ring-2 ring-primary translate-y-px"
+                    : "border-border bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* Volume */}
-        <section aria-labelledby="volumen" className="mb-6 rounded-2xl bg-card p-5 shadow-sm">
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 id="volumen" className="text-xl font-bold">
-              Volumen
-            </h2>
-            <span className="text-lg font-semibold tabular-nums text-muted-foreground">
-              {volumeDb > 0 ? "+" : ""}
-              {volumeDb} dB
+        <div className="mb-3 rounded-xl bg-card p-3 shadow-sm">
+          <div className="mb-1 flex items-baseline justify-between">
+            <h2 className="text-base font-bold">Volumen</h2>
+            <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+              {volumeDb > 0 ? "+" : ""}{volumeDb} dB
             </span>
           </div>
           <input
@@ -271,39 +221,13 @@ function Index() {
             aria-label="Volumen general"
             className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
           />
-          <div className="mt-2 flex justify-between text-sm text-muted-foreground">
-            <span>Más bajo</span>
-            <span>Más alto</span>
-          </div>
-
-          <button
-            onClick={toggleBoost}
-            aria-pressed={boost}
-            className={[
-              "mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border-2 px-4 py-4 text-base sm:text-lg font-bold transition-all min-h-[64px] select-none text-center leading-tight",
-              "active:scale-[0.97] active:shadow-inner",
-              boost
-                ? "border-warning bg-warning text-warning-foreground shadow-inner ring-2 ring-warning translate-y-px"
-                : "border-border bg-card shadow-sm hover:border-warning/50",
-            ].join(" ")}
-          >
-            <Zap className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" aria-hidden />
-            <span className="break-words">
-              {boost ? "Refuerzo extra ACTIVADO (+15 dB)" : "Activar refuerzo extra"}
-            </span>
-          </button>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Úsalo solo en momentos puntuales cuando necesites oír mucho más fuerte. Puede ser molesto si el ambiente ya es ruidoso.
-          </p>
-        </section>
+        </div>
 
         {/* Balance L/R */}
-        <section aria-labelledby="balance" className="mb-6 rounded-2xl bg-card p-5 shadow-sm">
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 id="balance" className="text-xl font-bold">
-              Balance
-            </h2>
-            <span className="text-lg font-semibold tabular-nums text-muted-foreground">
+        <div className="rounded-xl bg-card p-3 shadow-sm">
+          <div className="mb-1 flex items-baseline justify-between">
+            <h2 className="text-base font-bold">Balance</h2>
+            <span className="text-sm font-semibold tabular-nums text-muted-foreground">
               {balance === 0
                 ? "Centro"
                 : balance < 0
@@ -321,22 +245,7 @@ function Index() {
             aria-label="Balance izquierda y derecha"
             className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
           />
-          <div className="mt-2 flex justify-between text-sm text-muted-foreground">
-            <span>Izquierdo</span>
-            <span>Derecho</span>
-          </div>
-        </section>
-
-        {/* Safety note */}
-        <section className="rounded-2xl border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground">
-          <p className="mb-2 font-semibold text-foreground">Seguridad auditiva</p>
-          <p>
-            La app incluye un <strong>limitador de picos</strong> para evitar
-            sonidos demasiado fuertes. Aun así, escucha al volumen mínimo
-            cómodo y haz descansos cada 30–60 minutos. Esta app no sustituye a
-            un audífono médico ni a la consulta con tu otorrino.
-          </p>
-        </section>
+        </div>
       </div>
     </main>
   );
