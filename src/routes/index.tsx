@@ -115,7 +115,13 @@ function Index() {
 
   const handleVolume = (db: number) => {
     setVolumeDb(db);
-    engineRef.current?.setMasterDb(db);
+    engineRef.current?.setMasterDb(effectiveDb(db, boost));
+  };
+
+  const toggleBoost = () => {
+    const next = !boost;
+    setBoost(next);
+    engineRef.current?.setMasterDb(effectiveDb(volumeDb, next));
   };
 
   const handleBalance = (b: number) => {
