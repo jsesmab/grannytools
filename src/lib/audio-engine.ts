@@ -74,17 +74,23 @@ export class AudioEngine {
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private highpass!: BiquadFilterNode;
+  private lowpass!: BiquadFilterNode;
   private bands: BiquadFilterNode[] = [];
   private compressor!: DynamicsCompressorNode;
   private makeup!: GainNode;
   private master!: GainNode;
+  private gate!: GainNode;
   private limiter!: DynamicsCompressorNode;
   private splitter!: ChannelSplitterNode;
   private merger!: ChannelMergerNode;
   private leftGain!: GainNode;
   private rightGain!: GainNode;
   private analyser!: AnalyserNode;
+  private inputAnalyser!: AnalyserNode;
   private running = false;
+  private gateRaf = 0;
+  private gateOpen = true;
+  private gateBuf: Uint8Array | null = null;
 
   isRunning() {
     return this.running;
