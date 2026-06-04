@@ -74,17 +74,23 @@ export class AudioEngine {
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private highpass!: BiquadFilterNode;
+  private lowpass!: BiquadFilterNode;
   private bands: BiquadFilterNode[] = [];
   private compressor!: DynamicsCompressorNode;
   private makeup!: GainNode;
   private master!: GainNode;
+  private gate!: GainNode;
   private limiter!: DynamicsCompressorNode;
   private splitter!: ChannelSplitterNode;
   private merger!: ChannelMergerNode;
   private leftGain!: GainNode;
   private rightGain!: GainNode;
   private analyser!: AnalyserNode;
+  private inputAnalyser!: AnalyserNode;
   private running = false;
+  private gateRaf = 0;
+  private gateOpen = true;
+  private gateBuf: Uint8Array | null = null;
 
   isRunning() {
     return this.running;
@@ -123,6 +129,17 @@ export class AudioEngine {
     this.highpass.frequency.value = opts.preset.highpassHz;
     this.highpass.Q.value = 0.707;
 
+    // Low-pass to roll off highs prone to feedback/sibilance
+    this.lowpass = this.ctx.createBiquadFilter();
+    this.lowpass.type = "lowpass";
+    this.lowpass.frequency.value = 7000;
+    this.lowpass.Q.value = 0.707;
+
+    // Pre-EQ analyser to detect ambient floor vs. near-field (self) voice
+    this.inputAnalyser = this.ctx.createAnalyser();
+    this.inputAnalyser.fftSize = 512;
+    this.inputAnalyser.smoothingTimeConstant = 0.2;
+
     // 5-band peaking EQ
     this.bands = BAND_FREQS.map((freq, i) => {
       const b = this.ctx!.createBiquadFilter();
@@ -147,6 +164,11 @@ export class AudioEngine {
     this.master = this.ctx.createGain();
     this.master.gain.value = dbToGain(opts.masterDb);
 
+    // Noise gate / self-voice duck: silences output when input is below
+    // noise floor (ambient hiss) or above near-field threshold (user speaks).
+    this.gate = this.ctx.createGain();
+    this.gate.gain.value = 1;
+
     // L/R balance
     this.splitter = this.ctx.createChannelSplitter(2);
     this.merger = this.ctx.createChannelMerger(2);
@@ -156,7 +178,7 @@ export class AudioEngine {
 
     // Brick-wall-ish limiter for hearing safety
     this.limiter = this.ctx.createDynamicsCompressor();
-    this.limiter.threshold.value = -3;
+    this.limiter.threshold.value = -6;
     this.limiter.knee.value = 0;
     this.limiter.ratio.value = 20;
     this.limiter.attack.value = 0.001;
@@ -166,9 +188,12 @@ export class AudioEngine {
     this.analyser.fftSize = 512;
 
     // Wire up
+    this.source.connect(this.inputAnalyser);
     let node: AudioNode = this.source;
     node.connect(this.highpass);
     node = this.highpass;
+    node.connect(this.lowpass);
+    node = this.lowpass;
     for (const b of this.bands) {
       node.connect(b);
       node = b;
@@ -176,7 +201,8 @@ export class AudioEngine {
     node.connect(this.compressor);
     this.compressor.connect(this.makeup);
     this.makeup.connect(this.master);
-    this.master.connect(this.splitter);
+    this.master.connect(this.gate);
+    this.gate.connect(this.splitter);
     this.splitter.connect(this.leftGain, 0);
     // mono source -> route same channel to both
     this.splitter.connect(this.rightGain, 0);
@@ -187,6 +213,39 @@ export class AudioEngine {
     this.analyser.connect(this.ctx.destination);
 
     this.running = true;
+    this.startGateLoop();
+  }
+
+  // Continuously open/close the output gate based on input RMS.
+  // - below NOISE_FLOOR  -> mute (kills background hiss)
+  // - above SELF_VOICE   -> mute (kills delayed echo of your own voice)
+  // - in between         -> pass-through
+  private startGateLoop() {
+    const NOISE_FLOOR = 0.012; // ~ quiet room
+    const SELF_VOICE = 0.18;   // loud near-field input
+    const buf = new Uint8Array(this.inputAnalyser.fftSize);
+    this.gateBuf = buf;
+    const tick = () => {
+      if (!this.running || !this.ctx) return;
+      this.inputAnalyser.getByteTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const v = (buf[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / buf.length);
+      const shouldOpen = rms >= NOISE_FLOOR && rms <= SELF_VOICE;
+      if (shouldOpen !== this.gateOpen) {
+        this.gateOpen = shouldOpen;
+        const target = shouldOpen ? 1 : 0;
+        // Fast close (5 ms) to kill your own voice instantly,
+        // slightly slower open (40 ms) to avoid clicks.
+        const tc = shouldOpen ? 0.04 : 0.005;
+        this.gate.gain.setTargetAtTime(target, this.ctx.currentTime, tc);
+      }
+      this.gateRaf = requestAnimationFrame(tick);
+    };
+    this.gateRaf = requestAnimationFrame(tick);
   }
 
   applyPreset(preset: EnvironmentPreset) {
@@ -240,6 +299,10 @@ export class AudioEngine {
 
   async stop() {
     this.running = false;
+    if (this.gateRaf) {
+      cancelAnimationFrame(this.gateRaf);
+      this.gateRaf = 0;
+    }
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
