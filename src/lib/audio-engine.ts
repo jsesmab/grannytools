@@ -299,6 +299,10 @@ export class AudioEngine {
 
   async stop() {
     this.running = false;
+    if (this.gateRaf) {
+      cancelAnimationFrame(this.gateRaf);
+      this.gateRaf = 0;
+    }
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
