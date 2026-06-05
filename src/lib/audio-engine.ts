@@ -227,15 +227,16 @@ export class AudioEngine {
     this.startGateLoop();
   }
 
-  // Continuously open/close the output gate based on input RMS.
-  // - below NOISE_FLOOR  -> mute (kills background hiss)
-  // - above SELF_VOICE   -> mute (kills delayed echo of your own voice)
-  // - in between         -> pass-through
+  // Ducks the output while the user is speaking into the mic (loud near-field
+  // input), then automatically reopens shortly after they stop. We no longer
+  // hard-mute on the noise floor, so the conversation always comes back.
   private startGateLoop() {
-    const NOISE_FLOOR = 0.012; // ~ quiet room
-    const SELF_VOICE = 0.18;   // loud near-field input
+    const SELF_VOICE_ON = 0.18;   // start ducking above this RMS
+    const SELF_VOICE_OFF = 0.08;  // reopen once we drop below this RMS
+    const HOLD_MS = 250;          // keep ducked at least this long after last loud frame
     const buf = new Uint8Array(this.inputAnalyser.fftSize);
     this.gateBuf = buf;
+    let lastLoudAt = 0;
     const tick = () => {
       if (!this.running || !this.ctx) return;
       this.inputAnalyser.getByteTimeDomainData(buf);
@@ -245,13 +246,19 @@ export class AudioEngine {
         sum += v * v;
       }
       const rms = Math.sqrt(sum / buf.length);
-      const shouldOpen = rms >= NOISE_FLOOR && rms <= SELF_VOICE;
+      const now = performance.now();
+      if (rms >= SELF_VOICE_ON) lastLoudAt = now;
+      const ducking =
+        rms >= SELF_VOICE_ON ||
+        (!this.gateOpen && rms >= SELF_VOICE_OFF) ||
+        now - lastLoudAt < HOLD_MS;
+      const shouldOpen = !ducking;
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
         const target = shouldOpen ? 1 : 0;
         // Fast close (5 ms) to kill your own voice instantly,
-        // slightly slower open (40 ms) to avoid clicks.
-        const tc = shouldOpen ? 0.04 : 0.005;
+        // slightly slower open (60 ms) to fade the conversation back in.
+        const tc = shouldOpen ? 0.06 : 0.005;
         this.gate.gain.setTargetAtTime(target, this.ctx.currentTime, tc);
       }
       this.gateRaf = requestAnimationFrame(tick);
