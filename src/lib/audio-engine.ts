@@ -305,7 +305,6 @@ export class AudioEngine {
     return { ...this.eqOffsets };
   }
 
-
   setMasterDb(db: number) {
     if (!this.ctx) return;
     this.master.gain.setTargetAtTime(dbToGain(db), this.ctx.currentTime, 0.03);
