@@ -69,7 +69,16 @@ export interface EngineOptions {
   balance: number; // -1 (left) .. +1 (right)
 }
 
+export interface EqOffsets {
+  bass: number; // dB
+  mid: number;  // dB
+  treble: number; // dB
+}
+
 export class AudioEngine {
+  private currentPreset: EnvironmentPreset | null = null;
+  private eqOffsets: EqOffsets = { bass: 0, mid: 0, treble: 0 };
+
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
@@ -141,14 +150,16 @@ export class AudioEngine {
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
     // 5-band peaking EQ
+    this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
       const b = this.ctx!.createBiquadFilter();
       b.type = "peaking";
       b.frequency.value = freq;
       b.Q.value = 1.2;
-      b.gain.value = opts.preset.bandsDb[i];
+      b.gain.value = opts.preset.bandsDb[i] + this.eqOffsetForBand(i);
       return b;
     });
+
 
     // Multiband-ish compression (single compressor, good first pass)
     this.compressor = this.ctx.createDynamicsCompressor();
@@ -249,16 +260,42 @@ export class AudioEngine {
   }
 
   applyPreset(preset: EnvironmentPreset) {
+    this.currentPreset = preset;
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
     this.highpass.frequency.setTargetAtTime(preset.highpassHz, t, 0.05);
     preset.bandsDb.forEach((db, i) => {
-      this.bands[i].gain.setTargetAtTime(db, t, 0.05);
+      this.bands[i].gain.setTargetAtTime(db + this.eqOffsetForBand(i), t, 0.05);
     });
     this.compressor.threshold.setTargetAtTime(preset.threshold, t, 0.05);
     this.compressor.ratio.setTargetAtTime(preset.ratio, t, 0.05);
     this.makeup.gain.setTargetAtTime(dbToGain(preset.makeupDb), t, 0.05);
   }
+
+  // Maps user bass/mid/treble offsets onto the 5 internal bands.
+  // bands: [250, 500, 1000, 2000, 4000]
+  private eqOffsetForBand(i: number): number {
+    const { bass, mid, treble } = this.eqOffsets;
+    if (i === 0) return bass;
+    if (i === 1) return bass * 0.5 + mid * 0.5;
+    if (i === 2) return mid;
+    if (i === 3) return mid * 0.5 + treble * 0.5;
+    return treble;
+  }
+
+  setEqOffsets(offsets: EqOffsets) {
+    this.eqOffsets = offsets;
+    if (!this.ctx || !this.currentPreset) return;
+    const t = this.ctx.currentTime;
+    this.currentPreset.bandsDb.forEach((db, i) => {
+      this.bands[i].gain.setTargetAtTime(db + this.eqOffsetForBand(i), t, 0.05);
+    });
+  }
+
+  getEqOffsets(): EqOffsets {
+    return { ...this.eqOffsets };
+  }
+
 
   setMasterDb(db: number) {
     if (!this.ctx) return;

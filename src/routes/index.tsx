@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, AlertTriangle, Zap } from "lucide-react";
+import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +37,17 @@ function Index() {
   const [boost, setBoost] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [eqOpen, setEqOpen] = useState(false);
+  const [bass, setBass] = useState(0);
+  const [mid, setMid] = useState(0);
+  const [treble, setTreble] = useState(0);
+
+  const applyEq = (b: number, m: number, t: number) => {
+    setBass(b); setMid(m); setTreble(t);
+    engineRef.current?.setEqOffsets({ bass: b, mid: m, treble: t });
+  };
+  const resetEq = () => applyEq(0, 0, 0);
+
 
   const BOOST_DB = 15;
   const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
@@ -138,7 +149,15 @@ function Index() {
             <Ear className="h-6 w-6" aria-hidden />
           </div>
           <h1 className="text-xl font-bold leading-tight">OyeBien</h1>
+          <button
+            onClick={() => setEqOpen(true)}
+            aria-label="Ecualizador"
+            className="ml-auto flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95] transition-all"
+          >
+            <MoreVertical className="h-5 w-5" aria-hidden />
+          </button>
         </header>
+
 
         {/* Main start/stop button */}
         <button
@@ -274,6 +293,64 @@ function Index() {
           />
         </div>
       </div>
+
+      {eqOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-background"
+          role="dialog"
+          aria-label="Ecualizador"
+        >
+          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-3">
+            <header className="mb-4 flex items-center gap-2">
+              <h2 className="text-xl font-bold">Ecualizador</h2>
+              <button
+                onClick={resetEq}
+                className="ml-auto flex items-center gap-1 rounded-lg border-2 border-border bg-secondary px-2 py-1.5 text-sm font-bold text-secondary-foreground active:scale-[0.95]"
+              >
+                <RotateCcw className="h-4 w-4" aria-hidden />
+                Restablecer
+              </button>
+              <button
+                onClick={() => setEqOpen(false)}
+                aria-label="Cerrar"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </header>
+
+            <p className="mb-4 text-sm text-muted-foreground">
+              Ajusta los graves, medios y agudos sobre el preset actual.
+            </p>
+
+            {([
+              { label: "Graves", value: bass, set: (v: number) => applyEq(v, mid, treble) },
+              { label: "Medios", value: mid, set: (v: number) => applyEq(bass, v, treble) },
+              { label: "Agudos", value: treble, set: (v: number) => applyEq(bass, mid, v) },
+            ] as const).map((b) => (
+              <div key={b.label} className="mb-4 rounded-xl bg-card p-3 shadow-sm">
+                <div className="mb-1 flex items-baseline justify-between">
+                  <h3 className="text-base font-bold">{b.label}</h3>
+                  <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+                    {b.value > 0 ? "+" : ""}{b.value} dB
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={-12}
+                  max={12}
+                  step={1}
+                  value={b.value}
+                  onChange={(e) => b.set(Number(e.target.value))}
+                  aria-label={b.label}
+                  className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
+
