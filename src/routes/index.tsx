@@ -37,6 +37,17 @@ function Index() {
   const [boost, setBoost] = useState(false);
   const [level, setLevel] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [eqOpen, setEqOpen] = useState(false);
+  const [bass, setBass] = useState(0);
+  const [mid, setMid] = useState(0);
+  const [treble, setTreble] = useState(0);
+
+  const applyEq = (b: number, m: number, t: number) => {
+    setBass(b); setMid(m); setTreble(t);
+    engineRef.current?.setEqOffsets({ bass: b, mid: m, treble: t });
+  };
+  const resetEq = () => applyEq(0, 0, 0);
+
 
   const BOOST_DB = 15;
   const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
