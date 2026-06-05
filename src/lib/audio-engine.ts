@@ -71,7 +71,7 @@ export interface EngineOptions {
 
 export interface EqOffsets {
   bass: number; // dB
-  mid: number;  // dB
+  mid: number; // dB
   treble: number; // dB
 }
 
@@ -123,11 +123,14 @@ export class AudioEngine {
 
     const Ctx =
       window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctx({ latencyHint: "interactive" });
     if (this.ctx.state === "suspended") {
-      try { await this.ctx.resume(); } catch { /* ignore */ }
+      try {
+        await this.ctx.resume();
+      } catch {
+        /* ignore */
+      }
     }
 
     this.source = this.ctx.createMediaStreamSource(this.stream);
@@ -159,7 +162,6 @@ export class AudioEngine {
       b.gain.value = opts.preset.bandsDb[i] + this.eqOffsetForBand(i);
       return b;
     });
-
 
     // Multiband-ish compression (single compressor, good first pass)
     this.compressor = this.ctx.createDynamicsCompressor();
@@ -232,8 +234,8 @@ export class AudioEngine {
   // Important: do not require total silence to reopen, because another person
   // may still be talking and the user needs that conversation to come back.
   private startGateLoop() {
-    const SELF_VOICE_ON = 0.12;   // start ducking above this RMS
-    const HOLD_MS = 180;          // keep ducked briefly after the last self-voice frame
+    const SELF_VOICE_ON = 0.12; // start ducking above this RMS
+    const HOLD_MS = 180; // keep ducked briefly after the last self-voice frame
     const buf = new Uint8Array(this.inputAnalyser.fftSize);
     this.gateBuf = buf;
     let lastSelfVoiceAt = 0;
@@ -266,7 +268,6 @@ export class AudioEngine {
     };
     this.gateRaf = requestAnimationFrame(tick);
   }
-
   applyPreset(preset: EnvironmentPreset) {
     this.currentPreset = preset;
     if (!this.ctx) return;
