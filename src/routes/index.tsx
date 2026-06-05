@@ -149,7 +149,15 @@ function Index() {
             <Ear className="h-6 w-6" aria-hidden />
           </div>
           <h1 className="text-xl font-bold leading-tight">OyeBien</h1>
+          <button
+            onClick={() => setEqOpen(true)}
+            aria-label="Ecualizador"
+            className="ml-auto flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95] transition-all"
+          >
+            <MoreVertical className="h-5 w-5" aria-hidden />
+          </button>
         </header>
+
 
         {/* Main start/stop button */}
         <button
