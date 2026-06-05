@@ -69,7 +69,16 @@ export interface EngineOptions {
   balance: number; // -1 (left) .. +1 (right)
 }
 
+export interface EqOffsets {
+  bass: number; // dB
+  mid: number;  // dB
+  treble: number; // dB
+}
+
 export class AudioEngine {
+  private currentPreset: EnvironmentPreset | null = null;
+  private eqOffsets: EqOffsets = { bass: 0, mid: 0, treble: 0 };
+
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
