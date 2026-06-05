@@ -323,30 +323,32 @@ function Index() {
               Ajusta los graves, medios y agudos sobre el preset actual.
             </p>
 
-            {([
-              { label: "Graves", value: bass, set: (v: number) => applyEq(v, mid, treble) },
-              { label: "Medios", value: mid, set: (v: number) => applyEq(bass, v, treble) },
-              { label: "Agudos", value: treble, set: (v: number) => applyEq(bass, mid, v) },
-            ] as const).map((b) => (
-              <div key={b.label} className="mb-4 rounded-xl bg-card p-3 shadow-sm">
-                <div className="mb-1 flex items-baseline justify-between">
-                  <h3 className="text-base font-bold">{b.label}</h3>
-                  <span className="text-sm font-semibold tabular-nums text-muted-foreground">
+            <div className="grid flex-1 grid-cols-3 gap-3">
+              {([
+                { label: "Graves", value: bass, set: (v: number) => applyEq(v, mid, treble) },
+                { label: "Medios", value: mid, set: (v: number) => applyEq(bass, v, treble) },
+                { label: "Agudos", value: treble, set: (v: number) => applyEq(bass, mid, v) },
+              ] as const).map((b) => (
+                <div key={b.label} className="flex flex-col items-center rounded-xl bg-card p-3 shadow-sm">
+                  <h3 className="mb-1 text-base font-bold">{b.label}</h3>
+                  <span className="mb-2 text-sm font-semibold tabular-nums text-muted-foreground">
                     {b.value > 0 ? "+" : ""}{b.value} dB
                   </span>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={1}
+                    value={b.value}
+                    onChange={(e) => b.set(Number(e.target.value))}
+                    aria-label={b.label}
+                    aria-orientation="vertical"
+                    className="h-64 w-3 cursor-pointer appearance-none rounded-full bg-muted accent-primary [writing-mode:vertical-lr] [direction:rtl] [-webkit-appearance:slider-vertical]"
+                  />
                 </div>
-                <input
-                  type="range"
-                  min={-12}
-                  max={12}
-                  step={1}
-                  value={b.value}
-                  onChange={(e) => b.set(Number(e.target.value))}
-                  aria-label={b.label}
-                  className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-                />
-              </div>
-            ))}
+              ))}
+            </div>
+
           </div>
         </div>
       )}
