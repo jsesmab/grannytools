@@ -71,7 +71,7 @@ export interface EngineOptions {
 
 export interface EqOffsets {
   bass: number; // dB
-  mid: number;  // dB
+  mid: number; // dB
   treble: number; // dB
 }
 
@@ -123,11 +123,14 @@ export class AudioEngine {
 
     const Ctx =
       window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new Ctx({ latencyHint: "interactive" });
     if (this.ctx.state === "suspended") {
-      try { await this.ctx.resume(); } catch { /* ignore */ }
+      try {
+        await this.ctx.resume();
+      } catch {
+        /* ignore */
+      }
     }
 
     this.source = this.ctx.createMediaStreamSource(this.stream);
@@ -160,7 +163,6 @@ export class AudioEngine {
       return b;
     });
 
-
     // Multiband-ish compression (single compressor, good first pass)
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.value = opts.preset.threshold;
@@ -175,8 +177,8 @@ export class AudioEngine {
     this.master = this.ctx.createGain();
     this.master.gain.value = dbToGain(opts.masterDb);
 
-    // Noise gate / self-voice duck: silences output when input is below
-    // noise floor (ambient hiss) or above near-field threshold (user speaks).
+    // Self-voice duck: silences the amplified mic only while the user is
+    // speaking, then brings ambient conversation back automatically.
     this.gate = this.ctx.createGain();
     this.gate.gain.value = 1;
 
@@ -228,15 +230,16 @@ export class AudioEngine {
   }
 
   // Ducks the output while the user is speaking into the mic (loud near-field
-  // input), then automatically reopens shortly after they stop. We no longer
-  // hard-mute on the noise floor, so the conversation always comes back.
+  // input), then automatically reopens shortly after the near-field voice ends.
+  // Important: do not require total silence to reopen, because another person
+  // may still be talking and the user needs that conversation to come back.
   private startGateLoop() {
-    const SELF_VOICE_ON = 0.18;   // start ducking above this RMS
-    const SELF_VOICE_OFF = 0.08;  // reopen once we drop below this RMS
-    const HOLD_MS = 250;          // keep ducked at least this long after last loud frame
+    const SELF_VOICE_ON = 0.12; // start ducking above this RMS
+    const HOLD_MS = 180; // keep ducked briefly after the last self-voice frame
     const buf = new Uint8Array(this.inputAnalyser.fftSize);
     this.gateBuf = buf;
-    let lastLoudAt = 0;
+    let lastSelfVoiceAt = 0;
+    let smoothedRms = 0;
     const tick = () => {
       if (!this.running || !this.ctx) return;
       this.inputAnalyser.getByteTimeDomainData(buf);
@@ -246,26 +249,25 @@ export class AudioEngine {
         sum += v * v;
       }
       const rms = Math.sqrt(sum / buf.length);
+      smoothedRms = smoothedRms * 0.65 + rms * 0.35;
       const now = performance.now();
-      if (rms >= SELF_VOICE_ON) lastLoudAt = now;
-      const ducking =
-        rms >= SELF_VOICE_ON ||
-        (!this.gateOpen && rms >= SELF_VOICE_OFF) ||
-        now - lastLoudAt < HOLD_MS;
+      if (rms >= SELF_VOICE_ON || smoothedRms >= SELF_VOICE_ON) {
+        lastSelfVoiceAt = now;
+      }
+      const ducking = now - lastSelfVoiceAt < HOLD_MS;
       const shouldOpen = !ducking;
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
         const target = shouldOpen ? 1 : 0;
         // Fast close (5 ms) to kill your own voice instantly,
-        // slightly slower open (60 ms) to fade the conversation back in.
-        const tc = shouldOpen ? 0.06 : 0.005;
+        // quick open (35 ms) so the conversation returns as soon as you stop.
+        const tc = shouldOpen ? 0.035 : 0.005;
         this.gate.gain.setTargetAtTime(target, this.ctx.currentTime, tc);
       }
       this.gateRaf = requestAnimationFrame(tick);
     };
     this.gateRaf = requestAnimationFrame(tick);
   }
-
   applyPreset(preset: EnvironmentPreset) {
     this.currentPreset = preset;
     if (!this.ctx) return;
@@ -302,7 +304,6 @@ export class AudioEngine {
   getEqOffsets(): EqOffsets {
     return { ...this.eqOffsets };
   }
-
 
   setMasterDb(db: number) {
     if (!this.ctx) return;
