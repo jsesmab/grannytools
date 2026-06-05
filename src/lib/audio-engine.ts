@@ -150,14 +150,16 @@ export class AudioEngine {
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
     // 5-band peaking EQ
+    this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
       const b = this.ctx!.createBiquadFilter();
       b.type = "peaking";
       b.frequency.value = freq;
       b.Q.value = 1.2;
-      b.gain.value = opts.preset.bandsDb[i];
+      b.gain.value = opts.preset.bandsDb[i] + this.eqOffsetForBand(i);
       return b;
     });
+
 
     // Multiband-ish compression (single compressor, good first pass)
     this.compressor = this.ctx.createDynamicsCompressor();
