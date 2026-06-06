@@ -342,15 +342,6 @@ export class AudioEngine {
       }
       const rms = Math.sqrt(sum / timeBuf.length);
 
-      // Voice-likeness: how much of the energy lives in the human-voice band.
-      let total = 0;
-      let voice = 0;
-      for (let i = 0; i < freqBuf.length; i++) {
-        total += freqBuf[i];
-        if (i >= voiceLo && i <= voiceHi) voice += freqBuf[i];
-      }
-      const voiceLike = total > 0 ? voice / total : 0;
-
       // Cosine similarity against the enrolled fingerprint.
       let sim = 0;
       if (this.voiceFingerprint) {
@@ -369,18 +360,15 @@ export class AudioEngine {
       }
 
       const now = performance.now();
-      // Self-voice = loud AND (matches fingerprint, or fingerprint missing)
+      // Self-voice = loud AND (matches fingerprint, or no fingerprint yet)
       const isSelf =
         rms >= SELF_VOICE_RMS &&
         (this.voiceFingerprint ? sim >= SIM_THRESHOLD : true);
       if (isSelf) lastSelfAt = now;
 
-      // Any human voice in the air keeps the gate alive.
-      if (voiceLike >= VOICE_LIKE_THRESHOLD && rms > 0.012) lastVoiceAt = now;
-
-      const selfDucking = now - lastSelfAt < SELF_HOLD_MS;
-      const voicePresent = now - lastVoiceAt < VOICE_HOLD_MS;
-      const shouldOpen = voicePresent && !selfDucking;
+      // Gate is OPEN by default (so the conversation always comes through).
+      // It only closes briefly when the user himself is talking.
+      const shouldOpen = now - lastSelfAt >= SELF_HOLD_MS;
 
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
