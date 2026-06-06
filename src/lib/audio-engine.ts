@@ -138,6 +138,9 @@ export class AudioEngine {
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
+    if (ctx.state === "suspended") {
+      try { await ctx.resume(); } catch { /* ignore */ }
+    }
     try {
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();
@@ -148,30 +151,38 @@ export class AudioEngine {
       const bins = an.frequencyBinCount;
       const avg = new Float32Array(bins);
       const buf = new Uint8Array(bins);
-      const t0 = performance.now();
       let frames = 0;
+      let totalFrames = 0;
 
       await new Promise<void>((resolve) => {
+        let stopped = false;
+        const finish = () => { if (!stopped) { stopped = true; resolve(); } };
+        setTimeout(finish, ms);
         const tick = () => {
+          if (stopped) return;
           an.getByteFrequencyData(buf);
           let energy = 0;
           for (let i = 0; i < bins; i++) energy += buf[i];
-          // only accumulate frames with actual voice-level energy
-          if (energy > bins * 10) {
+          totalFrames++;
+          // Accept frames with any reasonable signal (low bar for mobile mics)
+          if (energy > bins * 3) {
             for (let i = 0; i < bins; i++) avg[i] += buf[i];
             frames++;
           }
-          if (performance.now() - t0 >= ms) resolve();
-          else requestAnimationFrame(tick);
+          setTimeout(tick, 30);
         };
-        requestAnimationFrame(tick);
+        tick();
       });
 
-      if (frames < 8) {
-        throw new Error("No se detectó suficiente voz. Habla más cerca del micro.");
+      if (frames < 3) {
+        if (totalFrames === 0) {
+          throw new Error("No se pudo capturar audio del micrófono.");
+        }
+        // Forgiving fallback: use the last frame so enrollment never blocks the app
+        for (let i = 0; i < bins; i++) avg[i] = buf[i];
+        frames = 1;
       }
       for (let i = 0; i < bins; i++) avg[i] /= frames;
-      // L2-normalize so we can use cosine similarity
       let n = 0;
       for (let i = 0; i < bins; i++) n += avg[i] * avg[i];
       n = Math.sqrt(n) || 1;
@@ -309,22 +320,15 @@ export class AudioEngine {
    * Otherwise the gate is open so the conversation around the user comes through.
    */
   private startGateLoop() {
-    const SELF_VOICE_RMS = 0.1; // loudness threshold for "near-field" voice
-    const SIM_THRESHOLD = 0.86; // cosine sim to user fingerprint
-    const VOICE_LIKE_THRESHOLD = 0.55; // fraction of energy in human-voice band
-    const SELF_HOLD_MS = 200;
-    const VOICE_HOLD_MS = 450;
+    const SELF_VOICE_RMS = 0.09; // loudness threshold for "near-field" voice
+    const SIM_THRESHOLD = 0.82; // cosine sim to user fingerprint
+    const SELF_HOLD_MS = 220;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
     const norm = new Float32Array(freqBuf.length);
-    const sr = this.ctx!.sampleRate;
-    const binHz = sr / this.inputAnalyser.fftSize;
-    const voiceLo = Math.max(1, Math.floor(200 / binHz));
-    const voiceHi = Math.min(freqBuf.length - 1, Math.ceil(3400 / binHz));
 
     let lastSelfAt = -Infinity;
-    let lastVoiceAt = performance.now();
 
     const tick = () => {
       if (!this.running || !this.ctx) return;
@@ -337,15 +341,6 @@ export class AudioEngine {
         sum += v * v;
       }
       const rms = Math.sqrt(sum / timeBuf.length);
-
-      // Voice-likeness: how much of the energy lives in the human-voice band.
-      let total = 0;
-      let voice = 0;
-      for (let i = 0; i < freqBuf.length; i++) {
-        total += freqBuf[i];
-        if (i >= voiceLo && i <= voiceHi) voice += freqBuf[i];
-      }
-      const voiceLike = total > 0 ? voice / total : 0;
 
       // Cosine similarity against the enrolled fingerprint.
       let sim = 0;
@@ -365,18 +360,15 @@ export class AudioEngine {
       }
 
       const now = performance.now();
-      // Self-voice = loud AND (matches fingerprint, or fingerprint missing)
+      // Self-voice = loud AND (matches fingerprint, or no fingerprint yet)
       const isSelf =
         rms >= SELF_VOICE_RMS &&
         (this.voiceFingerprint ? sim >= SIM_THRESHOLD : true);
       if (isSelf) lastSelfAt = now;
 
-      // Any human voice in the air keeps the gate alive.
-      if (voiceLike >= VOICE_LIKE_THRESHOLD && rms > 0.012) lastVoiceAt = now;
-
-      const selfDucking = now - lastSelfAt < SELF_HOLD_MS;
-      const voicePresent = now - lastVoiceAt < VOICE_HOLD_MS;
-      const shouldOpen = voicePresent && !selfDucking;
+      // Gate is OPEN by default (so the conversation always comes through).
+      // It only closes briefly when the user himself is talking.
+      const shouldOpen = now - lastSelfAt >= SELF_HOLD_MS;
 
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
