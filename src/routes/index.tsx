@@ -412,7 +412,7 @@ function Index() {
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={enrollVoice}
+                  onClick={() => enrollVoice(false)}
                   disabled={enrolling}
                   className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
                 >
@@ -457,7 +457,7 @@ function Index() {
             )}
             <div className="flex flex-col gap-2">
               <button
-                onClick={enrollVoice}
+                onClick={() => enrollVoice(false)}
                 disabled={enrolling}
                 className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-3 text-base font-bold text-primary-foreground active:scale-[0.98] disabled:opacity-60"
               >
