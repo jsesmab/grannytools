@@ -51,7 +51,7 @@ function Index() {
     setHasFingerprint(e.hasVoiceFingerprint());
   }, []);
 
-  const enrollVoice = async () => {
+  const enrollVoice = async (autoStart = false) => {
     setError(null);
     setEnrolling(true);
     try {
@@ -60,6 +60,11 @@ function Index() {
       await e.captureVoiceFingerprint(3500);
       setHasFingerprint(true);
       setEnrollPrompt(false);
+      if (autoStart) {
+        await e.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
+        await requestWakeLock();
+        setRunning(true);
+      }
     } catch (err) {
       console.error(err);
       setError(
