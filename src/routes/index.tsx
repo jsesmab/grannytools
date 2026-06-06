@@ -132,6 +132,10 @@ function Index() {
 
   const start = async () => {
     setError(null);
+    if (!hasFingerprint) {
+      setEnrollPrompt(true);
+      return;
+    }
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
