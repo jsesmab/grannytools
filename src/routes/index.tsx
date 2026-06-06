@@ -41,6 +41,41 @@ function Index() {
   const [bass, setBass] = useState(0);
   const [mid, setMid] = useState(0);
   const [treble, setTreble] = useState(0);
+  const [hasFingerprint, setHasFingerprint] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollPrompt, setEnrollPrompt] = useState(false);
+
+  useEffect(() => {
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    setHasFingerprint(e.hasVoiceFingerprint());
+  }, []);
+
+  const enrollVoice = async () => {
+    setError(null);
+    setEnrolling(true);
+    try {
+      const e = engineRef.current ?? new AudioEngine();
+      engineRef.current = e;
+      await e.captureVoiceFingerprint(3500);
+      setHasFingerprint(true);
+      setEnrollPrompt(false);
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo identificar tu voz. Inténtalo de nuevo.",
+      );
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const clearFingerprint = () => {
+    engineRef.current?.setVoiceFingerprint(null);
+    setHasFingerprint(false);
+  };
 
   const applyEq = (b: number, m: number, t: number) => {
     setBass(b); setMid(m); setTreble(t);
