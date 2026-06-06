@@ -320,22 +320,15 @@ export class AudioEngine {
    * Otherwise the gate is open so the conversation around the user comes through.
    */
   private startGateLoop() {
-    const SELF_VOICE_RMS = 0.1; // loudness threshold for "near-field" voice
-    const SIM_THRESHOLD = 0.86; // cosine sim to user fingerprint
-    const VOICE_LIKE_THRESHOLD = 0.55; // fraction of energy in human-voice band
-    const SELF_HOLD_MS = 200;
-    const VOICE_HOLD_MS = 450;
+    const SELF_VOICE_RMS = 0.09; // loudness threshold for "near-field" voice
+    const SIM_THRESHOLD = 0.82; // cosine sim to user fingerprint
+    const SELF_HOLD_MS = 220;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
     const norm = new Float32Array(freqBuf.length);
-    const sr = this.ctx!.sampleRate;
-    const binHz = sr / this.inputAnalyser.fftSize;
-    const voiceLo = Math.max(1, Math.floor(200 / binHz));
-    const voiceHi = Math.min(freqBuf.length - 1, Math.ceil(3400 / binHz));
 
     let lastSelfAt = -Infinity;
-    let lastVoiceAt = performance.now();
 
     const tick = () => {
       if (!this.running || !this.ctx) return;
