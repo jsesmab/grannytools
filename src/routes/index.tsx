@@ -457,7 +457,7 @@ function Index() {
             )}
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => enrollVoice(false)}
+                onClick={() => enrollVoice(true)}
                 disabled={enrolling}
                 className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-3 text-base font-bold text-primary-foreground active:scale-[0.98] disabled:opacity-60"
               >
