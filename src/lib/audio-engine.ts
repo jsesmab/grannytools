@@ -138,6 +138,9 @@ export class AudioEngine {
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
+    if (ctx.state === "suspended") {
+      try { await ctx.resume(); } catch { /* ignore */ }
+    }
     try {
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();
@@ -148,30 +151,38 @@ export class AudioEngine {
       const bins = an.frequencyBinCount;
       const avg = new Float32Array(bins);
       const buf = new Uint8Array(bins);
-      const t0 = performance.now();
       let frames = 0;
+      let totalFrames = 0;
 
       await new Promise<void>((resolve) => {
+        let stopped = false;
+        const finish = () => { if (!stopped) { stopped = true; resolve(); } };
+        setTimeout(finish, ms);
         const tick = () => {
+          if (stopped) return;
           an.getByteFrequencyData(buf);
           let energy = 0;
           for (let i = 0; i < bins; i++) energy += buf[i];
-          // only accumulate frames with actual voice-level energy
-          if (energy > bins * 10) {
+          totalFrames++;
+          // Accept frames with any reasonable signal (low bar for mobile mics)
+          if (energy > bins * 3) {
             for (let i = 0; i < bins; i++) avg[i] += buf[i];
             frames++;
           }
-          if (performance.now() - t0 >= ms) resolve();
-          else requestAnimationFrame(tick);
+          setTimeout(tick, 30);
         };
-        requestAnimationFrame(tick);
+        tick();
       });
 
-      if (frames < 8) {
-        throw new Error("No se detectó suficiente voz. Habla más cerca del micro.");
+      if (frames < 3) {
+        if (totalFrames === 0) {
+          throw new Error("No se pudo capturar audio del micrófono.");
+        }
+        // Forgiving fallback: use the last frame so enrollment never blocks the app
+        for (let i = 0; i < bins; i++) avg[i] = buf[i];
+        frames = 1;
       }
       for (let i = 0; i < bins; i++) avg[i] /= frames;
-      // L2-normalize so we can use cosine similarity
       let n = 0;
       for (let i = 0; i < bins; i++) n += avg[i] * avg[i];
       n = Math.sqrt(n) || 1;
