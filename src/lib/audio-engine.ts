@@ -55,24 +55,25 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     description: "Atenúa tráfico y viento, prioriza voz y alertas.",
     bandsDb: [-10, -6, 3, 8, 8],
     threshold: -20,
-    ratio: 6,
+    ratio: 7,
     makeupDb: 7,
     highpassHz: 300,
   },
 ];
 
 const BAND_FREQS = [250, 500, 1000, 2000, 4000];
+const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
-  masterDb: number; // user volume in dB, e.g. -10..+20
-  balance: number; // -1 (left) .. +1 (right)
+  masterDb: number; // user volume in dB
+  balance: number; // -1..+1
 }
 
 export interface EqOffsets {
-  bass: number; // dB
-  mid: number; // dB
-  treble: number; // dB
+  bass: number;
+  mid: number;
+  treble: number;
 }
 
 export class AudioEngine {
@@ -99,18 +100,97 @@ export class AudioEngine {
   private running = false;
   private gateRaf = 0;
   private gateOpen = true;
-  private gateBuf: Uint8Array | null = null;
+  private voiceFingerprint: Float32Array | null = null;
+
+  constructor() {
+    this.voiceFingerprint = loadFingerprint();
+  }
 
   isRunning() {
     return this.running;
   }
 
+  hasVoiceFingerprint() {
+    return !!this.voiceFingerprint;
+  }
+
+  setVoiceFingerprint(fp: Float32Array | null) {
+    this.voiceFingerprint = fp;
+    saveFingerprint(fp);
+  }
+
+  /**
+   * Records ~`ms` of audio from the mic and returns a normalized average
+   * magnitude spectrum that represents the speaker's voice timbre.
+   * Used later to distinguish the user's own voice from other people's voices.
+   */
+  async captureVoiceFingerprint(ms = 3500): Promise<Float32Array> {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      },
+      video: false,
+    });
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new Ctx();
+    try {
+      const src = ctx.createMediaStreamSource(stream);
+      const an = ctx.createAnalyser();
+      an.fftSize = 1024;
+      an.smoothingTimeConstant = 0.2;
+      src.connect(an);
+
+      const bins = an.frequencyBinCount;
+      const avg = new Float32Array(bins);
+      const buf = new Uint8Array(bins);
+      const t0 = performance.now();
+      let frames = 0;
+
+      await new Promise<void>((resolve) => {
+        const tick = () => {
+          an.getByteFrequencyData(buf);
+          let energy = 0;
+          for (let i = 0; i < bins; i++) energy += buf[i];
+          // only accumulate frames with actual voice-level energy
+          if (energy > bins * 10) {
+            for (let i = 0; i < bins; i++) avg[i] += buf[i];
+            frames++;
+          }
+          if (performance.now() - t0 >= ms) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+
+      if (frames < 8) {
+        throw new Error("No se detectó suficiente voz. Habla más cerca del micro.");
+      }
+      for (let i = 0; i < bins; i++) avg[i] /= frames;
+      // L2-normalize so we can use cosine similarity
+      let n = 0;
+      for (let i = 0; i < bins; i++) n += avg[i] * avg[i];
+      n = Math.sqrt(n) || 1;
+      for (let i = 0; i < bins; i++) avg[i] /= n;
+      this.setVoiceFingerprint(avg);
+      return avg;
+    } finally {
+      stream.getTracks().forEach((t) => t.stop());
+      try {
+        await ctx.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   async start(opts: EngineOptions) {
     if (this.running) return;
 
-    // Request mic with all browser DSP off — echo cancellation in particular
-    // mutes the amplified signal because it detects it coming back through the
-    // headphones/speaker and treats it as feedback.
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
@@ -135,24 +215,21 @@ export class AudioEngine {
 
     this.source = this.ctx.createMediaStreamSource(this.stream);
 
-    // High-pass to kill rumble & reduce feedback
     this.highpass = this.ctx.createBiquadFilter();
     this.highpass.type = "highpass";
     this.highpass.frequency.value = opts.preset.highpassHz;
     this.highpass.Q.value = 0.707;
 
-    // Low-pass to roll off highs prone to feedback/sibilance
     this.lowpass = this.ctx.createBiquadFilter();
     this.lowpass.type = "lowpass";
     this.lowpass.frequency.value = 7000;
     this.lowpass.Q.value = 0.707;
 
-    // Pre-EQ analyser to detect ambient floor vs. near-field (self) voice
+    // Analyser placed before the EQ so detection sees the raw mic signal
     this.inputAnalyser = this.ctx.createAnalyser();
-    this.inputAnalyser.fftSize = 512;
+    this.inputAnalyser.fftSize = 1024;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
-    // 5-band peaking EQ
     this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
       const b = this.ctx!.createBiquadFilter();
@@ -163,7 +240,6 @@ export class AudioEngine {
       return b;
     });
 
-    // Multiband-ish compression (single compressor, good first pass)
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.value = opts.preset.threshold;
     this.compressor.knee.value = 12;
@@ -177,19 +253,16 @@ export class AudioEngine {
     this.master = this.ctx.createGain();
     this.master.gain.value = dbToGain(opts.masterDb);
 
-    // Self-voice duck: silences the amplified mic only while the user is
-    // speaking, then brings ambient conversation back automatically.
+    // Smart gate: muted when the user himself talks or when input isn't voice.
     this.gate = this.ctx.createGain();
     this.gate.gain.value = 1;
 
-    // L/R balance
     this.splitter = this.ctx.createChannelSplitter(2);
     this.merger = this.ctx.createChannelMerger(2);
     this.leftGain = this.ctx.createGain();
     this.rightGain = this.ctx.createGain();
     this.applyBalance(opts.balance);
 
-    // Brick-wall-ish limiter for hearing safety
     this.limiter = this.ctx.createDynamicsCompressor();
     this.limiter.threshold.value = -6;
     this.limiter.knee.value = 0;
@@ -200,7 +273,6 @@ export class AudioEngine {
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 512;
 
-    // Wire up
     this.source.connect(this.inputAnalyser);
     let node: AudioNode = this.source;
     node.connect(this.highpass);
@@ -217,7 +289,6 @@ export class AudioEngine {
     this.master.connect(this.gate);
     this.gate.connect(this.splitter);
     this.splitter.connect(this.leftGain, 0);
-    // mono source -> route same channel to both
     this.splitter.connect(this.rightGain, 0);
     this.leftGain.connect(this.merger, 0, 0);
     this.rightGain.connect(this.merger, 0, 1);
@@ -229,45 +300,100 @@ export class AudioEngine {
     this.startGateLoop();
   }
 
-  // Ducks the output while the user is speaking into the mic (loud near-field
-  // input), then automatically reopens shortly after the near-field voice ends.
-  // Important: do not require total silence to reopen, because another person
-  // may still be talking and the user needs that conversation to come back.
+  /**
+   * Smart gate loop. Two reasons to mute the amplified output:
+   *  - The user is talking (matches the enrolled voice fingerprint at loud level).
+   *  - There is no human voice in the air (only ambient noise) — the AI-style
+   *    voice detector keeps the gate closed so traffic, fans, claps, etc. don't
+   *    get amplified.
+   * Otherwise the gate is open so the conversation around the user comes through.
+   */
   private startGateLoop() {
-    const SELF_VOICE_ON = 0.12; // start ducking above this RMS
-    const HOLD_MS = 180; // keep ducked briefly after the last self-voice frame
-    const buf = new Uint8Array(this.inputAnalyser.fftSize);
-    this.gateBuf = buf;
-    let lastSelfVoiceAt = 0;
-    let smoothedRms = 0;
+    const SELF_VOICE_RMS = 0.1; // loudness threshold for "near-field" voice
+    const SIM_THRESHOLD = 0.86; // cosine sim to user fingerprint
+    const VOICE_LIKE_THRESHOLD = 0.55; // fraction of energy in human-voice band
+    const SELF_HOLD_MS = 200;
+    const VOICE_HOLD_MS = 450;
+
+    const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
+    const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
+    const norm = new Float32Array(freqBuf.length);
+    const sr = this.ctx!.sampleRate;
+    const binHz = sr / this.inputAnalyser.fftSize;
+    const voiceLo = Math.max(1, Math.floor(200 / binHz));
+    const voiceHi = Math.min(freqBuf.length - 1, Math.ceil(3400 / binHz));
+
+    let lastSelfAt = -Infinity;
+    let lastVoiceAt = performance.now();
+
     const tick = () => {
       if (!this.running || !this.ctx) return;
-      this.inputAnalyser.getByteTimeDomainData(buf);
+      this.inputAnalyser.getByteTimeDomainData(timeBuf);
+      this.inputAnalyser.getByteFrequencyData(freqBuf);
+
       let sum = 0;
-      for (let i = 0; i < buf.length; i++) {
-        const v = (buf[i] - 128) / 128;
+      for (let i = 0; i < timeBuf.length; i++) {
+        const v = (timeBuf[i] - 128) / 128;
         sum += v * v;
       }
-      const rms = Math.sqrt(sum / buf.length);
-      smoothedRms = smoothedRms * 0.65 + rms * 0.35;
-      const now = performance.now();
-      if (rms >= SELF_VOICE_ON || smoothedRms >= SELF_VOICE_ON) {
-        lastSelfVoiceAt = now;
+      const rms = Math.sqrt(sum / timeBuf.length);
+
+      // Voice-likeness: how much of the energy lives in the human-voice band.
+      let total = 0;
+      let voice = 0;
+      for (let i = 0; i < freqBuf.length; i++) {
+        total += freqBuf[i];
+        if (i >= voiceLo && i <= voiceHi) voice += freqBuf[i];
       }
-      const ducking = now - lastSelfVoiceAt < HOLD_MS;
-      const shouldOpen = !ducking;
+      const voiceLike = total > 0 ? voice / total : 0;
+
+      // Cosine similarity against the enrolled fingerprint.
+      let sim = 0;
+      if (this.voiceFingerprint) {
+        let n = 0;
+        for (let i = 0; i < freqBuf.length; i++) {
+          norm[i] = freqBuf[i];
+          n += freqBuf[i] * freqBuf[i];
+        }
+        n = Math.sqrt(n);
+        if (n > 0) {
+          for (let i = 0; i < freqBuf.length; i++) {
+            norm[i] /= n;
+            sim += norm[i] * this.voiceFingerprint[i];
+          }
+        }
+      }
+
+      const now = performance.now();
+      // Self-voice = loud AND (matches fingerprint, or fingerprint missing)
+      const isSelf =
+        rms >= SELF_VOICE_RMS &&
+        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : true);
+      if (isSelf) lastSelfAt = now;
+
+      // Any human voice in the air keeps the gate alive.
+      if (voiceLike >= VOICE_LIKE_THRESHOLD && rms > 0.012) lastVoiceAt = now;
+
+      const selfDucking = now - lastSelfAt < SELF_HOLD_MS;
+      const voicePresent = now - lastVoiceAt < VOICE_HOLD_MS;
+      const shouldOpen = voicePresent && !selfDucking;
+
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
-        const target = shouldOpen ? 1 : 0;
-        // Fast close (5 ms) to kill your own voice instantly,
-        // quick open (35 ms) so the conversation returns as soon as you stop.
-        const tc = shouldOpen ? 0.035 : 0.005;
-        this.gate.gain.setTargetAtTime(target, this.ctx.currentTime, tc);
+        // Fast close to kill self-voice / sudden noise, slightly slower open
+        // so the conversation fades back in naturally.
+        const tc = shouldOpen ? 0.04 : 0.008;
+        this.gate.gain.setTargetAtTime(
+          shouldOpen ? 1 : 0,
+          this.ctx.currentTime,
+          tc,
+        );
       }
       this.gateRaf = requestAnimationFrame(tick);
     };
     this.gateRaf = requestAnimationFrame(tick);
   }
+
   applyPreset(preset: EnvironmentPreset) {
     this.currentPreset = preset;
     if (!this.ctx) return;
@@ -281,8 +407,6 @@ export class AudioEngine {
     this.makeup.gain.setTargetAtTime(dbToGain(preset.makeupDb), t, 0.05);
   }
 
-  // Maps user bass/mid/treble offsets onto the 5 internal bands.
-  // bands: [250, 500, 1000, 2000, 4000]
   private eqOffsetForBand(i: number): number {
     const { bass, mid, treble } = this.eqOffsets;
     if (i === 0) return bass;
@@ -315,7 +439,6 @@ export class AudioEngine {
   }
 
   private applyBalance(balance: number) {
-    // balance: -1 full left, 0 center, +1 full right
     const b = Math.max(-1, Math.min(1, balance));
     const left = b <= 0 ? 1 : 1 - b;
     const right = b >= 0 ? 1 : 1 + b;
@@ -335,11 +458,11 @@ export class AudioEngine {
       const v = (data[i] - 128) / 128;
       sum += v * v;
     }
-    return Math.sqrt(sum / data.length); // 0..1
+    return Math.sqrt(sum / data.length);
   }
 
   getReduction(): number {
-    return this.compressor?.reduction ?? 0; // negative dB
+    return this.compressor?.reduction ?? 0;
   }
 
   async stop() {
@@ -361,4 +484,31 @@ export class AudioEngine {
 
 function dbToGain(db: number) {
   return Math.pow(10, db / 20);
+}
+
+function saveFingerprint(fp: Float32Array | null) {
+  try {
+    if (!fp) {
+      localStorage.removeItem(FP_STORAGE_KEY);
+      return;
+    }
+    localStorage.setItem(
+      FP_STORAGE_KEY,
+      JSON.stringify(Array.from(fp)),
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadFingerprint(): Float32Array | null {
+  try {
+    const raw = localStorage.getItem(FP_STORAGE_KEY);
+    if (!raw) return null;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr) || arr.length === 0) return null;
+    return Float32Array.from(arr);
+  } catch {
+    return null;
+  }
 }
