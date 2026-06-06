@@ -5,7 +5,7 @@ import {
   ENVIRONMENTS,
   type EnvironmentPreset,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw } from "lucide-react";
+import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, UserCheck, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,6 +41,46 @@ function Index() {
   const [bass, setBass] = useState(0);
   const [mid, setMid] = useState(0);
   const [treble, setTreble] = useState(0);
+  const [hasFingerprint, setHasFingerprint] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollPrompt, setEnrollPrompt] = useState(false);
+
+  useEffect(() => {
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    setHasFingerprint(e.hasVoiceFingerprint());
+  }, []);
+
+  const enrollVoice = async (autoStart = false) => {
+    setError(null);
+    setEnrolling(true);
+    try {
+      const e = engineRef.current ?? new AudioEngine();
+      engineRef.current = e;
+      await e.captureVoiceFingerprint(3500);
+      setHasFingerprint(true);
+      setEnrollPrompt(false);
+      if (autoStart) {
+        await e.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
+        await requestWakeLock();
+        setRunning(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo identificar tu voz. Inténtalo de nuevo.",
+      );
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const clearFingerprint = () => {
+    engineRef.current?.setVoiceFingerprint(null);
+    setHasFingerprint(false);
+  };
 
   const applyEq = (b: number, m: number, t: number) => {
     setBass(b); setMid(m); setTreble(t);
@@ -97,6 +137,10 @@ function Index() {
 
   const start = async () => {
     setError(null);
+    if (!hasFingerprint) {
+      setEnrollPrompt(true);
+      return;
+    }
     try {
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
@@ -349,6 +393,94 @@ function Index() {
               ))}
             </div>
 
+            <div className="mt-4 rounded-xl bg-card p-3 shadow-sm">
+              <div className="mb-1 flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" aria-hidden />
+                <h3 className="text-base font-bold">Tu voz</h3>
+                <span className={[
+                  "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
+                  hasFingerprint
+                    ? "bg-success/20 text-success-foreground"
+                    : "bg-muted text-muted-foreground",
+                ].join(" ")}>
+                  {hasFingerprint ? "Identificada" : "Sin identificar"}
+                </span>
+              </div>
+              <p className="mb-2 text-sm text-muted-foreground">
+                La app aprende tu voz para silenciarla solo a ti cuando hables, y
+                filtra los sonidos que no son voz humana.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => enrollVoice(false)}
+                  disabled={enrolling}
+                  className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
+                >
+                  {enrolling ? "Escuchando..." : hasFingerprint ? "Reidentificar" : "Identificar mi voz"}
+                </button>
+                {hasFingerprint && (
+                  <button
+                    onClick={clearFingerprint}
+                    className="rounded-lg border-2 border-border bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground active:scale-[0.97]"
+                  >
+                    Borrar
+                  </button>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {enrollPrompt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4"
+          role="dialog"
+          aria-label="Identificar tu voz"
+        >
+          <div className="w-full max-w-sm rounded-2xl bg-card p-4 shadow-xl">
+            <div className="mb-2 flex items-center gap-2">
+              <UserCheck className="h-6 w-6 text-primary" aria-hidden />
+              <h2 className="text-lg font-bold">Identifica tu voz</h2>
+            </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Antes de empezar, di en voz alta una frase normal durante ~3
+              segundos. Esto permite silenciar solo tu voz cuando hables, y
+              filtrar los ruidos que no sean voces.
+            </p>
+            {error && (
+              <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border-2 border-destructive/40 bg-destructive/10 p-2">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
+                <p className="text-sm text-foreground">{error}</p>
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => enrollVoice(true)}
+                disabled={enrolling}
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-3 text-base font-bold text-primary-foreground active:scale-[0.98] disabled:opacity-60"
+              >
+                {enrolling ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                    Escuchando tu voz...
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-5 w-5" aria-hidden />
+                    Empezar a grabar
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setEnrollPrompt(false)}
+                disabled={enrolling}
+                className="rounded-xl border-2 border-border bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground active:scale-[0.97] disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
