@@ -113,7 +113,7 @@ export class AudioEngine {
   private gateTimer = 0;
   private gateOpen = true;
   private voiceFingerprint: Float32Array | null = null;
-  private levelBuffer: Uint8Array | null = null;
+  private levelBuffer: Uint8Array<ArrayBuffer> | null = null;
 
   constructor() {
     this.voiceFingerprint = loadActiveFingerprint() ?? loadFingerprint();
@@ -134,7 +134,11 @@ export class AudioEngine {
   }
 
   getVoiceProfiles(): VoiceProfile[] {
-    return loadVoiceProfiles().map(({ fingerprint: _fingerprint, ...profile }) => profile);
+    return loadVoiceProfiles().map((stored) => ({
+      id: stored.id,
+      name: stored.name,
+      createdAt: stored.createdAt,
+    }));
   }
 
   getActiveVoiceProfileId(): string | null {
