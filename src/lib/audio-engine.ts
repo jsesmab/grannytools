@@ -63,6 +63,8 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
 
 const BAND_FREQS = [250, 500, 1000, 2000, 4000];
 const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
+const FP_PROFILES_KEY = "oyebien.voiceProfiles.v1";
+const ACTIVE_FP_PROFILE_KEY = "oyebien.activeVoiceProfile.v1";
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
@@ -74,6 +76,16 @@ export interface EqOffsets {
   bass: number;
   mid: number;
   treble: number;
+}
+
+export interface VoiceProfile {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+interface StoredVoiceProfile extends VoiceProfile {
+  fingerprint: number[];
 }
 
 export class AudioEngine {
@@ -98,12 +110,13 @@ export class AudioEngine {
   private analyser!: AnalyserNode;
   private inputAnalyser!: AnalyserNode;
   private running = false;
-  private gateRaf = 0;
+  private gateTimer = 0;
   private gateOpen = true;
   private voiceFingerprint: Float32Array | null = null;
+  private levelBuffer: Uint8Array<ArrayBuffer> | null = null;
 
   constructor() {
-    this.voiceFingerprint = loadFingerprint();
+    this.voiceFingerprint = loadActiveFingerprint() ?? loadFingerprint();
   }
 
   isRunning() {
@@ -117,6 +130,54 @@ export class AudioEngine {
   setVoiceFingerprint(fp: Float32Array | null) {
     this.voiceFingerprint = fp;
     saveFingerprint(fp);
+    if (!fp) saveActiveProfileId(null);
+  }
+
+  getVoiceProfiles(): VoiceProfile[] {
+    return loadVoiceProfiles().map((stored) => ({
+      id: stored.id,
+      name: stored.name,
+      createdAt: stored.createdAt,
+    }));
+  }
+
+  getActiveVoiceProfileId(): string | null {
+    return loadActiveProfileId();
+  }
+
+  saveCurrentVoiceProfile(name: string, id?: string): VoiceProfile | null {
+    if (!this.voiceFingerprint) return null;
+    const cleanName = name.trim() || "Voz principal";
+    const profiles = loadVoiceProfiles();
+    const profile: StoredVoiceProfile = {
+      id: id ?? makeVoiceProfileId(),
+      name: cleanName,
+      createdAt: Date.now(),
+      fingerprint: Array.from(this.voiceFingerprint),
+    };
+    const nextProfiles = profiles.filter((p) => p.id !== profile.id).concat(profile);
+    saveVoiceProfiles(nextProfiles);
+    saveActiveProfileId(profile.id);
+    saveFingerprint(this.voiceFingerprint);
+    return { id: profile.id, name: profile.name, createdAt: profile.createdAt };
+  }
+
+  selectVoiceProfile(id: string): boolean {
+    const profile = loadVoiceProfiles().find((p) => p.id === id);
+    if (!profile) return false;
+    this.voiceFingerprint = Float32Array.from(profile.fingerprint);
+    saveFingerprint(this.voiceFingerprint);
+    saveActiveProfileId(profile.id);
+    return true;
+  }
+
+  deleteVoiceProfile(id: string) {
+    const profiles = loadVoiceProfiles().filter((p) => p.id !== id);
+    saveVoiceProfiles(profiles);
+    if (loadActiveProfileId() === id) {
+      saveActiveProfileId(null);
+      this.setVoiceFingerprint(null);
+    }
   }
 
   /**
@@ -124,7 +185,7 @@ export class AudioEngine {
    * magnitude spectrum that represents the speaker's voice timbre.
    * Used later to distinguish the user's own voice from other people's voices.
    */
-  async captureVoiceFingerprint(ms = 3500): Promise<Float32Array> {
+  async captureVoiceFingerprint(ms = 2500): Promise<Float32Array> {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
@@ -144,7 +205,7 @@ export class AudioEngine {
     try {
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();
-      an.fftSize = 1024;
+      an.fftSize = 512;
       an.smoothingTimeConstant = 0.2;
       src.connect(an);
 
@@ -238,7 +299,7 @@ export class AudioEngine {
 
     // Analyser placed before the EQ so detection sees the raw mic signal
     this.inputAnalyser = this.ctx.createAnalyser();
-    this.inputAnalyser.fftSize = 1024;
+    this.inputAnalyser.fftSize = 512;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
     this.currentPreset = opts.preset;
@@ -312,21 +373,17 @@ export class AudioEngine {
   }
 
   /**
-   * Smart gate loop. Two reasons to mute the amplified output:
-   *  - The user is talking (matches the enrolled voice fingerprint at loud level).
-   *  - There is no human voice in the air (only ambient noise) — the AI-style
-   *    voice detector keeps the gate closed so traffic, fans, claps, etc. don't
-   *    get amplified.
-   * Otherwise the gate is open so the conversation around the user comes through.
+   * Lightweight smart gate. It stays open by default and only ducks the output
+   * briefly when the mic signal is loud and similar to the selected voice.
+   * This avoids heavy continuous processing on mobile devices.
    */
   private startGateLoop() {
     const SELF_VOICE_RMS = 0.09; // loudness threshold for "near-field" voice
-    const SIM_THRESHOLD = 0.82; // cosine sim to user fingerprint
-    const SELF_HOLD_MS = 220;
+    const SIM_THRESHOLD = 0.74; // cosine sim to user fingerprint
+    const SELF_HOLD_MS = 260;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
-    const norm = new Float32Array(freqBuf.length);
 
     let lastSelfAt = -Infinity;
 
@@ -345,16 +402,15 @@ export class AudioEngine {
       // Cosine similarity against the enrolled fingerprint.
       let sim = 0;
       if (this.voiceFingerprint) {
+        const compareBins = Math.min(freqBuf.length, this.voiceFingerprint.length);
         let n = 0;
-        for (let i = 0; i < freqBuf.length; i++) {
-          norm[i] = freqBuf[i];
+        for (let i = 0; i < compareBins; i++) {
           n += freqBuf[i] * freqBuf[i];
         }
         n = Math.sqrt(n);
         if (n > 0) {
-          for (let i = 0; i < freqBuf.length; i++) {
-            norm[i] /= n;
-            sim += norm[i] * this.voiceFingerprint[i];
+          for (let i = 0; i < compareBins; i++) {
+            sim += (freqBuf[i] / n) * this.voiceFingerprint[i];
           }
         }
       }
@@ -381,9 +437,9 @@ export class AudioEngine {
           tc,
         );
       }
-      this.gateRaf = requestAnimationFrame(tick);
+      this.gateTimer = window.setTimeout(tick, 80);
     };
-    this.gateRaf = requestAnimationFrame(tick);
+    tick();
   }
 
   applyPreset(preset: EnvironmentPreset) {
@@ -443,7 +499,8 @@ export class AudioEngine {
 
   getLevel(): number {
     if (!this.analyser) return 0;
-    const data = new Uint8Array(this.analyser.fftSize);
+    const data = this.levelBuffer ?? new Uint8Array(this.analyser.fftSize);
+    this.levelBuffer = data;
     this.analyser.getByteTimeDomainData(data);
     let sum = 0;
     for (let i = 0; i < data.length; i++) {
@@ -459,9 +516,9 @@ export class AudioEngine {
 
   async stop() {
     this.running = false;
-    if (this.gateRaf) {
-      cancelAnimationFrame(this.gateRaf);
-      this.gateRaf = 0;
+    if (this.gateTimer) {
+      clearTimeout(this.gateTimer);
+      this.gateTimer = 0;
     }
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
@@ -503,4 +560,65 @@ function loadFingerprint(): Float32Array | null {
   } catch {
     return null;
   }
+}
+
+function loadVoiceProfiles(): StoredVoiceProfile[] {
+  try {
+    const raw = localStorage.getItem(FP_PROFILES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(isStoredVoiceProfile);
+  } catch {
+    return [];
+  }
+}
+
+function saveVoiceProfiles(profiles: StoredVoiceProfile[]) {
+  try {
+    localStorage.setItem(FP_PROFILES_KEY, JSON.stringify(profiles));
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadActiveProfileId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_FP_PROFILE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveProfileId(id: string | null) {
+  try {
+    if (id) localStorage.setItem(ACTIVE_FP_PROFILE_KEY, id);
+    else localStorage.removeItem(ACTIVE_FP_PROFILE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadActiveFingerprint(): Float32Array | null {
+  const activeId = loadActiveProfileId();
+  if (!activeId) return null;
+  const profile = loadVoiceProfiles().find((p) => p.id === activeId);
+  return profile ? Float32Array.from(profile.fingerprint) : null;
+}
+
+function makeVoiceProfileId() {
+  return `voice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isStoredVoiceProfile(value: unknown): value is StoredVoiceProfile {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoredVoiceProfile>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.createdAt === "number" &&
+    Array.isArray(candidate.fingerprint) &&
+    candidate.fingerprint.length > 0 &&
+    candidate.fingerprint.every((n) => typeof n === "number")
+  );
 }

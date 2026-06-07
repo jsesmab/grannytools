@@ -4,6 +4,7 @@ import {
   AudioEngine,
   ENVIRONMENTS,
   type EnvironmentPreset,
+  type VoiceProfile,
 } from "@/lib/audio-engine";
 import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, UserCheck, Loader2 } from "lucide-react";
 
@@ -44,11 +45,20 @@ function Index() {
   const [hasFingerprint, setHasFingerprint] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollPrompt, setEnrollPrompt] = useState(false);
+  const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([]);
+  const [activeVoiceId, setActiveVoiceId] = useState<string | null>(null);
+  const [voiceName, setVoiceName] = useState("Voz principal");
+
+  const refreshVoiceState = (engine: AudioEngine) => {
+    setHasFingerprint(engine.hasVoiceFingerprint());
+    setVoiceProfiles(engine.getVoiceProfiles());
+    setActiveVoiceId(engine.getActiveVoiceProfileId());
+  };
 
   useEffect(() => {
     const e = engineRef.current ?? new AudioEngine();
     engineRef.current = e;
-    setHasFingerprint(e.hasVoiceFingerprint());
+    refreshVoiceState(e);
   }, []);
 
   const enrollVoice = async (autoStart = false) => {
@@ -57,8 +67,19 @@ function Index() {
     try {
       const e = engineRef.current ?? new AudioEngine();
       engineRef.current = e;
-      await e.captureVoiceFingerprint(3500);
-      setHasFingerprint(true);
+      if (running) {
+        void e.stop();
+        try { void wakeLockRef.current?.release(); } catch { /* ignore */ }
+        wakeLockRef.current = null;
+        setRunning(false);
+        setLevel(0);
+      }
+      await e.captureVoiceFingerprint(2500);
+      const selectedProfile = voiceProfiles.find((profile) => profile.id === activeVoiceId);
+      const profileIdToReplace =
+        selectedProfile?.name.trim() === voiceName.trim() ? activeVoiceId ?? undefined : undefined;
+      e.saveCurrentVoiceProfile(voiceName, profileIdToReplace);
+      refreshVoiceState(e);
       setEnrollPrompt(false);
       if (autoStart) {
         await e.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
@@ -79,7 +100,22 @@ function Index() {
 
   const clearFingerprint = () => {
     engineRef.current?.setVoiceFingerprint(null);
-    setHasFingerprint(false);
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    refreshVoiceState(e);
+  };
+
+  const selectVoiceProfile = (id: string) => {
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    if (e.selectVoiceProfile(id)) refreshVoiceState(e);
+  };
+
+  const deleteVoiceProfile = (id: string) => {
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    e.deleteVoiceProfile(id);
+    refreshVoiceState(e);
   };
 
   const applyEq = (b: number, m: number, t: number) => {
@@ -95,14 +131,14 @@ function Index() {
   // Audio level meter loop
   useEffect(() => {
     if (!running) return;
-    let raf = 0;
+    let timer = 0;
     const tick = () => {
       const e = engineRef.current;
       if (e) setLevel(e.getLevel());
-      raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    tick();
+    timer = window.setInterval(tick, 120);
+    return () => clearInterval(timer);
   }, [running]);
 
   // Cleanup on unmount
@@ -407,16 +443,24 @@ function Index() {
                 </span>
               </div>
               <p className="mb-2 text-sm text-muted-foreground">
-                La app aprende tu voz para silenciarla solo a ti cuando hables, y
-                filtra los sonidos que no son voz humana.
+                Elige o graba una voz para silenciar a quien lleva los cascos cuando hable.
               </p>
-              <div className="flex gap-2">
+              <label className="mb-2 block text-sm font-bold">
+                Nombre
+                <input
+                  value={voiceName}
+                  onChange={(event) => setVoiceName(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
+                  placeholder="Ej. María, Papá, Voz principal"
+                />
+              </label>
+              <div className="mb-3 flex gap-2">
                 <button
                   onClick={() => enrollVoice(false)}
                   disabled={enrolling}
                   className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
                 >
-                  {enrolling ? "Escuchando..." : hasFingerprint ? "Reidentificar" : "Identificar mi voz"}
+                  {enrolling ? "Escuchando..." : hasFingerprint ? "Regrabar voz" : "Grabar voz"}
                 </button>
                 {hasFingerprint && (
                   <button
@@ -427,6 +471,36 @@ function Index() {
                   </button>
                 )}
               </div>
+              {voiceProfiles.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold">Voces favoritas</h4>
+                  {voiceProfiles.map((profile) => {
+                    const active = profile.id === activeVoiceId;
+                    return (
+                      <div key={profile.id} className="flex items-center gap-2 rounded-lg bg-background p-2">
+                        <button
+                          onClick={() => selectVoiceProfile(profile.id)}
+                          className={[
+                            "min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm font-bold active:scale-[0.98]",
+                            active
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          <span className="block truncate">{profile.name}</span>
+                        </button>
+                        <button
+                          onClick={() => deleteVoiceProfile(profile.id)}
+                          aria-label={`Borrar ${profile.name}`}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground active:scale-[0.95]"
+                        >
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
           </div>
@@ -446,9 +520,17 @@ function Index() {
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
               Antes de empezar, di en voz alta una frase normal durante ~3
-              segundos. Esto permite silenciar solo tu voz cuando hables, y
-              filtrar los ruidos que no sean voces.
+              segundos. Esto permite silenciar la voz de quien lleva los cascos.
             </p>
+            <label className="mb-3 block text-sm font-bold">
+              Nombre de la voz
+              <input
+                value={voiceName}
+                onChange={(event) => setVoiceName(event.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
+                placeholder="Ej. María, Papá, Voz principal"
+              />
+            </label>
             {error && (
               <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border-2 border-destructive/40 bg-destructive/10 p-2">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
@@ -457,7 +539,7 @@ function Index() {
             )}
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => enrollVoice(true)}
+                onClick={() => enrollVoice(false)}
                 disabled={enrolling}
                 className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-3 text-base font-bold text-primary-foreground active:scale-[0.98] disabled:opacity-60"
               >
