@@ -515,9 +515,17 @@ function Index() {
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
               Antes de empezar, di en voz alta una frase normal durante ~3
-              segundos. Esto permite silenciar solo tu voz cuando hables, y
-              filtrar los ruidos que no sean voces.
+              segundos. Esto permite silenciar la voz de quien lleva los cascos.
             </p>
+            <label className="mb-3 block text-sm font-bold">
+              Nombre de la voz
+              <input
+                value={voiceName}
+                onChange={(event) => setVoiceName(event.target.value)}
+                className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
+                placeholder="Ej. María, Papá, Voz principal"
+              />
+            </label>
             {error && (
               <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border-2 border-destructive/40 bg-destructive/10 p-2">
                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
