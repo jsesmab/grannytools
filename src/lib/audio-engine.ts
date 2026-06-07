@@ -561,3 +561,64 @@ function loadFingerprint(): Float32Array | null {
     return null;
   }
 }
+
+function loadVoiceProfiles(): StoredVoiceProfile[] {
+  try {
+    const raw = localStorage.getItem(FP_PROFILES_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(isStoredVoiceProfile);
+  } catch {
+    return [];
+  }
+}
+
+function saveVoiceProfiles(profiles: StoredVoiceProfile[]) {
+  try {
+    localStorage.setItem(FP_PROFILES_KEY, JSON.stringify(profiles));
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadActiveProfileId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_FP_PROFILE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function saveActiveProfileId(id: string | null) {
+  try {
+    if (id) localStorage.setItem(ACTIVE_FP_PROFILE_KEY, id);
+    else localStorage.removeItem(ACTIVE_FP_PROFILE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function loadActiveFingerprint(): Float32Array | null {
+  const activeId = loadActiveProfileId();
+  if (!activeId) return null;
+  const profile = loadVoiceProfiles().find((p) => p.id === activeId);
+  return profile ? Float32Array.from(profile.fingerprint) : null;
+}
+
+function makeVoiceProfileId() {
+  return `voice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isStoredVoiceProfile(value: unknown): value is StoredVoiceProfile {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<StoredVoiceProfile>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    typeof candidate.createdAt === "number" &&
+    Array.isArray(candidate.fingerprint) &&
+    candidate.fingerprint.length > 0 &&
+    candidate.fingerprint.every((n) => typeof n === "number")
+  );
+}
