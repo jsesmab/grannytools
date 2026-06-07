@@ -201,7 +201,7 @@ export class AudioEngine {
     try {
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();
-      an.fftSize = 1024;
+      an.fftSize = 512;
       an.smoothingTimeConstant = 0.2;
       src.connect(an);
 
@@ -295,7 +295,7 @@ export class AudioEngine {
 
     // Analyser placed before the EQ so detection sees the raw mic signal
     this.inputAnalyser = this.ctx.createAnalyser();
-    this.inputAnalyser.fftSize = 1024;
+    this.inputAnalyser.fftSize = 512;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
     this.currentPreset = opts.preset;
@@ -369,21 +369,17 @@ export class AudioEngine {
   }
 
   /**
-   * Smart gate loop. Two reasons to mute the amplified output:
-   *  - The user is talking (matches the enrolled voice fingerprint at loud level).
-   *  - There is no human voice in the air (only ambient noise) — the AI-style
-   *    voice detector keeps the gate closed so traffic, fans, claps, etc. don't
-   *    get amplified.
-   * Otherwise the gate is open so the conversation around the user comes through.
+   * Lightweight smart gate. It stays open by default and only ducks the output
+   * briefly when the mic signal is loud and similar to the selected voice.
+   * This avoids heavy continuous processing on mobile devices.
    */
   private startGateLoop() {
     const SELF_VOICE_RMS = 0.09; // loudness threshold for "near-field" voice
-    const SIM_THRESHOLD = 0.82; // cosine sim to user fingerprint
-    const SELF_HOLD_MS = 220;
+    const SIM_THRESHOLD = 0.74; // cosine sim to user fingerprint
+    const SELF_HOLD_MS = 260;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
-    const norm = new Float32Array(freqBuf.length);
 
     let lastSelfAt = -Infinity;
 
@@ -402,16 +398,15 @@ export class AudioEngine {
       // Cosine similarity against the enrolled fingerprint.
       let sim = 0;
       if (this.voiceFingerprint) {
+        const compareBins = Math.min(freqBuf.length, this.voiceFingerprint.length);
         let n = 0;
-        for (let i = 0; i < freqBuf.length; i++) {
-          norm[i] = freqBuf[i];
+        for (let i = 0; i < compareBins; i++) {
           n += freqBuf[i] * freqBuf[i];
         }
         n = Math.sqrt(n);
         if (n > 0) {
-          for (let i = 0; i < freqBuf.length; i++) {
-            norm[i] /= n;
-            sim += norm[i] * this.voiceFingerprint[i];
+          for (let i = 0; i < compareBins; i++) {
+            sim += (freqBuf[i] / n) * this.voiceFingerprint[i];
           }
         }
       }
@@ -438,9 +433,9 @@ export class AudioEngine {
           tc,
         );
       }
-      this.gateRaf = requestAnimationFrame(tick);
+      this.gateTimer = window.setTimeout(tick, 80);
     };
-    this.gateRaf = requestAnimationFrame(tick);
+    tick();
   }
 
   applyPreset(preset: EnvironmentPreset) {
@@ -500,7 +495,8 @@ export class AudioEngine {
 
   getLevel(): number {
     if (!this.analyser) return 0;
-    const data = new Uint8Array(this.analyser.fftSize);
+    const data = this.levelBuffer ?? new Uint8Array(this.analyser.fftSize);
+    this.levelBuffer = data;
     this.analyser.getByteTimeDomainData(data);
     let sum = 0;
     for (let i = 0; i < data.length; i++) {
@@ -516,9 +512,9 @@ export class AudioEngine {
 
   async stop() {
     this.running = false;
-    if (this.gateRaf) {
-      cancelAnimationFrame(this.gateRaf);
-      this.gateRaf = 0;
+    if (this.gateTimer) {
+      clearTimeout(this.gateTimer);
+      this.gateTimer = 0;
     }
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
