@@ -68,7 +68,9 @@ function Index() {
       const e = engineRef.current ?? new AudioEngine();
       engineRef.current = e;
       if (running) {
-        await e.stop();
+        void e.stop();
+        try { void wakeLockRef.current?.release(); } catch { /* ignore */ }
+        wakeLockRef.current = null;
         setRunning(false);
         setLevel(0);
       }
