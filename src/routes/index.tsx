@@ -67,6 +67,11 @@ function Index() {
     try {
       const e = engineRef.current ?? new AudioEngine();
       engineRef.current = e;
+      if (running) {
+        await e.stop();
+        setRunning(false);
+        setLevel(0);
+      }
       await e.captureVoiceFingerprint(2500);
       e.saveCurrentVoiceProfile(voiceName);
       refreshVoiceState(e);
@@ -121,14 +126,14 @@ function Index() {
   // Audio level meter loop
   useEffect(() => {
     if (!running) return;
-    let raf = 0;
+    let timer = 0;
     const tick = () => {
       const e = engineRef.current;
       if (e) setLevel(e.getLevel());
-      raf = requestAnimationFrame(tick);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    tick();
+    timer = window.setInterval(tick, 120);
+    return () => clearInterval(timer);
   }, [running]);
 
   // Cleanup on unmount
