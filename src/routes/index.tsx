@@ -4,6 +4,7 @@ import {
   AudioEngine,
   ENVIRONMENTS,
   type EnvironmentPreset,
+  type VoiceProfile,
 } from "@/lib/audio-engine";
 import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, UserCheck, Loader2 } from "lucide-react";
 
@@ -44,11 +45,20 @@ function Index() {
   const [hasFingerprint, setHasFingerprint] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollPrompt, setEnrollPrompt] = useState(false);
+  const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([]);
+  const [activeVoiceId, setActiveVoiceId] = useState<string | null>(null);
+  const [voiceName, setVoiceName] = useState("Voz principal");
+
+  const refreshVoiceState = (engine: AudioEngine) => {
+    setHasFingerprint(engine.hasVoiceFingerprint());
+    setVoiceProfiles(engine.getVoiceProfiles());
+    setActiveVoiceId(engine.getActiveVoiceProfileId());
+  };
 
   useEffect(() => {
     const e = engineRef.current ?? new AudioEngine();
     engineRef.current = e;
-    setHasFingerprint(e.hasVoiceFingerprint());
+    refreshVoiceState(e);
   }, []);
 
   const enrollVoice = async (autoStart = false) => {
@@ -57,8 +67,9 @@ function Index() {
     try {
       const e = engineRef.current ?? new AudioEngine();
       engineRef.current = e;
-      await e.captureVoiceFingerprint(3500);
-      setHasFingerprint(true);
+      await e.captureVoiceFingerprint(2500);
+      e.saveCurrentVoiceProfile(voiceName);
+      refreshVoiceState(e);
       setEnrollPrompt(false);
       if (autoStart) {
         await e.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
@@ -79,7 +90,22 @@ function Index() {
 
   const clearFingerprint = () => {
     engineRef.current?.setVoiceFingerprint(null);
-    setHasFingerprint(false);
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    refreshVoiceState(e);
+  };
+
+  const selectVoiceProfile = (id: string) => {
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    if (e.selectVoiceProfile(id)) refreshVoiceState(e);
+  };
+
+  const deleteVoiceProfile = (id: string) => {
+    const e = engineRef.current ?? new AudioEngine();
+    engineRef.current = e;
+    e.deleteVoiceProfile(id);
+    refreshVoiceState(e);
   };
 
   const applyEq = (b: number, m: number, t: number) => {
