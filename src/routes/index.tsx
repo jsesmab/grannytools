@@ -75,7 +75,10 @@ function Index() {
         setLevel(0);
       }
       await e.captureVoiceFingerprint(2500);
-      e.saveCurrentVoiceProfile(voiceName);
+      const selectedProfile = voiceProfiles.find((profile) => profile.id === activeVoiceId);
+      const profileIdToReplace =
+        selectedProfile?.name.trim() === voiceName.trim() ? activeVoiceId ?? undefined : undefined;
+      e.saveCurrentVoiceProfile(voiceName, profileIdToReplace);
       refreshVoiceState(e);
       setEnrollPrompt(false);
       if (autoStart) {
