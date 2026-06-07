@@ -438,16 +438,24 @@ function Index() {
                 </span>
               </div>
               <p className="mb-2 text-sm text-muted-foreground">
-                La app aprende tu voz para silenciarla solo a ti cuando hables, y
-                filtra los sonidos que no son voz humana.
+                Elige o graba una voz para silenciar a quien lleva los cascos cuando hable.
               </p>
-              <div className="flex gap-2">
+              <label className="mb-2 block text-sm font-bold">
+                Nombre
+                <input
+                  value={voiceName}
+                  onChange={(event) => setVoiceName(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
+                  placeholder="Ej. María, Papá, Voz principal"
+                />
+              </label>
+              <div className="mb-3 flex gap-2">
                 <button
                   onClick={() => enrollVoice(false)}
                   disabled={enrolling}
                   className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
                 >
-                  {enrolling ? "Escuchando..." : hasFingerprint ? "Reidentificar" : "Identificar mi voz"}
+                  {enrolling ? "Escuchando..." : hasFingerprint ? "Regrabar voz" : "Grabar voz"}
                 </button>
                 {hasFingerprint && (
                   <button
@@ -458,6 +466,36 @@ function Index() {
                   </button>
                 )}
               </div>
+              {voiceProfiles.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-bold">Voces favoritas</h4>
+                  {voiceProfiles.map((profile) => {
+                    const active = profile.id === activeVoiceId;
+                    return (
+                      <div key={profile.id} className="flex items-center gap-2 rounded-lg bg-background p-2">
+                        <button
+                          onClick={() => selectVoiceProfile(profile.id)}
+                          className={[
+                            "min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm font-bold active:scale-[0.98]",
+                            active
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          <span className="block truncate">{profile.name}</span>
+                        </button>
+                        <button
+                          onClick={() => deleteVoiceProfile(profile.id)}
+                          aria-label={`Borrar ${profile.name}`}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground active:scale-[0.95]"
+                        >
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
           </div>
