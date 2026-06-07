@@ -63,6 +63,8 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
 
 const BAND_FREQS = [250, 500, 1000, 2000, 4000];
 const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
+const FP_PROFILES_KEY = "oyebien.voiceProfiles.v1";
+const ACTIVE_FP_PROFILE_KEY = "oyebien.activeVoiceProfile.v1";
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
@@ -74,6 +76,16 @@ export interface EqOffsets {
   bass: number;
   mid: number;
   treble: number;
+}
+
+export interface VoiceProfile {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+interface StoredVoiceProfile extends VoiceProfile {
+  fingerprint: number[];
 }
 
 export class AudioEngine {
@@ -98,12 +110,13 @@ export class AudioEngine {
   private analyser!: AnalyserNode;
   private inputAnalyser!: AnalyserNode;
   private running = false;
-  private gateRaf = 0;
+  private gateTimer = 0;
   private gateOpen = true;
   private voiceFingerprint: Float32Array | null = null;
+  private levelBuffer: Uint8Array | null = null;
 
   constructor() {
-    this.voiceFingerprint = loadFingerprint();
+    this.voiceFingerprint = loadActiveFingerprint() ?? loadFingerprint();
   }
 
   isRunning() {
@@ -117,6 +130,50 @@ export class AudioEngine {
   setVoiceFingerprint(fp: Float32Array | null) {
     this.voiceFingerprint = fp;
     saveFingerprint(fp);
+    if (!fp) saveActiveProfileId(null);
+  }
+
+  getVoiceProfiles(): VoiceProfile[] {
+    return loadVoiceProfiles().map(({ fingerprint: _fingerprint, ...profile }) => profile);
+  }
+
+  getActiveVoiceProfileId(): string | null {
+    return loadActiveProfileId();
+  }
+
+  saveCurrentVoiceProfile(name: string, id?: string): VoiceProfile | null {
+    if (!this.voiceFingerprint) return null;
+    const cleanName = name.trim() || "Voz principal";
+    const profiles = loadVoiceProfiles();
+    const profile: StoredVoiceProfile = {
+      id: id ?? makeVoiceProfileId(),
+      name: cleanName,
+      createdAt: Date.now(),
+      fingerprint: Array.from(this.voiceFingerprint),
+    };
+    const nextProfiles = profiles.filter((p) => p.id !== profile.id).concat(profile);
+    saveVoiceProfiles(nextProfiles);
+    saveActiveProfileId(profile.id);
+    saveFingerprint(this.voiceFingerprint);
+    return { id: profile.id, name: profile.name, createdAt: profile.createdAt };
+  }
+
+  selectVoiceProfile(id: string): boolean {
+    const profile = loadVoiceProfiles().find((p) => p.id === id);
+    if (!profile) return false;
+    this.voiceFingerprint = Float32Array.from(profile.fingerprint);
+    saveFingerprint(this.voiceFingerprint);
+    saveActiveProfileId(profile.id);
+    return true;
+  }
+
+  deleteVoiceProfile(id: string) {
+    const profiles = loadVoiceProfiles().filter((p) => p.id !== id);
+    saveVoiceProfiles(profiles);
+    if (loadActiveProfileId() === id) {
+      saveActiveProfileId(null);
+      this.setVoiceFingerprint(null);
+    }
   }
 
   /**
@@ -124,7 +181,7 @@ export class AudioEngine {
    * magnitude spectrum that represents the speaker's voice timbre.
    * Used later to distinguish the user's own voice from other people's voices.
    */
-  async captureVoiceFingerprint(ms = 3500): Promise<Float32Array> {
+  async captureVoiceFingerprint(ms = 2500): Promise<Float32Array> {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
