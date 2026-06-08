@@ -263,7 +263,7 @@ export class AudioEngine {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
-        noiseSuppression: false,
+        noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
       },
@@ -291,7 +291,7 @@ export class AudioEngine {
 
     this.lowpass = this.ctx.createBiquadFilter();
     this.lowpass.type = "lowpass";
-    this.lowpass.frequency.value = 7000;
+    this.lowpass.frequency.value = 5200;
     this.lowpass.Q.value = 0.707;
 
     // Analyser placed before the EQ so detection sees the raw mic signal
@@ -375,14 +375,17 @@ export class AudioEngine {
    * This avoids heavy continuous processing on mobile devices.
    */
   private startGateLoop() {
-    const SELF_VOICE_RMS = 0.09; // loudness threshold for "near-field" voice
-    const SIM_THRESHOLD = 0.74; // cosine sim to user fingerprint
-    const SELF_HOLD_MS = 260;
+    const SELF_VOICE_RMS = 0.055; // near-field voice is much louder than room voices
+    const SIM_THRESHOLD = 0.58; // log-band match to the selected speaker profile
+    const MIN_VOICE_RMS = 0.012;
+    const SELF_HOLD_MS = 360;
+    const VOICE_HOLD_MS = 420;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
 
     let lastSelfAt = -Infinity;
+    let lastVoiceAt = -Infinity;
 
     const tick = () => {
       if (!this.running || !this.ctx) return;
@@ -396,38 +399,37 @@ export class AudioEngine {
       }
       const rms = Math.sqrt(sum / timeBuf.length);
 
-      // Cosine similarity against the enrolled fingerprint.
+      const features = makeVoiceFeatures(freqBuf, this.ctx.sampleRate);
+      const voiceStats = getVoiceStats(freqBuf, this.ctx.sampleRate);
+
+      // Cosine similarity against the enrolled voice profile.
       let sim = 0;
       if (this.voiceFingerprint) {
-        const compareBins = Math.min(freqBuf.length, this.voiceFingerprint.length);
-        let n = 0;
-        for (let i = 0; i < compareBins; i++) {
-          n += freqBuf[i] * freqBuf[i];
-        }
-        n = Math.sqrt(n);
-        if (n > 0) {
-          for (let i = 0; i < compareBins; i++) {
-            sim += (freqBuf[i] / n) * this.voiceFingerprint[i];
-          }
-        }
+        const compareBins = Math.min(features.length, this.voiceFingerprint.length);
+        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint[i];
       }
 
       const now = performance.now();
-      // Self-voice = loud AND (matches fingerprint, or no fingerprint yet)
+      const isLikelyVoice =
+        rms >= MIN_VOICE_RMS &&
+        voiceStats.voiceRatio >= 0.48 &&
+        voiceStats.lowRatio <= 0.42 &&
+        voiceStats.highRatio <= 0.36;
       const isSelf =
         rms >= SELF_VOICE_RMS &&
-        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : true);
+        isLikelyVoice &&
+        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : false);
+      if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
-      // Gate is OPEN by default (so the conversation always comes through).
-      // It only closes briefly when the user himself is talking.
-      const shouldOpen = now - lastSelfAt >= SELF_HOLD_MS;
+      // Open only for speech-like sound, and close for the selected user's voice.
+      const shouldOpen = now - lastVoiceAt < VOICE_HOLD_MS && now - lastSelfAt >= SELF_HOLD_MS;
 
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
         // Fast close to kill self-voice / sudden noise, slightly slower open
         // so the conversation fades back in naturally.
-        const tc = shouldOpen ? 0.04 : 0.008;
+        const tc = shouldOpen ? 0.035 : 0.012;
         this.gate.gain.setTargetAtTime(
           shouldOpen ? 1 : 0,
           this.ctx.currentTime,
