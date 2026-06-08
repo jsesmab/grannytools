@@ -23,41 +23,41 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     id: "conversacion",
     label: "Conversación",
     description: "Realza voces cercanas con poco ruido de fondo.",
-    bandsDb: [-2, 2, 6, 8, 5],
+    bandsDb: [-5, -1, 7, 9, 4],
     threshold: -28,
     ratio: 3,
-    makeupDb: 10,
-    highpassHz: 150,
+    makeupDb: 8,
+    highpassHz: 220,
   },
   {
     id: "tv",
     label: "TV",
     description: "Claridad en diálogos de televisión.",
-    bandsDb: [-3, 1, 5, 7, 6],
+    bandsDb: [-5, -1, 6, 8, 5],
     threshold: -26,
     ratio: 2.5,
-    makeupDb: 8,
-    highpassHz: 120,
+    makeupDb: 7,
+    highpassHz: 180,
   },
   {
     id: "restaurante",
     label: "Restaurante",
     description: "Reduce ruido grave de fondo y enfoca la voz.",
-    bandsDb: [-8, -4, 4, 9, 7],
+    bandsDb: [-10, -6, 5, 10, 6],
     threshold: -22,
     ratio: 5,
-    makeupDb: 9,
-    highpassHz: 250,
+    makeupDb: 7,
+    highpassHz: 320,
   },
   {
     id: "calle",
     label: "Calle",
     description: "Atenúa tráfico y viento, prioriza voz y alertas.",
-    bandsDb: [-10, -6, 3, 8, 8],
+    bandsDb: [-12, -8, 4, 9, 7],
     threshold: -20,
     ratio: 7,
-    makeupDb: 7,
-    highpassHz: 300,
+    makeupDb: 6,
+    highpassHz: 380,
   },
 ];
 
@@ -189,7 +189,7 @@ export class AudioEngine {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
-        noiseSuppression: false,
+        noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
       },
@@ -244,12 +244,9 @@ export class AudioEngine {
         frames = 1;
       }
       for (let i = 0; i < bins; i++) avg[i] /= frames;
-      let n = 0;
-      for (let i = 0; i < bins; i++) n += avg[i] * avg[i];
-      n = Math.sqrt(n) || 1;
-      for (let i = 0; i < bins; i++) avg[i] /= n;
-      this.setVoiceFingerprint(avg);
-      return avg;
+      const fingerprint = makeVoiceFeatures(avg, ctx.sampleRate);
+      this.setVoiceFingerprint(fingerprint);
+      return fingerprint;
     } finally {
       stream.getTracks().forEach((t) => t.stop());
       try {
