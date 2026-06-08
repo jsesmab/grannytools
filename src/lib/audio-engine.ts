@@ -534,6 +534,69 @@ function dbToGain(db: number) {
   return Math.pow(10, db / 20);
 }
 
+function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
+  const bands: Array<[number, number]> = [
+    [180, 320],
+    [320, 520],
+    [520, 850],
+    [850, 1300],
+    [1300, 1900],
+    [1900, 2700],
+    [2700, 3800],
+    [3800, 5000],
+  ];
+  const features = new Float32Array(bands.length);
+  const binHz = sampleRate / 2 / spectrum.length;
+
+  bands.forEach(([fromHz, toHz], bandIndex) => {
+    const from = Math.max(1, Math.floor(fromHz / binHz));
+    const to = Math.min(spectrum.length - 1, Math.ceil(toHz / binHz));
+    let sum = 0;
+    let count = 0;
+    for (let i = from; i <= to; i++) {
+      sum += Math.log1p(spectrum[i]);
+      count++;
+    }
+    features[bandIndex] = count ? sum / count : 0;
+  });
+
+  let mean = 0;
+  for (let i = 0; i < features.length; i++) mean += features[i];
+  mean /= features.length;
+  let norm = 0;
+  for (let i = 0; i < features.length; i++) {
+    features[i] -= mean;
+    norm += features[i] * features[i];
+  }
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < features.length; i++) features[i] /= norm;
+  return features;
+}
+
+function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
+  const binHz = sampleRate / 2 / spectrum.length;
+  let low = 0;
+  let voice = 0;
+  let high = 0;
+  let total = 0;
+
+  for (let i = 1; i < spectrum.length; i++) {
+    const hz = i * binHz;
+    const value = spectrum[i] * spectrum[i];
+    if (hz < 220) low += value;
+    if (hz >= 220 && hz <= 4200) voice += value;
+    if (hz > 4200) high += value;
+    total += value;
+  }
+
+  total ||= 1;
+  return {
+    lowRatio: low / total,
+    voiceRatio: voice / total,
+    highRatio: high / total,
+  };
+}
+
 function saveFingerprint(fp: Float32Array | null) {
   try {
     if (!fp) {
