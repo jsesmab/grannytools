@@ -617,7 +617,7 @@ function loadFingerprint(): Float32Array | null {
     const raw = localStorage.getItem(FP_STORAGE_KEY);
     if (!raw) return null;
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr) || arr.length === 0) return null;
+    if (!Array.isArray(arr) || arr.length !== 8) return null;
     return Float32Array.from(arr);
   } catch {
     return null;
@@ -680,7 +680,7 @@ function isStoredVoiceProfile(value: unknown): value is StoredVoiceProfile {
     typeof candidate.name === "string" &&
     typeof candidate.createdAt === "number" &&
     Array.isArray(candidate.fingerprint) &&
-    candidate.fingerprint.length > 0 &&
+    candidate.fingerprint.length === 8 &&
     candidate.fingerprint.every((n) => typeof n === "number")
   );
 }
