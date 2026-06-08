@@ -23,41 +23,41 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     id: "conversacion",
     label: "Conversación",
     description: "Realza voces cercanas con poco ruido de fondo.",
-    bandsDb: [-2, 2, 6, 8, 5],
+    bandsDb: [-5, -1, 7, 9, 4],
     threshold: -28,
     ratio: 3,
-    makeupDb: 10,
-    highpassHz: 150,
+    makeupDb: 8,
+    highpassHz: 220,
   },
   {
     id: "tv",
     label: "TV",
     description: "Claridad en diálogos de televisión.",
-    bandsDb: [-3, 1, 5, 7, 6],
+    bandsDb: [-5, -1, 6, 8, 5],
     threshold: -26,
     ratio: 2.5,
-    makeupDb: 8,
-    highpassHz: 120,
+    makeupDb: 7,
+    highpassHz: 180,
   },
   {
     id: "restaurante",
     label: "Restaurante",
     description: "Reduce ruido grave de fondo y enfoca la voz.",
-    bandsDb: [-8, -4, 4, 9, 7],
+    bandsDb: [-10, -6, 5, 10, 6],
     threshold: -22,
     ratio: 5,
-    makeupDb: 9,
-    highpassHz: 250,
+    makeupDb: 7,
+    highpassHz: 320,
   },
   {
     id: "calle",
     label: "Calle",
     description: "Atenúa tráfico y viento, prioriza voz y alertas.",
-    bandsDb: [-10, -6, 3, 8, 8],
+    bandsDb: [-12, -8, 4, 9, 7],
     threshold: -20,
     ratio: 7,
-    makeupDb: 7,
-    highpassHz: 300,
+    makeupDb: 6,
+    highpassHz: 380,
   },
 ];
 
@@ -189,7 +189,7 @@ export class AudioEngine {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
-        noiseSuppression: false,
+        noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
       },
@@ -244,12 +244,9 @@ export class AudioEngine {
         frames = 1;
       }
       for (let i = 0; i < bins; i++) avg[i] /= frames;
-      let n = 0;
-      for (let i = 0; i < bins; i++) n += avg[i] * avg[i];
-      n = Math.sqrt(n) || 1;
-      for (let i = 0; i < bins; i++) avg[i] /= n;
-      this.setVoiceFingerprint(avg);
-      return avg;
+      const fingerprint = makeVoiceFeatures(avg, ctx.sampleRate);
+      this.setVoiceFingerprint(fingerprint);
+      return fingerprint;
     } finally {
       stream.getTracks().forEach((t) => t.stop());
       try {
@@ -266,7 +263,7 @@ export class AudioEngine {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         echoCancellation: false,
-        noiseSuppression: false,
+        noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
       },
@@ -294,7 +291,7 @@ export class AudioEngine {
 
     this.lowpass = this.ctx.createBiquadFilter();
     this.lowpass.type = "lowpass";
-    this.lowpass.frequency.value = 7000;
+    this.lowpass.frequency.value = 5200;
     this.lowpass.Q.value = 0.707;
 
     // Analyser placed before the EQ so detection sees the raw mic signal
@@ -378,14 +375,17 @@ export class AudioEngine {
    * This avoids heavy continuous processing on mobile devices.
    */
   private startGateLoop() {
-    const SELF_VOICE_RMS = 0.09; // loudness threshold for "near-field" voice
-    const SIM_THRESHOLD = 0.74; // cosine sim to user fingerprint
-    const SELF_HOLD_MS = 260;
+    const SELF_VOICE_RMS = 0.055; // near-field voice is much louder than room voices
+    const SIM_THRESHOLD = 0.58; // log-band match to the selected speaker profile
+    const MIN_VOICE_RMS = 0.012;
+    const SELF_HOLD_MS = 360;
+    const VOICE_HOLD_MS = 420;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
 
     let lastSelfAt = -Infinity;
+    let lastVoiceAt = -Infinity;
 
     const tick = () => {
       if (!this.running || !this.ctx) return;
@@ -399,38 +399,37 @@ export class AudioEngine {
       }
       const rms = Math.sqrt(sum / timeBuf.length);
 
-      // Cosine similarity against the enrolled fingerprint.
+      const features = makeVoiceFeatures(freqBuf, this.ctx.sampleRate);
+      const voiceStats = getVoiceStats(freqBuf, this.ctx.sampleRate);
+
+      // Cosine similarity against the enrolled voice profile.
       let sim = 0;
       if (this.voiceFingerprint) {
-        const compareBins = Math.min(freqBuf.length, this.voiceFingerprint.length);
-        let n = 0;
-        for (let i = 0; i < compareBins; i++) {
-          n += freqBuf[i] * freqBuf[i];
-        }
-        n = Math.sqrt(n);
-        if (n > 0) {
-          for (let i = 0; i < compareBins; i++) {
-            sim += (freqBuf[i] / n) * this.voiceFingerprint[i];
-          }
-        }
+        const compareBins = Math.min(features.length, this.voiceFingerprint.length);
+        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint[i];
       }
 
       const now = performance.now();
-      // Self-voice = loud AND (matches fingerprint, or no fingerprint yet)
+      const isLikelyVoice =
+        rms >= MIN_VOICE_RMS &&
+        voiceStats.voiceRatio >= 0.48 &&
+        voiceStats.lowRatio <= 0.42 &&
+        voiceStats.highRatio <= 0.36;
       const isSelf =
         rms >= SELF_VOICE_RMS &&
-        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : true);
+        isLikelyVoice &&
+        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : false);
+      if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
-      // Gate is OPEN by default (so the conversation always comes through).
-      // It only closes briefly when the user himself is talking.
-      const shouldOpen = now - lastSelfAt >= SELF_HOLD_MS;
+      // Open only for speech-like sound, and close for the selected user's voice.
+      const shouldOpen = now - lastVoiceAt < VOICE_HOLD_MS && now - lastSelfAt >= SELF_HOLD_MS;
 
       if (shouldOpen !== this.gateOpen) {
         this.gateOpen = shouldOpen;
         // Fast close to kill self-voice / sudden noise, slightly slower open
         // so the conversation fades back in naturally.
-        const tc = shouldOpen ? 0.04 : 0.008;
+        const tc = shouldOpen ? 0.035 : 0.012;
         this.gate.gain.setTargetAtTime(
           shouldOpen ? 1 : 0,
           this.ctx.currentTime,
@@ -535,6 +534,69 @@ function dbToGain(db: number) {
   return Math.pow(10, db / 20);
 }
 
+function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
+  const bands: Array<[number, number]> = [
+    [180, 320],
+    [320, 520],
+    [520, 850],
+    [850, 1300],
+    [1300, 1900],
+    [1900, 2700],
+    [2700, 3800],
+    [3800, 5000],
+  ];
+  const features = new Float32Array(bands.length);
+  const binHz = sampleRate / 2 / spectrum.length;
+
+  bands.forEach(([fromHz, toHz], bandIndex) => {
+    const from = Math.max(1, Math.floor(fromHz / binHz));
+    const to = Math.min(spectrum.length - 1, Math.ceil(toHz / binHz));
+    let sum = 0;
+    let count = 0;
+    for (let i = from; i <= to; i++) {
+      sum += Math.log1p(spectrum[i]);
+      count++;
+    }
+    features[bandIndex] = count ? sum / count : 0;
+  });
+
+  let mean = 0;
+  for (let i = 0; i < features.length; i++) mean += features[i];
+  mean /= features.length;
+  let norm = 0;
+  for (let i = 0; i < features.length; i++) {
+    features[i] -= mean;
+    norm += features[i] * features[i];
+  }
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < features.length; i++) features[i] /= norm;
+  return features;
+}
+
+function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
+  const binHz = sampleRate / 2 / spectrum.length;
+  let low = 0;
+  let voice = 0;
+  let high = 0;
+  let total = 0;
+
+  for (let i = 1; i < spectrum.length; i++) {
+    const hz = i * binHz;
+    const value = spectrum[i] * spectrum[i];
+    if (hz < 220) low += value;
+    if (hz >= 220 && hz <= 4200) voice += value;
+    if (hz > 4200) high += value;
+    total += value;
+  }
+
+  total ||= 1;
+  return {
+    lowRatio: low / total,
+    voiceRatio: voice / total,
+    highRatio: high / total,
+  };
+}
+
 function saveFingerprint(fp: Float32Array | null) {
   try {
     if (!fp) {
@@ -555,7 +617,7 @@ function loadFingerprint(): Float32Array | null {
     const raw = localStorage.getItem(FP_STORAGE_KEY);
     if (!raw) return null;
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr) || arr.length === 0) return null;
+    if (!Array.isArray(arr) || arr.length !== 8) return null;
     return Float32Array.from(arr);
   } catch {
     return null;
@@ -618,7 +680,7 @@ function isStoredVoiceProfile(value: unknown): value is StoredVoiceProfile {
     typeof candidate.name === "string" &&
     typeof candidate.createdAt === "number" &&
     Array.isArray(candidate.fingerprint) &&
-    candidate.fingerprint.length > 0 &&
+    candidate.fingerprint.length === 8 &&
     candidate.fingerprint.every((n) => typeof n === "number")
   );
 }

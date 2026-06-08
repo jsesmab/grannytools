@@ -373,81 +373,6 @@ function Index() {
           />
         </div>
 
-        {/* Tu voz */}
-        <div className="rounded-xl bg-card p-3 shadow-sm">
-          <div className="mb-1 flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-primary" aria-hidden />
-            <h2 className="text-base font-bold">Tu voz</h2>
-            <span className={[
-              "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
-              hasFingerprint
-                ? "bg-success/20 text-success-foreground"
-                : "bg-muted text-muted-foreground",
-            ].join(" ")}>
-              {hasFingerprint ? "Identificada" : "Sin identificar"}
-            </span>
-          </div>
-          <p className="mb-2 text-sm text-muted-foreground">
-            Graba la voz de quien lleva los cascos para silenciarla cuando hable.
-          </p>
-          <label className="mb-2 block text-sm font-bold">
-            Nombre
-            <input
-              value={voiceName}
-              onChange={(event) => setVoiceName(event.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
-              placeholder="Ej. María, Papá, Voz principal"
-            />
-          </label>
-          <div className="mb-3 flex gap-2">
-            <button
-              onClick={() => enrollVoice(false)}
-              disabled={enrolling}
-              className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
-            >
-              {enrolling ? "Escuchando..." : hasFingerprint ? "Regrabar voz" : "Grabar voz"}
-            </button>
-            {hasFingerprint && (
-              <button
-                onClick={clearFingerprint}
-                className="rounded-lg border-2 border-border bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground active:scale-[0.97]"
-              >
-                Borrar
-              </button>
-            )}
-          </div>
-          {voiceProfiles.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold">Voces favoritas</h3>
-              {voiceProfiles.map((profile) => {
-                const active = profile.id === activeVoiceId;
-                return (
-                  <div key={profile.id} className="flex items-center gap-2 rounded-lg bg-background p-2">
-                    <button
-                      onClick={() => selectVoiceProfile(profile.id)}
-                      className={[
-                        "min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm font-bold active:scale-[0.98]",
-                        active
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-secondary-foreground",
-                      ].join(" ")}
-                    >
-                      <span className="block truncate">{profile.name}</span>
-                    </button>
-                    <button
-                      onClick={() => deleteVoiceProfile(profile.id)}
-                      aria-label={`Borrar ${profile.name}`}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground active:scale-[0.95]"
-                    >
-                      <X className="h-4 w-4" aria-hidden />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
       </div>
 
       {eqOpen && (
@@ -456,7 +381,7 @@ function Index() {
           role="dialog"
           aria-label="Ecualizador"
         >
-          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 py-3">
+          <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col overflow-y-auto px-3 py-3">
             <header className="mb-4 flex items-center gap-2">
               <h2 className="text-xl font-bold">Ecualizador</h2>
               <button
@@ -479,7 +404,7 @@ function Index() {
               Ajusta los graves, medios y agudos sobre el preset actual.
             </p>
 
-            <div className="grid flex-1 grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {([
                 { label: "Graves", value: bass, set: (v: number) => applyEq(v, mid, treble) },
                 { label: "Medios", value: mid, set: (v: number) => applyEq(bass, v, treble) },
@@ -503,6 +428,81 @@ function Index() {
                   />
                 </div>
               ))}
+            </div>
+
+            {/* Tu voz */}
+            <div className="mt-3 rounded-xl bg-card p-3 shadow-sm">
+              <div className="mb-1 flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-primary" aria-hidden />
+                <h2 className="text-base font-bold">Tu voz</h2>
+                <span className={[
+                  "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
+                  hasFingerprint
+                    ? "bg-success/20 text-success-foreground"
+                    : "bg-muted text-muted-foreground",
+                ].join(" ")}>
+                  {hasFingerprint ? "Identificada" : "Sin identificar"}
+                </span>
+              </div>
+              <p className="mb-2 text-sm text-muted-foreground">
+                Graba la voz de quien lleva los cascos para silenciarla cuando hable.
+              </p>
+              <label className="mb-2 block text-sm font-bold">
+                Nombre
+                <input
+                  value={voiceName}
+                  onChange={(event) => setVoiceName(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
+                  placeholder="Ej. María, Papá, Voz principal"
+                />
+              </label>
+              <div className="mb-3 flex gap-2">
+                <button
+                  onClick={() => enrollVoice(false)}
+                  disabled={enrolling}
+                  className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
+                >
+                  {enrolling ? "Escuchando..." : hasFingerprint ? "Regrabar voz" : "Grabar voz"}
+                </button>
+                {hasFingerprint && (
+                  <button
+                    onClick={clearFingerprint}
+                    className="rounded-lg border-2 border-border bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground active:scale-[0.97]"
+                  >
+                    Borrar
+                  </button>
+                )}
+              </div>
+              {voiceProfiles.length > 0 && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold">Voces favoritas</h3>
+                  {voiceProfiles.map((profile) => {
+                    const active = profile.id === activeVoiceId;
+                    return (
+                      <div key={profile.id} className="flex items-center gap-2 rounded-lg bg-background p-2">
+                        <button
+                          onClick={() => selectVoiceProfile(profile.id)}
+                          className={[
+                            "min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm font-bold active:scale-[0.98]",
+                            active
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          <span className="block truncate">{profile.name}</span>
+                        </button>
+                        <button
+                          onClick={() => deleteVoiceProfile(profile.id)}
+                          aria-label={`Borrar ${profile.name}`}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground active:scale-[0.95]"
+                        >
+                          <X className="h-4 w-4" aria-hidden />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
 
