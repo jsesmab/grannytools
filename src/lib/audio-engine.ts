@@ -320,6 +320,8 @@ export class AudioEngine {
     this.inputAnalyser.fftSize = 512;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
+    this.noiseSuppressor = await this.createNoiseSuppressorNode();
+
     this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
       const b = this.ctx!.createBiquadFilter();
@@ -365,6 +367,10 @@ export class AudioEngine {
 
     this.source.connect(this.inputAnalyser);
     let node: AudioNode = this.source;
+    if (this.noiseSuppressor) {
+      node.connect(this.noiseSuppressor);
+      node = this.noiseSuppressor;
+    }
     node.connect(this.highpass);
     node = this.highpass;
     node.connect(this.lowpass);
@@ -390,17 +396,33 @@ export class AudioEngine {
     this.startGateLoop();
   }
 
+  private async createNoiseSuppressorNode(): Promise<AudioNode | null> {
+    if (!this.ctx || !("audioWorklet" in this.ctx)) return null;
+    try {
+      const workletModule = await import(
+        "@timephy/rnnoise-wasm/NoiseSuppressorWorklet?worker&url"
+      );
+      await this.ctx.audioWorklet.addModule(workletModule.default);
+      return new AudioWorkletNode(this.ctx, NoiseSuppressorWorklet_Name, {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+      });
+    } catch (error) {
+      console.warn("RNNoise unavailable; using browser noise suppression only", error);
+      return null;
+    }
+  }
+
   /**
    * Lightweight smart gate. It stays open by default and only ducks the output
    * briefly when the mic signal is loud and similar to the selected voice.
    * This avoids heavy continuous processing on mobile devices.
    */
   private startGateLoop() {
-    const SELF_VOICE_RMS = 0.055; // near-field voice is much louder than room voices
-    const SIM_THRESHOLD = 0.58; // log-band match to the selected speaker profile
-    const MIN_VOICE_RMS = 0.012;
-    const SELF_HOLD_MS = 360;
-    const VOICE_HOLD_MS = 420;
+    const MIN_VOICE_RMS = 0.006;
+    const SELF_HOLD_MS = 780;
+    const VOICE_HOLD_MS = 520;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
@@ -413,33 +435,35 @@ export class AudioEngine {
       this.inputAnalyser.getByteTimeDomainData(timeBuf);
       this.inputAnalyser.getByteFrequencyData(freqBuf);
 
-      let sum = 0;
-      for (let i = 0; i < timeBuf.length; i++) {
-        const v = (timeBuf[i] - 128) / 128;
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / timeBuf.length);
+      const rms = getRms(timeBuf);
 
-      const features = makeVoiceFeatures(freqBuf, this.ctx.sampleRate);
+      const features = makeSpeakerFeatures(freqBuf, this.ctx.sampleRate);
       const voiceStats = getVoiceStats(freqBuf, this.ctx.sampleRate);
+      const voiceScore = getVoiceScore(voiceStats, rms);
 
       // Cosine similarity against the enrolled voice profile.
       let sim = 0;
       if (this.voiceFingerprint) {
-        const compareBins = Math.min(features.length, this.voiceFingerprint.length);
-        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint[i];
+        const compareBins = Math.min(features.length, this.voiceFingerprint.features.length);
+        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint.features[i];
       }
 
       const now = performance.now();
-      const isLikelyVoice =
-        rms >= MIN_VOICE_RMS &&
-        voiceStats.voiceRatio >= 0.48 &&
-        voiceStats.lowRatio <= 0.42 &&
-        voiceStats.highRatio <= 0.36;
+      if (voiceScore < 0.38) {
+        this.noiseFloor = this.noiseFloor * 0.96 + rms * 0.04;
+      }
+
+      const fingerprint = this.voiceFingerprint;
+      const dynamicThreshold = Math.max(MIN_VOICE_RMS, this.noiseFloor * 1.65);
+      const enrolledRms = fingerprint?.rms ?? 0.035;
+      const selfRmsFloor = Math.max(dynamicThreshold, enrolledRms * 0.3);
+      const strongSelfMatch = sim >= 0.55 && rms >= selfRmsFloor;
+      const nearFieldSelfMatch = sim >= 0.46 && rms >= Math.max(0.014, enrolledRms * 0.55);
+      const isLikelyVoice = rms >= dynamicThreshold && voiceScore >= 0.5;
       const isSelf =
-        rms >= SELF_VOICE_RMS &&
         isLikelyVoice &&
-        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : false);
+        !!fingerprint &&
+        (strongSelfMatch || nearFieldSelfMatch);
       if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
@@ -452,12 +476,12 @@ export class AudioEngine {
         // so the conversation fades back in naturally.
         const tc = shouldOpen ? 0.035 : 0.012;
         this.gate.gain.setTargetAtTime(
-          shouldOpen ? 1 : 0,
+          shouldOpen ? 1 : 0.015,
           this.ctx.currentTime,
           tc,
         );
       }
-      this.gateTimer = window.setTimeout(tick, 80);
+      this.gateTimer = window.setTimeout(tick, 35);
     };
     tick();
   }
@@ -548,6 +572,7 @@ export class AudioEngine {
       await this.ctx.close();
       this.ctx = null;
     }
+    this.noiseSuppressor = null;
   }
 }
 
