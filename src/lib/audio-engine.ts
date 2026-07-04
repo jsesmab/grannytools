@@ -580,18 +580,23 @@ function dbToGain(db: number) {
   return Math.pow(10, db / 20);
 }
 
-function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
+function makeSpeakerFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
   const bands: Array<[number, number]> = [
-    [180, 320],
-    [320, 520],
-    [520, 850],
-    [850, 1300],
-    [1300, 1900],
-    [1900, 2700],
-    [2700, 3800],
-    [3800, 5000],
+    [120, 200],
+    [200, 300],
+    [300, 430],
+    [430, 600],
+    [600, 820],
+    [820, 1100],
+    [1100, 1450],
+    [1450, 1900],
+    [1900, 2500],
+    [2500, 3300],
+    [3300, 4300],
+    [4300, 5600],
   ];
-  const features = new Float32Array(bands.length);
+  const stats = getVoiceStats(spectrum, sampleRate);
+  const features = new Float32Array(bands.length + 4);
   const binHz = sampleRate / 2 / spectrum.length;
 
   bands.forEach(([fromHz, toHz], bandIndex) => {
@@ -606,6 +611,11 @@ function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
     features[bandIndex] = count ? sum / count : 0;
   });
 
+  features[bands.length] = stats.centroid / 5000;
+  features[bands.length + 1] = stats.voiceRatio;
+  features[bands.length + 2] = stats.lowRatio;
+  features[bands.length + 3] = stats.highRatio;
+
   let mean = 0;
   for (let i = 0; i < features.length; i++) mean += features[i];
   mean /= features.length;
@@ -619,12 +629,56 @@ function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
   return features;
 }
 
+function makeSpeakerFingerprint(
+  frames: Float32Array[],
+  rmsValues: number[],
+  voiceRatios: number[],
+): SpeakerFingerprint {
+  const features = new Float32Array(frames[0].length);
+  for (const frame of frames) {
+    for (let i = 0; i < features.length; i++) features[i] += frame[i];
+  }
+  for (let i = 0; i < features.length; i++) features[i] /= frames.length;
+  normalizeVector(features);
+
+  return {
+    version: FP_VERSION,
+    features,
+    rms: median(rmsValues),
+    voiceRatio: median(voiceRatios),
+    createdAt: Date.now(),
+  };
+}
+
+function normalizeVector(values: Float32Array) {
+  let norm = 0;
+  for (let i = 0; i < values.length; i++) norm += values[i] * values[i];
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < values.length; i++) values[i] /= norm;
+}
+
+function median(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+function getRms(timeData: ArrayLike<number>) {
+  let sum = 0;
+  for (let i = 0; i < timeData.length; i++) {
+    const v = (timeData[i] - 128) / 128;
+    sum += v * v;
+  }
+  return Math.sqrt(sum / timeData.length);
+}
+
 function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
   const binHz = sampleRate / 2 / spectrum.length;
   let low = 0;
   let voice = 0;
   let high = 0;
   let total = 0;
+  let weightedHz = 0;
 
   for (let i = 1; i < spectrum.length; i++) {
     const hz = i * binHz;
@@ -633,6 +687,7 @@ function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
     if (hz >= 220 && hz <= 4200) voice += value;
     if (hz > 4200) high += value;
     total += value;
+    weightedHz += hz * value;
   }
 
   total ||= 1;
@@ -640,10 +695,24 @@ function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
     lowRatio: low / total,
     voiceRatio: voice / total,
     highRatio: high / total,
+    centroid: weightedHz / total,
   };
 }
 
-function saveFingerprint(fp: Float32Array | null) {
+function getVoiceScore(stats: ReturnType<typeof getVoiceStats>, rms: number) {
+  const energy = clamp((rms - 0.004) / 0.035, 0, 1);
+  const voice = clamp((stats.voiceRatio - 0.42) / 0.42, 0, 1);
+  const lowPenalty = clamp((stats.lowRatio - 0.34) / 0.36, 0, 1);
+  const highPenalty = clamp((stats.highRatio - 0.32) / 0.38, 0, 1);
+  const centroidPenalty = stats.centroid < 180 || stats.centroid > 5200 ? 0.18 : 0;
+  return clamp(voice * 0.72 + energy * 0.28 - lowPenalty * 0.24 - highPenalty * 0.18 - centroidPenalty, 0, 1);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function saveFingerprint(fp: SpeakerFingerprint | null) {
   try {
     if (!fp) {
       localStorage.removeItem(FP_STORAGE_KEY);
@@ -651,20 +720,18 @@ function saveFingerprint(fp: Float32Array | null) {
     }
     localStorage.setItem(
       FP_STORAGE_KEY,
-      JSON.stringify(Array.from(fp)),
+      JSON.stringify(serializeFingerprint(fp)),
     );
   } catch {
     /* ignore */
   }
 }
 
-function loadFingerprint(): Float32Array | null {
+function loadFingerprint(): SpeakerFingerprint | null {
   try {
     const raw = localStorage.getItem(FP_STORAGE_KEY);
     if (!raw) return null;
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr) || arr.length !== 8) return null;
-    return Float32Array.from(arr);
+    return parseFingerprint(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -707,11 +774,11 @@ function saveActiveProfileId(id: string | null) {
   }
 }
 
-function loadActiveFingerprint(): Float32Array | null {
+function loadActiveFingerprint(): SpeakerFingerprint | null {
   const activeId = loadActiveProfileId();
   if (!activeId) return null;
   const profile = loadVoiceProfiles().find((p) => p.id === activeId);
-  return profile ? Float32Array.from(profile.fingerprint) : null;
+  return profile ? cloneFingerprint(profile.fingerprint) : null;
 }
 
 function makeVoiceProfileId() {
@@ -725,8 +792,55 @@ function isStoredVoiceProfile(value: unknown): value is StoredVoiceProfile {
     typeof candidate.id === "string" &&
     typeof candidate.name === "string" &&
     typeof candidate.createdAt === "number" &&
-    Array.isArray(candidate.fingerprint) &&
-    candidate.fingerprint.length === 8 &&
-    candidate.fingerprint.every((n) => typeof n === "number")
+    !!parseFingerprint(candidate.fingerprint)
   );
+}
+
+function serializeFingerprint(fp: SpeakerFingerprint) {
+  return {
+    version: fp.version,
+    features: Array.from(fp.features),
+    rms: fp.rms,
+    voiceRatio: fp.voiceRatio,
+    createdAt: fp.createdAt,
+  };
+}
+
+function cloneFingerprint(fp: SpeakerFingerprint): SpeakerFingerprint {
+  return {
+    version: FP_VERSION,
+    features: Float32Array.from(fp.features),
+    rms: fp.rms,
+    voiceRatio: fp.voiceRatio,
+    createdAt: fp.createdAt,
+  };
+}
+
+function parseFingerprint(value: unknown): SpeakerFingerprint | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<{
+    version: number;
+    features: unknown;
+    rms: unknown;
+    voiceRatio: unknown;
+    createdAt: unknown;
+  }>;
+  if (
+    candidate.version !== FP_VERSION ||
+    !Array.isArray(candidate.features) ||
+    candidate.features.length !== 16 ||
+    !candidate.features.every((n) => typeof n === "number") ||
+    typeof candidate.rms !== "number" ||
+    typeof candidate.voiceRatio !== "number" ||
+    typeof candidate.createdAt !== "number"
+  ) {
+    return null;
+  }
+  return {
+    version: FP_VERSION,
+    features: Float32Array.from(candidate.features),
+    rms: candidate.rms,
+    voiceRatio: candidate.voiceRatio,
+    createdAt: candidate.createdAt,
+  };
 }
