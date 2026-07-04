@@ -194,14 +194,14 @@ export class AudioEngine {
   }
 
   /**
-   * Records ~`ms` of audio from the mic and returns a normalized average
-   * magnitude spectrum that represents the speaker's voice timbre.
-   * Used later to distinguish the user's own voice from other people's voices.
+   * Records ~`ms` of audio from the mic and returns a calibrated speaker
+   * fingerprint. Only speech-like frames are accepted, so background noise is
+   * much less likely to become part of the enrolled voice.
    */
-  async captureVoiceFingerprint(ms = 2500): Promise<Float32Array> {
+  async captureVoiceFingerprint(ms = 4000): Promise<SpeakerFingerprint> {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
@@ -218,14 +218,16 @@ export class AudioEngine {
     try {
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();
-      an.fftSize = 512;
-      an.smoothingTimeConstant = 0.2;
+      an.fftSize = 1024;
+      an.smoothingTimeConstant = 0.12;
       src.connect(an);
 
       const bins = an.frequencyBinCount;
-      const avg = new Float32Array(bins);
-      const buf = new Uint8Array(bins);
-      let frames = 0;
+      const freqBuf = new Uint8Array(bins);
+      const timeBuf = new Uint8Array(an.fftSize);
+      const acceptedFeatures: Float32Array[] = [];
+      const acceptedRms: number[] = [];
+      const acceptedVoiceRatios: number[] = [];
       let totalFrames = 0;
 
       await new Promise<void>((resolve) => {
@@ -234,30 +236,36 @@ export class AudioEngine {
         setTimeout(finish, ms);
         const tick = () => {
           if (stopped) return;
-          an.getByteFrequencyData(buf);
-          let energy = 0;
-          for (let i = 0; i < bins; i++) energy += buf[i];
+          an.getByteTimeDomainData(timeBuf);
+          an.getByteFrequencyData(freqBuf);
           totalFrames++;
-          // Accept frames with any reasonable signal (low bar for mobile mics)
-          if (energy > bins * 3) {
-            for (let i = 0; i < bins; i++) avg[i] += buf[i];
-            frames++;
+          const rms = getRms(timeBuf);
+          const stats = getVoiceStats(freqBuf, ctx.sampleRate);
+          const voiceScore = getVoiceScore(stats, rms);
+
+          if (voiceScore >= 0.58 && rms >= 0.008) {
+            acceptedFeatures.push(makeSpeakerFeatures(freqBuf, ctx.sampleRate));
+            acceptedRms.push(rms);
+            acceptedVoiceRatios.push(stats.voiceRatio);
           }
-          setTimeout(tick, 30);
+          setTimeout(tick, 40);
         };
         tick();
       });
 
-      if (frames < 3) {
-        if (totalFrames === 0) {
-          throw new Error("No se pudo capturar audio del micrófono.");
-        }
-        // Forgiving fallback: use the last frame so enrollment never blocks the app
-        for (let i = 0; i < bins; i++) avg[i] = buf[i];
-        frames = 1;
+      if (acceptedFeatures.length < 8) {
+        throw new Error(
+          totalFrames === 0
+            ? "No se pudo capturar audio del micrófono."
+            : "No he detectado suficiente voz clara. Acerca el móvil y habla durante unos segundos.",
+        );
       }
-      for (let i = 0; i < bins; i++) avg[i] /= frames;
-      const fingerprint = makeVoiceFeatures(avg, ctx.sampleRate);
+
+      const fingerprint = makeSpeakerFingerprint(
+        acceptedFeatures,
+        acceptedRms,
+        acceptedVoiceRatios,
+      );
       this.setVoiceFingerprint(fingerprint);
       return fingerprint;
     } finally {
@@ -275,7 +283,7 @@ export class AudioEngine {
 
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
