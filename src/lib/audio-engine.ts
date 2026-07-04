@@ -1,5 +1,7 @@
+import { NoiseSuppressorWorklet_Name } from "@timephy/rnnoise-wasm";
+
 // Web Audio hearing-amplifier engine.
-// Signal chain: mic -> highpass -> 5-band EQ -> compressor -> makeup gain -> limiter -> destination
+// Signal chain: mic -> RNNoise -> voice gate -> highpass -> 5-band EQ -> compressor -> makeup gain -> limiter -> destination
 
 export type EnvironmentId = "conversacion" | "tv" | "restaurante" | "calle";
 
@@ -65,6 +67,7 @@ const BAND_FREQS = [250, 500, 1000, 2000, 4000];
 const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
 const FP_PROFILES_KEY = "oyebien.voiceProfiles.v1";
 const ACTIVE_FP_PROFILE_KEY = "oyebien.activeVoiceProfile.v1";
+const FP_VERSION = 3;
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
@@ -85,7 +88,15 @@ export interface VoiceProfile {
 }
 
 interface StoredVoiceProfile extends VoiceProfile {
-  fingerprint: number[];
+  fingerprint: SpeakerFingerprint;
+}
+
+interface SpeakerFingerprint {
+  version: typeof FP_VERSION;
+  features: Float32Array;
+  rms: number;
+  voiceRatio: number;
+  createdAt: number;
 }
 
 export class AudioEngine {
@@ -109,10 +120,12 @@ export class AudioEngine {
   private rightGain!: GainNode;
   private analyser!: AnalyserNode;
   private inputAnalyser!: AnalyserNode;
+  private noiseSuppressor: AudioNode | null = null;
   private running = false;
   private gateTimer = 0;
   private gateOpen = true;
-  private voiceFingerprint: Float32Array | null = null;
+  private noiseFloor = 0.006;
+  private voiceFingerprint: SpeakerFingerprint | null = null;
   private levelBuffer: Uint8Array<ArrayBuffer> | null = null;
 
   constructor() {
@@ -127,7 +140,7 @@ export class AudioEngine {
     return !!this.voiceFingerprint;
   }
 
-  setVoiceFingerprint(fp: Float32Array | null) {
+  setVoiceFingerprint(fp: SpeakerFingerprint | null) {
     this.voiceFingerprint = fp;
     saveFingerprint(fp);
     if (!fp) saveActiveProfileId(null);
@@ -153,7 +166,7 @@ export class AudioEngine {
       id: id ?? makeVoiceProfileId(),
       name: cleanName,
       createdAt: Date.now(),
-      fingerprint: Array.from(this.voiceFingerprint),
+      fingerprint: cloneFingerprint(this.voiceFingerprint),
     };
     const nextProfiles = profiles.filter((p) => p.id !== profile.id).concat(profile);
     saveVoiceProfiles(nextProfiles);
@@ -165,7 +178,7 @@ export class AudioEngine {
   selectVoiceProfile(id: string): boolean {
     const profile = loadVoiceProfiles().find((p) => p.id === id);
     if (!profile) return false;
-    this.voiceFingerprint = Float32Array.from(profile.fingerprint);
+    this.voiceFingerprint = cloneFingerprint(profile.fingerprint);
     saveFingerprint(this.voiceFingerprint);
     saveActiveProfileId(profile.id);
     return true;
