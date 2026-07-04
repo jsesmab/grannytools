@@ -1,5 +1,7 @@
+import { NoiseSuppressorWorklet_Name } from "@timephy/rnnoise-wasm";
+
 // Web Audio hearing-amplifier engine.
-// Signal chain: mic -> highpass -> 5-band EQ -> compressor -> makeup gain -> limiter -> destination
+// Signal chain: mic -> RNNoise -> voice gate -> highpass -> 5-band EQ -> compressor -> makeup gain -> limiter -> destination
 
 export type EnvironmentId = "conversacion" | "tv" | "restaurante" | "calle";
 
@@ -65,6 +67,7 @@ const BAND_FREQS = [250, 500, 1000, 2000, 4000];
 const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
 const FP_PROFILES_KEY = "oyebien.voiceProfiles.v1";
 const ACTIVE_FP_PROFILE_KEY = "oyebien.activeVoiceProfile.v1";
+const FP_VERSION = 3;
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
@@ -85,7 +88,15 @@ export interface VoiceProfile {
 }
 
 interface StoredVoiceProfile extends VoiceProfile {
-  fingerprint: number[];
+  fingerprint: SpeakerFingerprint;
+}
+
+interface SpeakerFingerprint {
+  version: typeof FP_VERSION;
+  features: Float32Array;
+  rms: number;
+  voiceRatio: number;
+  createdAt: number;
 }
 
 export class AudioEngine {
@@ -109,10 +120,12 @@ export class AudioEngine {
   private rightGain!: GainNode;
   private analyser!: AnalyserNode;
   private inputAnalyser!: AnalyserNode;
+  private noiseSuppressor: AudioNode | null = null;
   private running = false;
   private gateTimer = 0;
   private gateOpen = true;
-  private voiceFingerprint: Float32Array | null = null;
+  private noiseFloor = 0.006;
+  private voiceFingerprint: SpeakerFingerprint | null = null;
   private levelBuffer: Uint8Array<ArrayBuffer> | null = null;
 
   constructor() {
@@ -127,7 +140,7 @@ export class AudioEngine {
     return !!this.voiceFingerprint;
   }
 
-  setVoiceFingerprint(fp: Float32Array | null) {
+  setVoiceFingerprint(fp: SpeakerFingerprint | null) {
     this.voiceFingerprint = fp;
     saveFingerprint(fp);
     if (!fp) saveActiveProfileId(null);
@@ -153,7 +166,7 @@ export class AudioEngine {
       id: id ?? makeVoiceProfileId(),
       name: cleanName,
       createdAt: Date.now(),
-      fingerprint: Array.from(this.voiceFingerprint),
+      fingerprint: cloneFingerprint(this.voiceFingerprint),
     };
     const nextProfiles = profiles.filter((p) => p.id !== profile.id).concat(profile);
     saveVoiceProfiles(nextProfiles);
@@ -165,7 +178,7 @@ export class AudioEngine {
   selectVoiceProfile(id: string): boolean {
     const profile = loadVoiceProfiles().find((p) => p.id === id);
     if (!profile) return false;
-    this.voiceFingerprint = Float32Array.from(profile.fingerprint);
+    this.voiceFingerprint = cloneFingerprint(profile.fingerprint);
     saveFingerprint(this.voiceFingerprint);
     saveActiveProfileId(profile.id);
     return true;
@@ -181,14 +194,14 @@ export class AudioEngine {
   }
 
   /**
-   * Records ~`ms` of audio from the mic and returns a normalized average
-   * magnitude spectrum that represents the speaker's voice timbre.
-   * Used later to distinguish the user's own voice from other people's voices.
+   * Records ~`ms` of audio from the mic and returns a calibrated speaker
+   * fingerprint. Only speech-like frames are accepted, so background noise is
+   * much less likely to become part of the enrolled voice.
    */
-  async captureVoiceFingerprint(ms = 2500): Promise<Float32Array> {
+  async captureVoiceFingerprint(ms = 4000): Promise<SpeakerFingerprint> {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
@@ -205,14 +218,16 @@ export class AudioEngine {
     try {
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser();
-      an.fftSize = 512;
-      an.smoothingTimeConstant = 0.2;
+      an.fftSize = 1024;
+      an.smoothingTimeConstant = 0.12;
       src.connect(an);
 
       const bins = an.frequencyBinCount;
-      const avg = new Float32Array(bins);
-      const buf = new Uint8Array(bins);
-      let frames = 0;
+      const freqBuf = new Uint8Array(bins);
+      const timeBuf = new Uint8Array(an.fftSize);
+      const acceptedFeatures: Float32Array[] = [];
+      const acceptedRms: number[] = [];
+      const acceptedVoiceRatios: number[] = [];
       let totalFrames = 0;
 
       await new Promise<void>((resolve) => {
@@ -221,30 +236,36 @@ export class AudioEngine {
         setTimeout(finish, ms);
         const tick = () => {
           if (stopped) return;
-          an.getByteFrequencyData(buf);
-          let energy = 0;
-          for (let i = 0; i < bins; i++) energy += buf[i];
+          an.getByteTimeDomainData(timeBuf);
+          an.getByteFrequencyData(freqBuf);
           totalFrames++;
-          // Accept frames with any reasonable signal (low bar for mobile mics)
-          if (energy > bins * 3) {
-            for (let i = 0; i < bins; i++) avg[i] += buf[i];
-            frames++;
+          const rms = getRms(timeBuf);
+          const stats = getVoiceStats(freqBuf, ctx.sampleRate);
+          const voiceScore = getVoiceScore(stats, rms);
+
+          if (voiceScore >= 0.58 && rms >= 0.008) {
+            acceptedFeatures.push(makeSpeakerFeatures(freqBuf, ctx.sampleRate));
+            acceptedRms.push(rms);
+            acceptedVoiceRatios.push(stats.voiceRatio);
           }
-          setTimeout(tick, 30);
+          setTimeout(tick, 40);
         };
         tick();
       });
 
-      if (frames < 3) {
-        if (totalFrames === 0) {
-          throw new Error("No se pudo capturar audio del micrófono.");
-        }
-        // Forgiving fallback: use the last frame so enrollment never blocks the app
-        for (let i = 0; i < bins; i++) avg[i] = buf[i];
-        frames = 1;
+      if (acceptedFeatures.length < 8) {
+        throw new Error(
+          totalFrames === 0
+            ? "No se pudo capturar audio del micrófono."
+            : "No he detectado suficiente voz clara. Acerca el móvil y habla durante unos segundos.",
+        );
       }
-      for (let i = 0; i < bins; i++) avg[i] /= frames;
-      const fingerprint = makeVoiceFeatures(avg, ctx.sampleRate);
+
+      const fingerprint = makeSpeakerFingerprint(
+        acceptedFeatures,
+        acceptedRms,
+        acceptedVoiceRatios,
+      );
       this.setVoiceFingerprint(fingerprint);
       return fingerprint;
     } finally {
@@ -262,7 +283,7 @@ export class AudioEngine {
 
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: false,
+        echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: false,
         channelCount: 1,
@@ -298,6 +319,8 @@ export class AudioEngine {
     this.inputAnalyser = this.ctx.createAnalyser();
     this.inputAnalyser.fftSize = 512;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
+
+    this.noiseSuppressor = await this.createNoiseSuppressorNode();
 
     this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
@@ -344,6 +367,10 @@ export class AudioEngine {
 
     this.source.connect(this.inputAnalyser);
     let node: AudioNode = this.source;
+    if (this.noiseSuppressor) {
+      node.connect(this.noiseSuppressor);
+      node = this.noiseSuppressor;
+    }
     node.connect(this.highpass);
     node = this.highpass;
     node.connect(this.lowpass);
@@ -369,17 +396,33 @@ export class AudioEngine {
     this.startGateLoop();
   }
 
+  private async createNoiseSuppressorNode(): Promise<AudioNode | null> {
+    if (!this.ctx || !("audioWorklet" in this.ctx)) return null;
+    try {
+      const workletModule = await import(
+        "@timephy/rnnoise-wasm/NoiseSuppressorWorklet?worker&url"
+      );
+      await this.ctx.audioWorklet.addModule(workletModule.default);
+      return new AudioWorkletNode(this.ctx, NoiseSuppressorWorklet_Name, {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+      });
+    } catch (error) {
+      console.warn("RNNoise unavailable; using browser noise suppression only", error);
+      return null;
+    }
+  }
+
   /**
    * Lightweight smart gate. It stays open by default and only ducks the output
    * briefly when the mic signal is loud and similar to the selected voice.
    * This avoids heavy continuous processing on mobile devices.
    */
   private startGateLoop() {
-    const SELF_VOICE_RMS = 0.055; // near-field voice is much louder than room voices
-    const SIM_THRESHOLD = 0.58; // log-band match to the selected speaker profile
-    const MIN_VOICE_RMS = 0.012;
-    const SELF_HOLD_MS = 360;
-    const VOICE_HOLD_MS = 420;
+    const MIN_VOICE_RMS = 0.006;
+    const SELF_HOLD_MS = 780;
+    const VOICE_HOLD_MS = 520;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
@@ -392,33 +435,35 @@ export class AudioEngine {
       this.inputAnalyser.getByteTimeDomainData(timeBuf);
       this.inputAnalyser.getByteFrequencyData(freqBuf);
 
-      let sum = 0;
-      for (let i = 0; i < timeBuf.length; i++) {
-        const v = (timeBuf[i] - 128) / 128;
-        sum += v * v;
-      }
-      const rms = Math.sqrt(sum / timeBuf.length);
+      const rms = getRms(timeBuf);
 
-      const features = makeVoiceFeatures(freqBuf, this.ctx.sampleRate);
+      const features = makeSpeakerFeatures(freqBuf, this.ctx.sampleRate);
       const voiceStats = getVoiceStats(freqBuf, this.ctx.sampleRate);
+      const voiceScore = getVoiceScore(voiceStats, rms);
 
       // Cosine similarity against the enrolled voice profile.
       let sim = 0;
       if (this.voiceFingerprint) {
-        const compareBins = Math.min(features.length, this.voiceFingerprint.length);
-        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint[i];
+        const compareBins = Math.min(features.length, this.voiceFingerprint.features.length);
+        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint.features[i];
       }
 
       const now = performance.now();
-      const isLikelyVoice =
-        rms >= MIN_VOICE_RMS &&
-        voiceStats.voiceRatio >= 0.48 &&
-        voiceStats.lowRatio <= 0.42 &&
-        voiceStats.highRatio <= 0.36;
+      if (voiceScore < 0.38) {
+        this.noiseFloor = this.noiseFloor * 0.96 + rms * 0.04;
+      }
+
+      const fingerprint = this.voiceFingerprint;
+      const dynamicThreshold = Math.max(MIN_VOICE_RMS, this.noiseFloor * 1.65);
+      const enrolledRms = fingerprint?.rms ?? 0.035;
+      const selfRmsFloor = Math.max(dynamicThreshold, enrolledRms * 0.3);
+      const strongSelfMatch = sim >= 0.55 && rms >= selfRmsFloor;
+      const nearFieldSelfMatch = sim >= 0.46 && rms >= Math.max(0.014, enrolledRms * 0.55);
+      const isLikelyVoice = rms >= dynamicThreshold && voiceScore >= 0.5;
       const isSelf =
-        rms >= SELF_VOICE_RMS &&
         isLikelyVoice &&
-        (this.voiceFingerprint ? sim >= SIM_THRESHOLD : false);
+        !!fingerprint &&
+        (strongSelfMatch || nearFieldSelfMatch);
       if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
@@ -431,12 +476,12 @@ export class AudioEngine {
         // so the conversation fades back in naturally.
         const tc = shouldOpen ? 0.035 : 0.012;
         this.gate.gain.setTargetAtTime(
-          shouldOpen ? 1 : 0,
+          shouldOpen ? 1 : 0.015,
           this.ctx.currentTime,
           tc,
         );
       }
-      this.gateTimer = window.setTimeout(tick, 80);
+      this.gateTimer = window.setTimeout(tick, 35);
     };
     tick();
   }
@@ -527,6 +572,7 @@ export class AudioEngine {
       await this.ctx.close();
       this.ctx = null;
     }
+    this.noiseSuppressor = null;
   }
 }
 
@@ -534,18 +580,23 @@ function dbToGain(db: number) {
   return Math.pow(10, db / 20);
 }
 
-function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
+function makeSpeakerFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
   const bands: Array<[number, number]> = [
-    [180, 320],
-    [320, 520],
-    [520, 850],
-    [850, 1300],
-    [1300, 1900],
-    [1900, 2700],
-    [2700, 3800],
-    [3800, 5000],
+    [120, 200],
+    [200, 300],
+    [300, 430],
+    [430, 600],
+    [600, 820],
+    [820, 1100],
+    [1100, 1450],
+    [1450, 1900],
+    [1900, 2500],
+    [2500, 3300],
+    [3300, 4300],
+    [4300, 5600],
   ];
-  const features = new Float32Array(bands.length);
+  const stats = getVoiceStats(spectrum, sampleRate);
+  const features = new Float32Array(bands.length + 4);
   const binHz = sampleRate / 2 / spectrum.length;
 
   bands.forEach(([fromHz, toHz], bandIndex) => {
@@ -560,6 +611,11 @@ function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
     features[bandIndex] = count ? sum / count : 0;
   });
 
+  features[bands.length] = stats.centroid / 5000;
+  features[bands.length + 1] = stats.voiceRatio;
+  features[bands.length + 2] = stats.lowRatio;
+  features[bands.length + 3] = stats.highRatio;
+
   let mean = 0;
   for (let i = 0; i < features.length; i++) mean += features[i];
   mean /= features.length;
@@ -573,12 +629,56 @@ function makeVoiceFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
   return features;
 }
 
+function makeSpeakerFingerprint(
+  frames: Float32Array[],
+  rmsValues: number[],
+  voiceRatios: number[],
+): SpeakerFingerprint {
+  const features = new Float32Array(frames[0].length);
+  for (const frame of frames) {
+    for (let i = 0; i < features.length; i++) features[i] += frame[i];
+  }
+  for (let i = 0; i < features.length; i++) features[i] /= frames.length;
+  normalizeVector(features);
+
+  return {
+    version: FP_VERSION,
+    features,
+    rms: median(rmsValues),
+    voiceRatio: median(voiceRatios),
+    createdAt: Date.now(),
+  };
+}
+
+function normalizeVector(values: Float32Array) {
+  let norm = 0;
+  for (let i = 0; i < values.length; i++) norm += values[i] * values[i];
+  norm = Math.sqrt(norm) || 1;
+  for (let i = 0; i < values.length; i++) values[i] /= norm;
+}
+
+function median(values: number[]) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+function getRms(timeData: ArrayLike<number>) {
+  let sum = 0;
+  for (let i = 0; i < timeData.length; i++) {
+    const v = (timeData[i] - 128) / 128;
+    sum += v * v;
+  }
+  return Math.sqrt(sum / timeData.length);
+}
+
 function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
   const binHz = sampleRate / 2 / spectrum.length;
   let low = 0;
   let voice = 0;
   let high = 0;
   let total = 0;
+  let weightedHz = 0;
 
   for (let i = 1; i < spectrum.length; i++) {
     const hz = i * binHz;
@@ -587,6 +687,7 @@ function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
     if (hz >= 220 && hz <= 4200) voice += value;
     if (hz > 4200) high += value;
     total += value;
+    weightedHz += hz * value;
   }
 
   total ||= 1;
@@ -594,10 +695,24 @@ function getVoiceStats(spectrum: ArrayLike<number>, sampleRate: number) {
     lowRatio: low / total,
     voiceRatio: voice / total,
     highRatio: high / total,
+    centroid: weightedHz / total,
   };
 }
 
-function saveFingerprint(fp: Float32Array | null) {
+function getVoiceScore(stats: ReturnType<typeof getVoiceStats>, rms: number) {
+  const energy = clamp((rms - 0.004) / 0.035, 0, 1);
+  const voice = clamp((stats.voiceRatio - 0.42) / 0.42, 0, 1);
+  const lowPenalty = clamp((stats.lowRatio - 0.34) / 0.36, 0, 1);
+  const highPenalty = clamp((stats.highRatio - 0.32) / 0.38, 0, 1);
+  const centroidPenalty = stats.centroid < 180 || stats.centroid > 5200 ? 0.18 : 0;
+  return clamp(voice * 0.72 + energy * 0.28 - lowPenalty * 0.24 - highPenalty * 0.18 - centroidPenalty, 0, 1);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function saveFingerprint(fp: SpeakerFingerprint | null) {
   try {
     if (!fp) {
       localStorage.removeItem(FP_STORAGE_KEY);
@@ -605,20 +720,18 @@ function saveFingerprint(fp: Float32Array | null) {
     }
     localStorage.setItem(
       FP_STORAGE_KEY,
-      JSON.stringify(Array.from(fp)),
+      JSON.stringify(serializeFingerprint(fp)),
     );
   } catch {
     /* ignore */
   }
 }
 
-function loadFingerprint(): Float32Array | null {
+function loadFingerprint(): SpeakerFingerprint | null {
   try {
     const raw = localStorage.getItem(FP_STORAGE_KEY);
     if (!raw) return null;
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr) || arr.length !== 8) return null;
-    return Float32Array.from(arr);
+    return parseFingerprint(JSON.parse(raw));
   } catch {
     return null;
   }
@@ -661,11 +774,11 @@ function saveActiveProfileId(id: string | null) {
   }
 }
 
-function loadActiveFingerprint(): Float32Array | null {
+function loadActiveFingerprint(): SpeakerFingerprint | null {
   const activeId = loadActiveProfileId();
   if (!activeId) return null;
   const profile = loadVoiceProfiles().find((p) => p.id === activeId);
-  return profile ? Float32Array.from(profile.fingerprint) : null;
+  return profile ? cloneFingerprint(profile.fingerprint) : null;
 }
 
 function makeVoiceProfileId() {
@@ -679,8 +792,55 @@ function isStoredVoiceProfile(value: unknown): value is StoredVoiceProfile {
     typeof candidate.id === "string" &&
     typeof candidate.name === "string" &&
     typeof candidate.createdAt === "number" &&
-    Array.isArray(candidate.fingerprint) &&
-    candidate.fingerprint.length === 8 &&
-    candidate.fingerprint.every((n) => typeof n === "number")
+    !!parseFingerprint(candidate.fingerprint)
   );
+}
+
+function serializeFingerprint(fp: SpeakerFingerprint) {
+  return {
+    version: fp.version,
+    features: Array.from(fp.features),
+    rms: fp.rms,
+    voiceRatio: fp.voiceRatio,
+    createdAt: fp.createdAt,
+  };
+}
+
+function cloneFingerprint(fp: SpeakerFingerprint): SpeakerFingerprint {
+  return {
+    version: FP_VERSION,
+    features: Float32Array.from(fp.features),
+    rms: fp.rms,
+    voiceRatio: fp.voiceRatio,
+    createdAt: fp.createdAt,
+  };
+}
+
+function parseFingerprint(value: unknown): SpeakerFingerprint | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<{
+    version: number;
+    features: unknown;
+    rms: unknown;
+    voiceRatio: unknown;
+    createdAt: unknown;
+  }>;
+  if (
+    candidate.version !== FP_VERSION ||
+    !Array.isArray(candidate.features) ||
+    candidate.features.length !== 16 ||
+    !candidate.features.every((n) => typeof n === "number") ||
+    typeof candidate.rms !== "number" ||
+    typeof candidate.voiceRatio !== "number" ||
+    typeof candidate.createdAt !== "number"
+  ) {
+    return null;
+  }
+  return {
+    version: FP_VERSION,
+    features: Float32Array.from(candidate.features),
+    rms: candidate.rms,
+    voiceRatio: candidate.voiceRatio,
+    createdAt: candidate.createdAt,
+  };
 }
