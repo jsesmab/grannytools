@@ -126,6 +126,8 @@ export class AudioEngine {
   private inputAnalyser!: AnalyserNode;
   private noiseSuppressor: AudioNode | null = null;
   private running = false;
+  private starting = false;
+  private sessionId = 0;
   private gateTimer = 0;
   private gateOpen = true;
   private noiseFloor = 0.006;
@@ -283,31 +285,39 @@ export class AudioEngine {
   }
 
   async start(opts: EngineOptions) {
-    if (this.running) return;
+    if (this.running || this.starting) return;
+    this.starting = true;
+    const sessionId = ++this.sessionId;
 
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: false,
-        channelCount: 1,
-      },
-      video: false,
-    });
-
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    this.ctx = new Ctx({ latencyHint: "interactive" });
-    if (this.ctx.state === "suspended") {
-      try {
-        await this.ctx.resume();
-      } catch {
-        /* ignore */
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: false,
+          channelCount: 1,
+        },
+        video: false,
+      });
+      if (sessionId !== this.sessionId) {
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+        return;
       }
-    }
 
-    this.source = this.ctx.createMediaStreamSource(this.stream);
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.ctx = new Ctx({ latencyHint: "interactive" });
+      if (this.ctx.state === "suspended") {
+        try {
+          await this.ctx.resume();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      this.source = this.ctx.createMediaStreamSource(this.stream);
 
     this.highpass = this.ctx.createBiquadFilter();
     this.highpass.type = "highpass";
@@ -324,7 +334,11 @@ export class AudioEngine {
     this.inputAnalyser.fftSize = 512;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
-    this.noiseSuppressor = await this.createNoiseSuppressorNode();
+      this.noiseSuppressor = await this.createNoiseSuppressorNode();
+      if (sessionId !== this.sessionId) {
+        await this.stop();
+        return;
+      }
 
     this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
@@ -396,9 +410,15 @@ export class AudioEngine {
     this.limiter.connect(this.analyser);
     this.analyser.connect(this.ctx.destination);
 
-    this.running = true;
-    this.gateOpen = false;
-    this.startGateLoop();
+      this.running = true;
+      this.gateOpen = false;
+      this.startGateLoop();
+    } catch (error) {
+      await this.stop();
+      throw error;
+    } finally {
+      this.starting = false;
+    }
   }
 
   private async createNoiseSuppressorNode(): Promise<AudioNode | null> {
@@ -566,6 +586,8 @@ export class AudioEngine {
   }
 
   async stop() {
+    this.sessionId++;
+    this.starting = false;
     this.running = false;
     if (this.gateTimer) {
       clearTimeout(this.gateTimer);
