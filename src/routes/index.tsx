@@ -74,7 +74,7 @@ function Index() {
         setRunning(false);
         setLevel(0);
       }
-      await e.captureVoiceFingerprint(2500);
+      await e.captureVoiceFingerprint(5500);
       const selectedProfile = voiceProfiles.find((profile) => profile.id === activeVoiceId);
       const profileIdToReplace =
         selectedProfile?.name.trim() === voiceName.trim() ? activeVoiceId ?? undefined : undefined;
@@ -524,8 +524,8 @@ function Index() {
               <h2 className="text-lg font-bold">Identifica tu voz</h2>
             </div>
             <p className="mb-4 text-sm text-muted-foreground">
-              Antes de empezar, di en voz alta una frase normal durante ~3
-              segundos. Esto permite silenciar la voz de quien lleva los cascos.
+              Antes de empezar, habla con tu voz normal durante unos 5 segundos.
+              Esto calibra el anti-retorno para silenciar la voz de quien lleva los cascos.
             </p>
             <label className="mb-3 block text-sm font-bold">
               Nombre de la voz

@@ -67,7 +67,7 @@ const BAND_FREQS = [250, 500, 1000, 2000, 4000];
 const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
 const FP_PROFILES_KEY = "oyebien.voiceProfiles.v1";
 const ACTIVE_FP_PROFILE_KEY = "oyebien.activeVoiceProfile.v1";
-const FP_VERSION = 3;
+const FP_VERSION = 4;
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
@@ -94,7 +94,10 @@ interface StoredVoiceProfile extends VoiceProfile {
 interface SpeakerFingerprint {
   version: typeof FP_VERSION;
   features: Float32Array;
+  templates: Float32Array[];
   rms: number;
+  rmsLow: number;
+  rmsHigh: number;
   voiceRatio: number;
   createdAt: number;
 }
@@ -421,8 +424,8 @@ export class AudioEngine {
    */
   private startGateLoop() {
     const MIN_VOICE_RMS = 0.006;
-    const SELF_HOLD_MS = 780;
-    const VOICE_HOLD_MS = 520;
+    const SELF_HOLD_MS = 1150;
+    const VOICE_HOLD_MS = 620;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
@@ -441,13 +444,6 @@ export class AudioEngine {
       const voiceStats = getVoiceStats(freqBuf, this.ctx.sampleRate);
       const voiceScore = getVoiceScore(voiceStats, rms);
 
-      // Cosine similarity against the enrolled voice profile.
-      let sim = 0;
-      if (this.voiceFingerprint) {
-        const compareBins = Math.min(features.length, this.voiceFingerprint.features.length);
-        for (let i = 0; i < compareBins; i++) sim += features[i] * this.voiceFingerprint.features[i];
-      }
-
       const now = performance.now();
       if (voiceScore < 0.38) {
         this.noiseFloor = this.noiseFloor * 0.96 + rms * 0.04;
@@ -456,14 +452,23 @@ export class AudioEngine {
       const fingerprint = this.voiceFingerprint;
       const dynamicThreshold = Math.max(MIN_VOICE_RMS, this.noiseFloor * 1.65);
       const enrolledRms = fingerprint?.rms ?? 0.035;
-      const selfRmsFloor = Math.max(dynamicThreshold, enrolledRms * 0.3);
-      const strongSelfMatch = sim >= 0.55 && rms >= selfRmsFloor;
-      const nearFieldSelfMatch = sim >= 0.46 && rms >= Math.max(0.014, enrolledRms * 0.55);
+      const selfRmsFloor = Math.max(dynamicThreshold, (fingerprint?.rmsLow ?? enrolledRms * 0.45) * 0.8);
+      const speakerMatch = fingerprint ? compareSpeakerFingerprint(features, fingerprint) : 0;
+      const nearFieldRms = Math.max(0.014, enrolledRms * 0.55, this.noiseFloor * 3.2);
+      const veryNearFieldRms = Math.max(0.022, (fingerprint?.rmsHigh ?? enrolledRms) * 0.85, this.noiseFloor * 5);
+      const calibratedNearField =
+        !!fingerprint &&
+        voiceScore >= 0.48 &&
+        rms >= Math.max(0.03, enrolledRms * 1.12, this.noiseFloor * 5.5);
+      const strongSelfMatch = speakerMatch >= 0.62 && rms >= selfRmsFloor;
+      const nearFieldSelfMatch = speakerMatch >= 0.48 && rms >= nearFieldRms;
+      const emergencyNearField = speakerMatch >= 0.38 && rms >= veryNearFieldRms;
       const isLikelyVoice = rms >= dynamicThreshold && voiceScore >= 0.5;
       const isSelf =
-        isLikelyVoice &&
+        rms >= dynamicThreshold &&
+        voiceScore >= 0.42 &&
         !!fingerprint &&
-        (strongSelfMatch || nearFieldSelfMatch);
+        (strongSelfMatch || nearFieldSelfMatch || emergencyNearField || calibratedNearField);
       if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
@@ -474,9 +479,9 @@ export class AudioEngine {
         this.gateOpen = shouldOpen;
         // Fast close to kill self-voice / sudden noise, slightly slower open
         // so the conversation fades back in naturally.
-        const tc = shouldOpen ? 0.035 : 0.012;
+        const tc = shouldOpen ? 0.045 : 0.006;
         this.gate.gain.setTargetAtTime(
-          shouldOpen ? 1 : 0.015,
+          shouldOpen ? 1 : 0.0008,
           this.ctx.currentTime,
           tc,
         );
@@ -644,10 +649,58 @@ function makeSpeakerFingerprint(
   return {
     version: FP_VERSION,
     features,
+    templates: makeSpeakerTemplates(frames, 10),
     rms: median(rmsValues),
+    rmsLow: percentile(rmsValues, 0.2),
+    rmsHigh: percentile(rmsValues, 0.85),
     voiceRatio: median(voiceRatios),
     createdAt: Date.now(),
   };
+}
+
+function makeSpeakerTemplates(frames: Float32Array[], maxTemplates: number) {
+  if (frames.length <= maxTemplates) return frames.map((frame) => Float32Array.from(frame));
+  const templates: Float32Array[] = [Float32Array.from(frames[0])];
+  while (templates.length < maxTemplates) {
+    let bestFrame: Float32Array | null = null;
+    let bestDistance = -Infinity;
+    for (const frame of frames) {
+      let nearest = Infinity;
+      for (const template of templates) {
+        nearest = Math.min(nearest, 1 - cosineSimilarity(frame, template));
+      }
+      if (nearest > bestDistance) {
+        bestDistance = nearest;
+        bestFrame = frame;
+      }
+    }
+    if (!bestFrame) break;
+    templates.push(Float32Array.from(bestFrame));
+  }
+  return templates;
+}
+
+function compareSpeakerFingerprint(features: Float32Array, fingerprint: SpeakerFingerprint) {
+  const centroid = cosineSimilarity(features, fingerprint.features);
+  let bestTemplate = centroid;
+  let topTwo = centroid;
+  for (const template of fingerprint.templates) {
+    const sim = cosineSimilarity(features, template);
+    if (sim > bestTemplate) {
+      topTwo = bestTemplate;
+      bestTemplate = sim;
+    } else if (sim > topTwo) {
+      topTwo = sim;
+    }
+  }
+  return bestTemplate * 0.72 + topTwo * 0.18 + centroid * 0.1;
+}
+
+function cosineSimilarity(a: Float32Array, b: Float32Array) {
+  const length = Math.min(a.length, b.length);
+  let sum = 0;
+  for (let i = 0; i < length; i++) sum += a[i] * b[i];
+  return sum;
 }
 
 function normalizeVector(values: Float32Array) {
@@ -661,6 +714,13 @@ function median(values: number[]) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)];
+}
+
+function percentile(values: number[], p: number) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.round((sorted.length - 1) * p)));
+  return sorted[index];
 }
 
 function getRms(timeData: ArrayLike<number>) {
@@ -751,7 +811,15 @@ function loadVoiceProfiles(): StoredVoiceProfile[] {
 
 function saveVoiceProfiles(profiles: StoredVoiceProfile[]) {
   try {
-    localStorage.setItem(FP_PROFILES_KEY, JSON.stringify(profiles));
+    localStorage.setItem(
+      FP_PROFILES_KEY,
+      JSON.stringify(
+        profiles.map((profile) => ({
+          ...profile,
+          fingerprint: serializeFingerprint(profile.fingerprint),
+        })),
+      ),
+    );
   } catch {
     /* ignore */
   }
@@ -800,7 +868,10 @@ function serializeFingerprint(fp: SpeakerFingerprint) {
   return {
     version: fp.version,
     features: Array.from(fp.features),
+    templates: fp.templates.map((template) => Array.from(template)),
     rms: fp.rms,
+    rmsLow: fp.rmsLow,
+    rmsHigh: fp.rmsHigh,
     voiceRatio: fp.voiceRatio,
     createdAt: fp.createdAt,
   };
@@ -810,7 +881,10 @@ function cloneFingerprint(fp: SpeakerFingerprint): SpeakerFingerprint {
   return {
     version: FP_VERSION,
     features: Float32Array.from(fp.features),
+    templates: fp.templates.map((template) => Float32Array.from(template)),
     rms: fp.rms,
+    rmsLow: fp.rmsLow,
+    rmsHigh: fp.rmsHigh,
     voiceRatio: fp.voiceRatio,
     createdAt: fp.createdAt,
   };
@@ -821,7 +895,10 @@ function parseFingerprint(value: unknown): SpeakerFingerprint | null {
   const candidate = value as Partial<{
     version: number;
     features: unknown;
+    templates: unknown;
     rms: unknown;
+    rmsLow: unknown;
+    rmsHigh: unknown;
     voiceRatio: unknown;
     createdAt: unknown;
   }>;
@@ -830,7 +907,18 @@ function parseFingerprint(value: unknown): SpeakerFingerprint | null {
     !Array.isArray(candidate.features) ||
     candidate.features.length !== 16 ||
     !candidate.features.every((n) => typeof n === "number") ||
+    !Array.isArray(candidate.templates) ||
+    candidate.templates.length < 1 ||
+    candidate.templates.length > 16 ||
+    !candidate.templates.every(
+      (template) =>
+        Array.isArray(template) &&
+        template.length === 16 &&
+        template.every((n) => typeof n === "number"),
+    ) ||
     typeof candidate.rms !== "number" ||
+    typeof candidate.rmsLow !== "number" ||
+    typeof candidate.rmsHigh !== "number" ||
     typeof candidate.voiceRatio !== "number" ||
     typeof candidate.createdAt !== "number"
   ) {
@@ -839,7 +927,10 @@ function parseFingerprint(value: unknown): SpeakerFingerprint | null {
   return {
     version: FP_VERSION,
     features: Float32Array.from(candidate.features),
+    templates: candidate.templates.map((template) => Float32Array.from(template as number[])),
     rms: candidate.rms,
+    rmsLow: candidate.rmsLow,
+    rmsHigh: candidate.rmsHigh,
     voiceRatio: candidate.voiceRatio,
     createdAt: candidate.createdAt,
   };
