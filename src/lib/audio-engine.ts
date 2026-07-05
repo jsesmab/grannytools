@@ -28,7 +28,7 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     bandsDb: [-5, -1, 7, 9, 4],
     threshold: -28,
     ratio: 3,
-    makeupDb: 8,
+    makeupDb: 3,
     highpassHz: 220,
   },
   {
@@ -38,7 +38,7 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     bandsDb: [-5, -1, 6, 8, 5],
     threshold: -26,
     ratio: 2.5,
-    makeupDb: 7,
+    makeupDb: 3,
     highpassHz: 180,
   },
   {
@@ -48,7 +48,7 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     bandsDb: [-10, -6, 5, 10, 6],
     threshold: -22,
     ratio: 5,
-    makeupDb: 7,
+    makeupDb: 2,
     highpassHz: 320,
   },
   {
@@ -58,7 +58,7 @@ export const ENVIRONMENTS: EnvironmentPreset[] = [
     bandsDb: [-12, -8, 4, 9, 7],
     threshold: -20,
     ratio: 7,
-    makeupDb: 6,
+    makeupDb: 2,
     highpassHz: 380,
   },
 ];
@@ -68,6 +68,7 @@ const FP_STORAGE_KEY = "oyebien.voiceFingerprint.v1";
 const FP_PROFILES_KEY = "oyebien.voiceProfiles.v1";
 const ACTIVE_FP_PROFILE_KEY = "oyebien.activeVoiceProfile.v1";
 const FP_VERSION = 4;
+const MAX_MASTER_DB = 22;
 
 export interface EngineOptions {
   preset: EnvironmentPreset;
@@ -125,6 +126,8 @@ export class AudioEngine {
   private inputAnalyser!: AnalyserNode;
   private noiseSuppressor: AudioNode | null = null;
   private running = false;
+  private starting = false;
+  private sessionId = 0;
   private gateTimer = 0;
   private gateOpen = true;
   private noiseFloor = 0.006;
@@ -282,31 +285,39 @@ export class AudioEngine {
   }
 
   async start(opts: EngineOptions) {
-    if (this.running) return;
+    if (this.running || this.starting) return;
+    this.starting = true;
+    const sessionId = ++this.sessionId;
 
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: false,
-        channelCount: 1,
-      },
-      video: false,
-    });
-
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    this.ctx = new Ctx({ latencyHint: "interactive" });
-    if (this.ctx.state === "suspended") {
-      try {
-        await this.ctx.resume();
-      } catch {
-        /* ignore */
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: false,
+          channelCount: 1,
+        },
+        video: false,
+      });
+      if (sessionId !== this.sessionId) {
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+        return;
       }
-    }
 
-    this.source = this.ctx.createMediaStreamSource(this.stream);
+      const Ctx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      this.ctx = new Ctx({ latencyHint: "interactive" });
+      if (this.ctx.state === "suspended") {
+        try {
+          await this.ctx.resume();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      this.source = this.ctx.createMediaStreamSource(this.stream);
 
     this.highpass = this.ctx.createBiquadFilter();
     this.highpass.type = "highpass";
@@ -323,7 +334,11 @@ export class AudioEngine {
     this.inputAnalyser.fftSize = 512;
     this.inputAnalyser.smoothingTimeConstant = 0.2;
 
-    this.noiseSuppressor = await this.createNoiseSuppressorNode();
+      this.noiseSuppressor = await this.createNoiseSuppressorNode();
+      if (sessionId !== this.sessionId) {
+        await this.stop();
+        return;
+      }
 
     this.currentPreset = opts.preset;
     this.bands = BAND_FREQS.map((freq, i) => {
@@ -346,11 +361,11 @@ export class AudioEngine {
     this.makeup.gain.value = dbToGain(opts.preset.makeupDb);
 
     this.master = this.ctx.createGain();
-    this.master.gain.value = dbToGain(opts.masterDb);
+    this.master.gain.value = dbToGain(clampMasterDb(opts.masterDb));
 
     // Smart gate: muted when the user himself talks or when input isn't voice.
     this.gate = this.ctx.createGain();
-    this.gate.gain.value = 1;
+    this.gate.gain.value = 0;
 
     this.splitter = this.ctx.createChannelSplitter(2);
     this.merger = this.ctx.createChannelMerger(2);
@@ -359,11 +374,11 @@ export class AudioEngine {
     this.applyBalance(opts.balance);
 
     this.limiter = this.ctx.createDynamicsCompressor();
-    this.limiter.threshold.value = -6;
+    this.limiter.threshold.value = -14;
     this.limiter.knee.value = 0;
-    this.limiter.ratio.value = 20;
+    this.limiter.ratio.value = 30;
     this.limiter.attack.value = 0.001;
-    this.limiter.release.value = 0.05;
+    this.limiter.release.value = 0.08;
 
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = 512;
@@ -395,8 +410,15 @@ export class AudioEngine {
     this.limiter.connect(this.analyser);
     this.analyser.connect(this.ctx.destination);
 
-    this.running = true;
-    this.startGateLoop();
+      this.running = true;
+      this.gateOpen = false;
+      this.startGateLoop();
+    } catch (error) {
+      await this.stop();
+      throw error;
+    } finally {
+      this.starting = false;
+    }
   }
 
   private async createNoiseSuppressorNode(): Promise<AudioNode | null> {
@@ -456,19 +478,19 @@ export class AudioEngine {
       const speakerMatch = fingerprint ? compareSpeakerFingerprint(features, fingerprint) : 0;
       const nearFieldRms = Math.max(0.014, enrolledRms * 0.55, this.noiseFloor * 3.2);
       const veryNearFieldRms = Math.max(0.022, (fingerprint?.rmsHigh ?? enrolledRms) * 0.85, this.noiseFloor * 5);
-      const calibratedNearField =
+      const veryCloseVoice =
         !!fingerprint &&
-        voiceScore >= 0.48 &&
-        rms >= Math.max(0.03, enrolledRms * 1.12, this.noiseFloor * 5.5);
-      const strongSelfMatch = speakerMatch >= 0.62 && rms >= selfRmsFloor;
-      const nearFieldSelfMatch = speakerMatch >= 0.48 && rms >= nearFieldRms;
-      const emergencyNearField = speakerMatch >= 0.38 && rms >= veryNearFieldRms;
+        voiceScore >= 0.46 &&
+        rms >= Math.max(0.024, enrolledRms * 0.9, this.noiseFloor * 4.5);
+      const strongSelfMatch = speakerMatch >= 0.58 && rms >= selfRmsFloor;
+      const nearFieldSelfMatch = speakerMatch >= 0.44 && rms >= nearFieldRms;
+      const emergencyNearField = speakerMatch >= 0.34 && rms >= veryNearFieldRms;
       const isLikelyVoice = rms >= dynamicThreshold && voiceScore >= 0.5;
       const isSelf =
         rms >= dynamicThreshold &&
         voiceScore >= 0.42 &&
         !!fingerprint &&
-        (strongSelfMatch || nearFieldSelfMatch || emergencyNearField || calibratedNearField);
+        (strongSelfMatch || nearFieldSelfMatch || emergencyNearField || veryCloseVoice);
       if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
@@ -528,7 +550,7 @@ export class AudioEngine {
 
   setMasterDb(db: number) {
     if (!this.ctx) return;
-    this.master.gain.setTargetAtTime(dbToGain(db), this.ctx.currentTime, 0.03);
+    this.master.gain.setTargetAtTime(dbToGain(clampMasterDb(db)), this.ctx.currentTime, 0.03);
   }
 
   setBalance(balance: number) {
@@ -564,10 +586,39 @@ export class AudioEngine {
   }
 
   async stop() {
+    this.sessionId++;
+    this.starting = false;
     this.running = false;
     if (this.gateTimer) {
       clearTimeout(this.gateTimer);
       this.gateTimer = 0;
+    }
+    if (this.ctx) {
+      const t = this.ctx.currentTime;
+      try {
+        this.gate?.gain.cancelScheduledValues(t);
+        this.gate?.gain.setValueAtTime(0, t);
+        this.master?.gain.cancelScheduledValues(t);
+        this.master?.gain.setValueAtTime(0, t);
+      } catch {
+        /* ignore */
+      }
+      try {
+        this.analyser?.disconnect();
+        this.limiter?.disconnect();
+        this.merger?.disconnect();
+        this.gate?.disconnect();
+        this.master?.disconnect();
+        this.makeup?.disconnect();
+        this.compressor?.disconnect();
+        this.bands.forEach((band) => band.disconnect());
+        this.lowpass?.disconnect();
+        this.highpass?.disconnect();
+        this.noiseSuppressor?.disconnect();
+        this.source?.disconnect();
+      } catch {
+        /* ignore */
+      }
     }
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
@@ -578,11 +629,18 @@ export class AudioEngine {
       this.ctx = null;
     }
     this.noiseSuppressor = null;
+    this.source = null;
+    this.levelBuffer = null;
+    this.gateOpen = false;
   }
 }
 
 function dbToGain(db: number) {
   return Math.pow(10, db / 20);
+}
+
+function clampMasterDb(db: number) {
+  return clamp(db, -10, MAX_MASTER_DB);
 }
 
 function makeSpeakerFeatures(spectrum: ArrayLike<number>, sampleRate: number) {
