@@ -32,6 +32,7 @@ function Index() {
   const engineRef = useRef<AudioEngine | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const [running, setRunning] = useState(false);
+  const [startingAudio, setStartingAudio] = useState(false);
   const [preset, setPreset] = useState<EnvironmentPreset>(ENVIRONMENTS[0]);
   const [volumeDb, setVolumeDb] = useState(12);
   const [balance, setBalance] = useState(0);
@@ -125,7 +126,7 @@ function Index() {
   const resetEq = () => applyEq(0, 0, 0);
 
 
-  const BOOST_DB = 15;
+  const BOOST_DB = 6;
   const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
 
   // Audio level meter loop
@@ -172,22 +173,26 @@ function Index() {
   }, [running]);
 
   const start = async () => {
+    if (startingAudio) return;
     setError(null);
     if (!hasFingerprint) {
       setEnrollPrompt(true);
       return;
     }
     try {
+      setStartingAudio(true);
       const engine = engineRef.current ?? new AudioEngine();
       engineRef.current = engine;
       await engine.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
       await requestWakeLock();
-      setRunning(true);
+      setRunning(engine.isRunning());
     } catch (e) {
       console.error(e);
       setError(
         "No se pudo acceder al micrófono. Permite el acceso en tu navegador y vuelve a intentarlo.",
       );
+    } finally {
+      setStartingAudio(false);
     }
   };
 
@@ -242,16 +247,23 @@ function Index() {
         {/* Main start/stop button */}
         <button
           onClick={running ? stop : start}
+          disabled={startingAudio}
           className={[
             "mb-3 flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-3 text-lg font-bold shadow-lg transition-all select-none",
             "active:scale-[0.98] active:shadow-inner",
             running
               ? "bg-destructive text-destructive-foreground"
               : "bg-primary text-primary-foreground",
+            startingAudio ? "opacity-70" : "",
           ].join(" ")}
           aria-pressed={running}
         >
-          {running ? (
+          {startingAudio ? (
+            <>
+              <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+              Iniciando...
+            </>
+          ) : running ? (
             <>
               <MicOff className="h-6 w-6" aria-hidden />
               Detener
@@ -324,7 +336,7 @@ function Index() {
             <input
               type="range"
               min={-10}
-              max={40}
+              max={22}
               step={1}
               value={volumeDb}
               onChange={(e) => handleVolume(Number(e.target.value))}
