@@ -424,8 +424,8 @@ export class AudioEngine {
    */
   private startGateLoop() {
     const MIN_VOICE_RMS = 0.006;
-    const SELF_HOLD_MS = 780;
-    const VOICE_HOLD_MS = 520;
+    const SELF_HOLD_MS = 1150;
+    const VOICE_HOLD_MS = 620;
 
     const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
     const freqBuf = new Uint8Array(this.inputAnalyser.frequencyBinCount);
@@ -456,15 +456,19 @@ export class AudioEngine {
       const speakerMatch = fingerprint ? compareSpeakerFingerprint(features, fingerprint) : 0;
       const nearFieldRms = Math.max(0.014, enrolledRms * 0.55, this.noiseFloor * 3.2);
       const veryNearFieldRms = Math.max(0.022, (fingerprint?.rmsHigh ?? enrolledRms) * 0.85, this.noiseFloor * 5);
-      const strongSelfMatch = speakerMatch >= 0.68 && rms >= selfRmsFloor;
-      const nearFieldSelfMatch = speakerMatch >= 0.56 && rms >= nearFieldRms;
-      const emergencyNearField = speakerMatch >= 0.48 && rms >= veryNearFieldRms;
+      const calibratedNearField =
+        !!fingerprint &&
+        voiceScore >= 0.48 &&
+        rms >= Math.max(0.03, enrolledRms * 1.12, this.noiseFloor * 5.5);
+      const strongSelfMatch = speakerMatch >= 0.62 && rms >= selfRmsFloor;
+      const nearFieldSelfMatch = speakerMatch >= 0.48 && rms >= nearFieldRms;
+      const emergencyNearField = speakerMatch >= 0.38 && rms >= veryNearFieldRms;
       const isLikelyVoice = rms >= dynamicThreshold && voiceScore >= 0.5;
       const isSelf =
         rms >= dynamicThreshold &&
         voiceScore >= 0.42 &&
         !!fingerprint &&
-        (strongSelfMatch || nearFieldSelfMatch || emergencyNearField);
+        (strongSelfMatch || nearFieldSelfMatch || emergencyNearField || calibratedNearField);
       if (isLikelyVoice) lastVoiceAt = now;
       if (isSelf) lastSelfAt = now;
 
