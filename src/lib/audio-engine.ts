@@ -91,10 +91,16 @@ export class AudioEngine {
   private leftGain!: GainNode;
   private rightGain!: GainNode;
   private analyser!: AnalyserNode;
+  private inputAnalyser!: AnalyserNode;
+  private gate!: GainNode;
+  private gateTimer = 0;
+  private gateOpen = false;
+  private noiseFloor = 0.01;
   private running = false;
   private starting = false;
   private sessionId = 0;
   private levelBuffer: Uint8Array<ArrayBuffer> | null = null;
+
 
   isRunning() {
     return this.running;
@@ -180,6 +186,15 @@ export class AudioEngine {
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 512;
 
+      this.inputAnalyser = this.ctx.createAnalyser();
+      this.inputAnalyser.fftSize = 512;
+      this.inputAnalyser.smoothingTimeConstant = 0.2;
+
+      this.gate = this.ctx.createGain();
+      this.gate.gain.value = 0;
+
+      this.source.connect(this.inputAnalyser);
+
       let node: AudioNode = this.source;
       node.connect(this.highpass); node = this.highpass;
       node.connect(this.lowpass); node = this.lowpass;
@@ -187,7 +202,8 @@ export class AudioEngine {
       node.connect(this.compressor);
       this.compressor.connect(this.makeup);
       this.makeup.connect(this.master);
-      this.master.connect(this.splitter);
+      this.master.connect(this.gate);
+      this.gate.connect(this.splitter);
       this.splitter.connect(this.leftGain, 0);
       this.splitter.connect(this.rightGain, 0);
       this.leftGain.connect(this.merger, 0, 0);
@@ -197,6 +213,10 @@ export class AudioEngine {
       this.analyser.connect(this.ctx.destination);
 
       this.running = true;
+      this.gateOpen = false;
+      this.noiseFloor = 0.01;
+      this.startGateLoop();
+
     } catch (error) {
       await this.stop();
       throw error;
