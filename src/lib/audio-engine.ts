@@ -225,6 +225,43 @@ export class AudioEngine {
     }
   }
 
+  private startGateLoop() {
+    const timeBuf = new Uint8Array(this.inputAnalyser.fftSize);
+    const HOLD_MS = 350;
+    let lastVoiceAt = -Infinity;
+
+    const tick = () => {
+      if (!this.running || !this.ctx) return;
+      this.inputAnalyser.getByteTimeDomainData(timeBuf);
+      let sum = 0;
+      for (let i = 0; i < timeBuf.length; i++) {
+        const v = (timeBuf[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / timeBuf.length);
+
+      // Track noise floor slowly when quiet
+      if (rms < this.noiseFloor * 1.8) {
+        this.noiseFloor = this.noiseFloor * 0.97 + rms * 0.03;
+      }
+      const openThreshold = Math.max(0.012, this.noiseFloor * 2.2);
+      const closeThreshold = Math.max(0.008, this.noiseFloor * 1.4);
+
+      const now = performance.now();
+      if (rms >= openThreshold) lastVoiceAt = now;
+      const shouldOpen = rms >= closeThreshold && now - lastVoiceAt < HOLD_MS;
+
+      if (shouldOpen !== this.gateOpen) {
+        this.gateOpen = shouldOpen;
+        const tc = shouldOpen ? 0.02 : 0.05;
+        this.gate.gain.setTargetAtTime(shouldOpen ? 1 : 0, this.ctx.currentTime, tc);
+      }
+      this.gateTimer = window.setTimeout(tick, 30);
+    };
+    tick();
+  }
+
+
   applyPreset(preset: EnvironmentPreset) {
     this.currentPreset = preset;
     if (!this.ctx) return;
@@ -297,8 +334,29 @@ export class AudioEngine {
     this.sessionId++;
     this.starting = false;
     this.running = false;
+    if (this.gateTimer) {
+      clearTimeout(this.gateTimer);
+      this.gateTimer = 0;
+    }
     if (this.ctx) {
       const t = this.ctx.currentTime;
+      try {
+        this.gate?.gain.cancelScheduledValues(t);
+        this.gate?.gain.setValueAtTime(0, t);
+        this.master?.gain.cancelScheduledValues(t);
+        this.master?.gain.setValueAtTime(0, t);
+      } catch { /* ignore */ }
+      try {
+        this.analyser?.disconnect();
+        this.inputAnalyser?.disconnect();
+        this.limiter?.disconnect();
+        this.merger?.disconnect();
+        this.leftGain?.disconnect();
+        this.rightGain?.disconnect();
+        this.splitter?.disconnect();
+        this.gate?.disconnect();
+        this.master?.disconnect();
+
       try {
         this.master?.gain.cancelScheduledValues(t);
         this.master?.gain.setValueAtTime(0, t);
