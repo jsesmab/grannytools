@@ -356,19 +356,6 @@ export class AudioEngine {
         this.splitter?.disconnect();
         this.gate?.disconnect();
         this.master?.disconnect();
-
-      try {
-        this.master?.gain.cancelScheduledValues(t);
-        this.master?.gain.setValueAtTime(0, t);
-      } catch { /* ignore */ }
-      try {
-        this.analyser?.disconnect();
-        this.limiter?.disconnect();
-        this.merger?.disconnect();
-        this.leftGain?.disconnect();
-        this.rightGain?.disconnect();
-        this.splitter?.disconnect();
-        this.master?.disconnect();
         this.makeup?.disconnect();
         this.compressor?.disconnect();
         this.bands.forEach((band) => band.disconnect());
@@ -377,6 +364,7 @@ export class AudioEngine {
         this.source?.disconnect();
       } catch { /* ignore */ }
     }
+
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
