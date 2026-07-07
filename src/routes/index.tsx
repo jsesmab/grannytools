@@ -4,9 +4,8 @@ import {
   AudioEngine,
   ENVIRONMENTS,
   type EnvironmentPreset,
-  type VoiceProfile,
 } from "@/lib/audio-engine";
-import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, UserCheck, Loader2 } from "lucide-react";
+import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -43,81 +42,6 @@ function Index() {
   const [bass, setBass] = useState(0);
   const [mid, setMid] = useState(0);
   const [treble, setTreble] = useState(0);
-  const [hasFingerprint, setHasFingerprint] = useState(false);
-  const [enrolling, setEnrolling] = useState(false);
-  const [enrollPrompt, setEnrollPrompt] = useState(false);
-  const [voiceProfiles, setVoiceProfiles] = useState<VoiceProfile[]>([]);
-  const [activeVoiceId, setActiveVoiceId] = useState<string | null>(null);
-  const [voiceName, setVoiceName] = useState("Voz principal");
-
-  const refreshVoiceState = (engine: AudioEngine) => {
-    setHasFingerprint(engine.hasVoiceFingerprint());
-    setVoiceProfiles(engine.getVoiceProfiles());
-    setActiveVoiceId(engine.getActiveVoiceProfileId());
-  };
-
-  useEffect(() => {
-    const e = engineRef.current ?? new AudioEngine();
-    engineRef.current = e;
-    refreshVoiceState(e);
-  }, []);
-
-  const enrollVoice = async (autoStart = false) => {
-    setError(null);
-    setEnrolling(true);
-    try {
-      const e = engineRef.current ?? new AudioEngine();
-      engineRef.current = e;
-      if (running) {
-        void e.stop();
-        try { void wakeLockRef.current?.release(); } catch { /* ignore */ }
-        wakeLockRef.current = null;
-        setRunning(false);
-        setLevel(0);
-      }
-      await e.captureVoiceFingerprint(5500);
-      const selectedProfile = voiceProfiles.find((profile) => profile.id === activeVoiceId);
-      const profileIdToReplace =
-        selectedProfile?.name.trim() === voiceName.trim() ? activeVoiceId ?? undefined : undefined;
-      e.saveCurrentVoiceProfile(voiceName, profileIdToReplace);
-      refreshVoiceState(e);
-      setEnrollPrompt(false);
-      if (autoStart) {
-        await e.start({ preset, masterDb: effectiveDb(volumeDb, boost), balance });
-        await requestWakeLock();
-        setRunning(true);
-      }
-    } catch (err) {
-      console.error(err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "No se pudo identificar tu voz. Inténtalo de nuevo.",
-      );
-    } finally {
-      setEnrolling(false);
-    }
-  };
-
-  const clearFingerprint = () => {
-    engineRef.current?.setVoiceFingerprint(null);
-    const e = engineRef.current ?? new AudioEngine();
-    engineRef.current = e;
-    refreshVoiceState(e);
-  };
-
-  const selectVoiceProfile = (id: string) => {
-    const e = engineRef.current ?? new AudioEngine();
-    engineRef.current = e;
-    if (e.selectVoiceProfile(id)) refreshVoiceState(e);
-  };
-
-  const deleteVoiceProfile = (id: string) => {
-    const e = engineRef.current ?? new AudioEngine();
-    engineRef.current = e;
-    e.deleteVoiceProfile(id);
-    refreshVoiceState(e);
-  };
 
   const applyEq = (b: number, m: number, t: number) => {
     setBass(b); setMid(m); setTreble(t);
@@ -125,24 +49,18 @@ function Index() {
   };
   const resetEq = () => applyEq(0, 0, 0);
 
-
   const BOOST_DB = 6;
   const effectiveDb = (db: number, b: boolean) => db + (b ? BOOST_DB : 0);
 
-  // Audio level meter loop
   useEffect(() => {
     if (!running) return;
-    let timer = 0;
-    const tick = () => {
+    const timer = window.setInterval(() => {
       const e = engineRef.current;
       if (e) setLevel(e.getLevel());
-    };
-    tick();
-    timer = window.setInterval(tick, 120);
+    }, 120);
     return () => clearInterval(timer);
   }, [running]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       engineRef.current?.stop();
@@ -175,10 +93,6 @@ function Index() {
   const start = async () => {
     if (startingAudio) return;
     setError(null);
-    if (!hasFingerprint) {
-      setEnrollPrompt(true);
-      return;
-    }
     try {
       setStartingAudio(true);
       const engine = engineRef.current ?? new AudioEngine();
@@ -228,7 +142,6 @@ function Index() {
   return (
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-3 py-3">
-        {/* Header */}
         <header className="mb-3 flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Ear className="h-6 w-6" aria-hidden />
@@ -243,8 +156,6 @@ function Index() {
           </button>
         </header>
 
-
-        {/* Main start/stop button */}
         <button
           onClick={running ? stop : start}
           disabled={startingAudio}
@@ -259,24 +170,14 @@ function Index() {
           aria-pressed={running}
         >
           {startingAudio ? (
-            <>
-              <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-              Iniciando...
-            </>
+            <><Loader2 className="h-6 w-6 animate-spin" aria-hidden />Iniciando...</>
           ) : running ? (
-            <>
-              <MicOff className="h-6 w-6" aria-hidden />
-              Detener
-            </>
+            <><MicOff className="h-6 w-6" aria-hidden />Detener</>
           ) : (
-            <>
-              <Mic className="h-6 w-6" aria-hidden />
-              Empezar a escuchar
-            </>
+            <><Mic className="h-6 w-6" aria-hidden />Empezar a escuchar</>
           )}
         </button>
 
-        {/* Level meter */}
         <div
           className="mb-3 h-2 w-full overflow-hidden rounded-full bg-muted"
           role="meter"
@@ -301,7 +202,6 @@ function Index() {
           </div>
         )}
 
-        {/* Environment presets */}
         <div className="mb-3 grid grid-cols-2 gap-2">
           {ENVIRONMENTS.map((p) => {
             const active = p.id === preset.id;
@@ -324,7 +224,6 @@ function Index() {
           })}
         </div>
 
-        {/* Volume */}
         <div className="mb-3 rounded-xl bg-card p-3 shadow-sm">
           <div className="mb-1 flex items-baseline justify-between">
             <h2 className="text-base font-bold">Volumen</h2>
@@ -360,8 +259,6 @@ function Index() {
           </div>
         </div>
 
-
-        {/* Balance L/R */}
         <div className="mb-3 rounded-xl bg-card p-3 shadow-sm">
           <div className="mb-1 flex items-baseline justify-between">
             <h2 className="text-base font-bold">Balance</h2>
@@ -384,7 +281,6 @@ function Index() {
             className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
           />
         </div>
-
       </div>
 
       {eqOpen && (
@@ -442,148 +338,13 @@ function Index() {
               ))}
             </div>
 
-            {/* Tu voz */}
-            <div className="mt-3 rounded-xl bg-card p-3 shadow-sm">
-              <div className="mb-1 flex items-center gap-2">
-                <UserCheck className="h-5 w-5 text-primary" aria-hidden />
-                <h2 className="text-base font-bold">Tu voz</h2>
-                <span className={[
-                  "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
-                  hasFingerprint
-                    ? "bg-success/20 text-success-foreground"
-                    : "bg-muted text-muted-foreground",
-                ].join(" ")}>
-                  {hasFingerprint ? "Identificada" : "Sin identificar"}
-                </span>
-              </div>
-              <p className="mb-2 text-sm text-muted-foreground">
-                Graba la voz de quien lleva los cascos para silenciarla cuando hable.
-              </p>
-              <label className="mb-2 block text-sm font-bold">
-                Nombre
-                <input
-                  value={voiceName}
-                  onChange={(event) => setVoiceName(event.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
-                  placeholder="Ej. María, Papá, Voz principal"
-                />
-              </label>
-              <div className="mb-3 flex gap-2">
-                <button
-                  onClick={() => enrollVoice(false)}
-                  disabled={enrolling}
-                  className="flex-1 rounded-lg border-2 border-primary bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97] disabled:opacity-60"
-                >
-                  {enrolling ? "Escuchando..." : hasFingerprint ? "Regrabar voz" : "Grabar voz"}
-                </button>
-                {hasFingerprint && (
-                  <button
-                    onClick={clearFingerprint}
-                    className="rounded-lg border-2 border-border bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground active:scale-[0.97]"
-                  >
-                    Borrar
-                  </button>
-                )}
-              </div>
-              {voiceProfiles.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-bold">Voces favoritas</h3>
-                  {voiceProfiles.map((profile) => {
-                    const active = profile.id === activeVoiceId;
-                    return (
-                      <div key={profile.id} className="flex items-center gap-2 rounded-lg bg-background p-2">
-                        <button
-                          onClick={() => selectVoiceProfile(profile.id)}
-                          className={[
-                            "min-w-0 flex-1 rounded-md px-3 py-2 text-left text-sm font-bold active:scale-[0.98]",
-                            active
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-secondary text-secondary-foreground",
-                          ].join(" ")}
-                        >
-                          <span className="block truncate">{profile.name}</span>
-                        </button>
-                        <button
-                          onClick={() => deleteVoiceProfile(profile.id)}
-                          aria-label={`Borrar ${profile.name}`}
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground active:scale-[0.95]"
-                        >
-                          <X className="h-4 w-4" aria-hidden />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-
-
-
-          </div>
-        </div>
-      )}
-
-      {enrollPrompt && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4"
-          role="dialog"
-          aria-label="Identificar tu voz"
-        >
-          <div className="w-full max-w-sm rounded-2xl bg-card p-4 shadow-xl">
-            <div className="mb-2 flex items-center gap-2">
-              <UserCheck className="h-6 w-6 text-primary" aria-hidden />
-              <h2 className="text-lg font-bold">Identifica tu voz</h2>
-            </div>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Antes de empezar, habla con tu voz normal durante unos 5 segundos.
-              Esto calibra el anti-retorno para silenciar la voz de quien lleva los cascos.
+            <p className="mt-4 rounded-xl bg-card p-3 text-sm text-muted-foreground shadow-sm">
+              Consejo: usa auriculares con cable para evitar el retorno de tu propia voz.
+              La cancelación de voz propia se ha retirado porque no era fiable en el navegador móvil.
             </p>
-            <label className="mb-3 block text-sm font-bold">
-              Nombre de la voz
-              <input
-                value={voiceName}
-                onChange={(event) => setVoiceName(event.target.value)}
-                className="mt-1 h-10 w-full rounded-lg border-2 border-border bg-background px-3 text-sm text-foreground"
-                placeholder="Ej. María, Papá, Voz principal"
-              />
-            </label>
-            {error && (
-              <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border-2 border-destructive/40 bg-destructive/10 p-2">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
-                <p className="text-sm text-foreground">{error}</p>
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              <button
-                onClick={() => enrollVoice(false)}
-                disabled={enrolling}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-3 text-base font-bold text-primary-foreground active:scale-[0.98] disabled:opacity-60"
-              >
-                {enrolling ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                    Escuchando tu voz...
-                  </>
-                ) : (
-                  <>
-                    <Mic className="h-5 w-5" aria-hidden />
-                    Empezar a grabar
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setEnrollPrompt(false)}
-                disabled={enrolling}
-                className="rounded-xl border-2 border-border bg-secondary px-3 py-2 text-sm font-bold text-secondary-foreground active:scale-[0.97] disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-            </div>
           </div>
         </div>
       )}
     </main>
   );
 }
-
