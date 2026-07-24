@@ -89,7 +89,7 @@ function Panico() {
   const [error, setError] = useState<string | null>(null);
 
   const sirenRef = useRef<SirenEngine>(new SirenEngine());
-  const recogRef = useRef<SpeechRecognition | null>(null);
+  const recogRef = useRef<SpeechRecognitionLike | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Load contacts
@@ -153,7 +153,7 @@ function Panico() {
     rec.lang = "es-ES";
     rec.continuous = true;
     rec.interimResults = false;
-    rec.onresult = (ev: SpeechRecognitionEvent) => {
+    rec.onresult = (ev) => {
       const txt = Array.from(ev.results).map((r) => r[0]?.transcript ?? "").join(" ").toLowerCase();
       setVoiceHint(txt);
       // very tolerant matching
