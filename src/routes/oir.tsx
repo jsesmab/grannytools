@@ -177,10 +177,13 @@ function Index() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-3 py-3">
         <header className="mb-3 flex items-center gap-2">
+          <a href="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95] transition-all">
+            <ArrowLeft className="h-5 w-5" aria-hidden />
+          </a>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Ear className="h-6 w-6" aria-hidden />
           </div>
-          <h1 className="text-xl font-bold leading-tight">OyeBien</h1>
+          <h1 className="text-xl font-bold leading-tight">Oír mejor</h1>
           <button
             onClick={() => setEqOpen(true)}
             aria-label="Ajustes"
@@ -189,6 +192,7 @@ function Index() {
             <MoreVertical className="h-5 w-5" aria-hidden />
           </button>
         </header>
+
 
         <button
           onClick={running ? stop : start}
