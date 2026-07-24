@@ -10,32 +10,42 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as OirRouteImport } from './routes/oir'
+import { Route as IndexRouteImport } from './routes/index'
 
 const OirRoute = OirRouteImport.update({
   id: '/oir',
   path: '/oir',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/oir': typeof OirRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/oir': typeof OirRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/oir': typeof OirRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/oir'
+  fullPaths: '/' | '/oir'
   fileRoutesByTo: FileRoutesByTo
-  to: '/oir'
-  id: '__root__' | '/oir'
+  to: '/' | '/oir'
+  id: '__root__' | '/' | '/oir'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   OirRoute: typeof OirRoute
 }
 
@@ -48,10 +58,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OirRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   OirRoute: OirRoute,
 }
 export const routeTree = rootRouteImport
