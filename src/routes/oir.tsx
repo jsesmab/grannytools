@@ -8,7 +8,7 @@ import {
 } from "@/lib/audio-engine";
 import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, Loader2, UserCheck, Hand } from "lucide-react";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/oir")({
   head: () => ({
     meta: [
       { title: "OyeBien — Amplificador de sonido para conversaciones" },
