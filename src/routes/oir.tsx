@@ -11,14 +11,15 @@ import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, Loade
 export const Route = createFileRoute("/oir")({
   head: () => ({
     meta: [
-      { title: "OyeBien — Amplificador de sonido para conversaciones" },
+      { title: "Yayoutil — Oír mejor" },
       {
         name: "description",
         content:
-          "App web para amplificar conversaciones, TV, restaurante y calle usando los auriculares del móvil. Pensada para personas con pérdida auditiva leve o moderada.",
+          "Amplifica conversaciones, TV, restaurante y calle usando los auriculares del móvil. Pensado para personas mayores con pérdida auditiva leve o moderada.",
       },
-      { property: "og:title", content: "OyeBien — Amplificador de sonido" },
+      { property: "og:title", content: "Yayoutil — Oír mejor" },
       { property: "og:description", content: "Amplifica las voces a tu alrededor con tu móvil y tus auriculares." },
+
     ],
   }),
   component: Index,
