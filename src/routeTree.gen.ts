@@ -9,12 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PanicoRouteImport } from './routes/panico'
 import { Route as OirRouteImport } from './routes/oir'
+import { Route as LupaRouteImport } from './routes/lupa'
 import { Route as IndexRouteImport } from './routes/index'
 
+const PanicoRoute = PanicoRouteImport.update({
+  id: '/panico',
+  path: '/panico',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OirRoute = OirRouteImport.update({
   id: '/oir',
   path: '/oir',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LupaRoute = LupaRouteImport.update({
+  id: '/lupa',
+  path: '/lupa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,37 +37,59 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
+  '/panico': typeof PanicoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
+  '/panico': typeof PanicoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
+  '/panico': typeof PanicoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/oir'
+  fullPaths: '/' | '/lupa' | '/oir' | '/panico'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/oir'
-  id: '__root__' | '/' | '/oir'
+  to: '/' | '/lupa' | '/oir' | '/panico'
+  id: '__root__' | '/' | '/lupa' | '/oir' | '/panico'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LupaRoute: typeof LupaRoute
   OirRoute: typeof OirRoute
+  PanicoRoute: typeof PanicoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/panico': {
+      id: '/panico'
+      path: '/panico'
+      fullPath: '/panico'
+      preLoaderRoute: typeof PanicoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/oir': {
       id: '/oir'
       path: '/oir'
       fullPath: '/oir'
       preLoaderRoute: typeof OirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lupa': {
+      id: '/lupa'
+      path: '/lupa'
+      fullPath: '/lupa'
+      preLoaderRoute: typeof LupaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,7 +104,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LupaRoute: LupaRoute,
   OirRoute: OirRoute,
+  PanicoRoute: PanicoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

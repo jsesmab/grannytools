@@ -48,7 +48,7 @@ function Lupa() {
       }
       const track = stream.getVideoTracks()[0] as TrackWithTorch;
       const caps = track.getCapabilities?.();
-      setTorchAvailable(Boolean(caps?.torch));
+      setTorchAvailable(Boolean((caps as unknown as { torch?: boolean } | undefined)?.torch));
       setRunning(true);
     } catch (e) {
       console.error(e);

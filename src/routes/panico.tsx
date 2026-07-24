@@ -57,12 +57,22 @@ class SirenEngine {
 }
 
 // ---- Voice-controlled camera ---------------------------------------------
-type SR = typeof window extends { SpeechRecognition: infer T } ? T : never;
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((ev: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
 
-function getSpeechRecognition(): { new (): SpeechRecognition } | null {
-  const w = window as unknown as { SpeechRecognition?: { new (): SpeechRecognition }; webkitSpeechRecognition?: { new (): SpeechRecognition } };
+function getSpeechRecognition(): { new (): SpeechRecognitionLike } | null {
+  const w = window as unknown as { SpeechRecognition?: { new (): SpeechRecognitionLike }; webkitSpeechRecognition?: { new (): SpeechRecognitionLike } };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
+
 
 function Panico() {
   const [contacts, setContacts] = useState<Contact[]>([]);
