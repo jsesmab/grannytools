@@ -1,7 +1,7 @@
 {
-  "name": "OyeBien — Amplificador de sonido",
-  "short_name": "OyeBien",
-  "description": "Amplifica conversaciones, TV y voces a tu alrededor con tus auriculares.",
+  "name": "Grammytools — Ayudas para el día a día",
+  "short_name": "Grammytools",
+  "description": "Oír mejor, lupa con la cámara y contactos de ayuda con un solo toque.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
