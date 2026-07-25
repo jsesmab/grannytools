@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Users, Phone, PhoneCall, Trash2, Plus, VolumeX, Volume2, Settings, X, Mic, MicOff, Camera, AlertTriangle, User, Volume as VolumeIcon } from "lucide-react";
+import { ArrowLeft, Users, Phone, PhoneCall, Trash2, Plus, VolumeX, Volume2, Settings, X, Mic, MicOff, Camera, AlertTriangle, Volume as VolumeIcon } from "lucide-react";
 
 export const Route = createFileRoute("/panico")({
   head: () => ({
