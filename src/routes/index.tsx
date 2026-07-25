@@ -1,16 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Ear, Search, AlertTriangle } from "lucide-react";
+import { Ear, Search, Users } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Yayoutil — Ayudas prácticas para el día a día" },
+      { title: "Grammytools — Ayudas prácticas para el día a día" },
       {
         name: "description",
         content:
-          "Yayoutil reúne en una sola app tres ayudas para personas mayores: amplificador de sonido, lupa con la cámara y botón de pánico con llamada a contactos de confianza.",
+          "Grammytools reúne en una sola app tres ayudas para personas mayores: amplificador de sonido, lupa con la cámara y contactos de ayuda con llamada rápida.",
       },
-      { property: "og:title", content: "Yayoutil — Ayudas prácticas para mayores" },
+      { property: "og:title", content: "Grammytools — Ayudas prácticas para mayores" },
       { property: "og:description", content: "Oír mejor, ver mejor y pedir ayuda en un solo toque." },
     ],
   }),
@@ -48,9 +48,9 @@ const TILES: Tile[] = [
   },
   {
     to: "/panico",
-    label: "Pánico",
+    label: "Contactos",
     hint: "Llama a tus contactos de ayuda",
-    Icon: AlertTriangle,
+    Icon: Users,
     bg: "bg-destructive",
     fg: "text-destructive-foreground",
     ring: "ring-destructive",
@@ -62,7 +62,7 @@ function Home() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 py-4">
         <header className="mb-4 text-center">
-          <h1 className="text-3xl font-black tracking-tight">Yayoutil</h1>
+          <h1 className="text-3xl font-black tracking-tight">Grammytools</h1>
           <p className="mt-1 text-sm text-muted-foreground">Elige qué quieres hacer</p>
         </header>
 
