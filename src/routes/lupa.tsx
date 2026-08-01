@@ -92,7 +92,19 @@ function Lupa() {
     setFrozen(c.toDataURL("image/jpeg", 0.9));
   };
 
-  const unfreeze = () => setFrozen(null);
+  const unfreeze = async () => {
+    setFrozen(null);
+    const v = videoRef.current;
+    const live = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
+    if (!live) {
+      await start();
+      return;
+    }
+    if (v) {
+      if (!v.srcObject) v.srcObject = streamRef.current;
+      await v.play().catch(() => {});
+    }
+  };
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
