@@ -9,11 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UbicacionRouteImport } from './routes/ubicacion'
+import { Route as PastillasRouteImport } from './routes/pastillas'
 import { Route as PanicoRouteImport } from './routes/panico'
 import { Route as OirRouteImport } from './routes/oir'
 import { Route as LupaRouteImport } from './routes/lupa'
+import { Route as CamaraRouteImport } from './routes/camara'
 import { Route as IndexRouteImport } from './routes/index'
 
+const UbicacionRoute = UbicacionRouteImport.update({
+  id: '/ubicacion',
+  path: '/ubicacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PastillasRoute = PastillasRouteImport.update({
+  id: '/pastillas',
+  path: '/pastillas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PanicoRoute = PanicoRouteImport.update({
   id: '/panico',
   path: '/panico',
@@ -29,6 +42,11 @@ const LupaRoute = LupaRouteImport.update({
   path: '/lupa',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CamaraRoute = CamaraRouteImport.update({
+  id: '/camara',
+  path: '/camara',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,40 +55,88 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/camara': typeof CamaraRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
+  '/pastillas': typeof PastillasRoute
+  '/ubicacion': typeof UbicacionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/camara': typeof CamaraRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
+  '/pastillas': typeof PastillasRoute
+  '/ubicacion': typeof UbicacionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/camara': typeof CamaraRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
+  '/pastillas': typeof PastillasRoute
+  '/ubicacion': typeof UbicacionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/lupa' | '/oir' | '/panico'
+  fullPaths:
+    | '/'
+    | '/camara'
+    | '/lupa'
+    | '/oir'
+    | '/panico'
+    | '/pastillas'
+    | '/ubicacion'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/lupa' | '/oir' | '/panico'
-  id: '__root__' | '/' | '/lupa' | '/oir' | '/panico'
+  to:
+    | '/'
+    | '/camara'
+    | '/lupa'
+    | '/oir'
+    | '/panico'
+    | '/pastillas'
+    | '/ubicacion'
+  id:
+    | '__root__'
+    | '/'
+    | '/camara'
+    | '/lupa'
+    | '/oir'
+    | '/panico'
+    | '/pastillas'
+    | '/ubicacion'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CamaraRoute: typeof CamaraRoute
   LupaRoute: typeof LupaRoute
   OirRoute: typeof OirRoute
   PanicoRoute: typeof PanicoRoute
+  PastillasRoute: typeof PastillasRoute
+  UbicacionRoute: typeof UbicacionRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ubicacion': {
+      id: '/ubicacion'
+      path: '/ubicacion'
+      fullPath: '/ubicacion'
+      preLoaderRoute: typeof UbicacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pastillas': {
+      id: '/pastillas'
+      path: '/pastillas'
+      fullPath: '/pastillas'
+      preLoaderRoute: typeof PastillasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/panico': {
       id: '/panico'
       path: '/panico'
@@ -92,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LupaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/camara': {
+      id: '/camara'
+      path: '/camara'
+      fullPath: '/camara'
+      preLoaderRoute: typeof CamaraRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,9 +177,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CamaraRoute: CamaraRoute,
   LupaRoute: LupaRoute,
   OirRoute: OirRoute,
   PanicoRoute: PanicoRoute,
+  PastillasRoute: PastillasRoute,
+  UbicacionRoute: UbicacionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -5,9 +5,9 @@ import { ArrowLeft, Search, Lightbulb, LightbulbOff, Camera, Play, RotateCcw, Al
 export const Route = createFileRoute("/lupa")({
   head: () => ({
     meta: [
-      { title: "Yayoutil — Lupa" },
+      { title: "Grannytools — Lupa" },
       { name: "description", content: "Usa la cámara del móvil como lupa para leer letra pequeña, etiquetas y documentos." },
-      { property: "og:title", content: "Yayoutil — Lupa" },
+      { property: "og:title", content: "Grannytools — Lupa" },
       { property: "og:description", content: "Amplía lo que quieras leer con la cámara de tu móvil." },
     ],
   }),
@@ -92,7 +92,19 @@ function Lupa() {
     setFrozen(c.toDataURL("image/jpeg", 0.9));
   };
 
-  const unfreeze = () => setFrozen(null);
+  const unfreeze = async () => {
+    setFrozen(null);
+    const v = videoRef.current;
+    const live = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
+    if (!live) {
+      await start();
+      return;
+    }
+    if (v) {
+      if (!v.srcObject) v.srcObject = streamRef.current;
+      await v.play().catch(() => {});
+    }
+  };
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -125,14 +137,18 @@ function Lupa() {
         )}
 
         <div className="relative mb-3 overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: "3 / 4" }}>
-          {frozen ? (
-            <img src={frozen} alt="Imagen ampliada" className="h-full w-full object-cover" style={{ transform: `scale(${zoom})`, transformOrigin: "center" }} />
-          ) : (
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              className="h-full w-full object-cover"
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            className="h-full w-full object-cover"
+            style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+          />
+          {frozen && (
+            <img
+              src={frozen}
+              alt="Imagen ampliada"
+              className="absolute inset-0 h-full w-full object-cover"
               style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
             />
           )}

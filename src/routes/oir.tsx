@@ -11,13 +11,13 @@ import { Ear, Mic, MicOff, AlertTriangle, Zap, MoreVertical, X, RotateCcw, Loade
 export const Route = createFileRoute("/oir")({
   head: () => ({
     meta: [
-      { title: "Yayoutil — Oír mejor" },
+      { title: "Grannytools — Oír mejor" },
       {
         name: "description",
         content:
           "Amplifica conversaciones, TV, restaurante y calle usando los auriculares del móvil. Pensado para personas mayores con pérdida auditiva leve o moderada.",
       },
-      { property: "og:title", content: "Yayoutil — Oír mejor" },
+      { property: "og:title", content: "Grannytools — Oír mejor" },
       { property: "og:description", content: "Amplifica las voces a tu alrededor con tu móvil y tus auriculares." },
 
     ],
