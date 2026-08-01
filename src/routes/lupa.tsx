@@ -5,9 +5,9 @@ import { ArrowLeft, Search, Lightbulb, LightbulbOff, Camera, Play, RotateCcw, Al
 export const Route = createFileRoute("/lupa")({
   head: () => ({
     meta: [
-      { title: "Yayoutil — Lupa" },
+      { title: "Grannytools — Lupa" },
       { name: "description", content: "Usa la cámara del móvil como lupa para leer letra pequeña, etiquetas y documentos." },
-      { property: "og:title", content: "Yayoutil — Lupa" },
+      { property: "og:title", content: "Grannytools — Lupa" },
       { property: "og:description", content: "Amplía lo que quieras leer con la cámara de tu móvil." },
     ],
   }),
