@@ -18,7 +18,7 @@ export const Route = createFileRoute("/lupa")({
 
 type TrackWithTorch = MediaStreamTrack & {
   applyConstraints: (c: MediaTrackConstraints & { advanced?: Array<{ torch?: boolean; focusMode?: string }> }) => Promise<void>;
-  getCapabilities?: () => MediaTrackCapabilities & { torch?: boolean; focusMode?: string[] };
+  getCapabilities?: () => MediaTrackCapabilities;
 };
 
 type ImageCaptureLike = { grabFrame: () => Promise<ImageBitmap> };
