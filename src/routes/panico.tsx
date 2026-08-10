@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Users, Phone, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX } from "lucide-react";
+import { ArrowLeft, Users, Phone, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX, SwitchCamera, Image as ImageIcon } from "lucide-react";
 import {
   type Contact,
   MAX_CONTACTS,
