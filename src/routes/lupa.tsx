@@ -52,8 +52,9 @@ function Lupa() {
         await videoRef.current.play().catch(() => {});
       }
       const track = stream.getVideoTracks()[0] as TrackWithTorch;
-      const caps = track.getCapabilities?.();
+      const caps = track.getCapabilities?.() as unknown as { torch?: boolean; focusMode?: string[] } | undefined;
       setTorchAvailable(Boolean(caps?.torch));
+
       // Enfoque continuo para que la imagen congelada salga nítida
       if (caps?.focusMode?.includes("continuous")) {
         try { await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch { /* ignore */ }
