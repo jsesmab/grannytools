@@ -173,12 +173,20 @@ function Pastillas() {
     if (p !== "granted") setError("No se han permitido los avisos.");
   };
 
+  const openGoogle = (p: Pending) => {
+    window.open(googleCalUrl(p.med, p.time), "_blank", "noopener");
+  };
+
   const addMed = () => {
     const n = name.trim();
     const ts = times.filter(Boolean);
     if (!n || ts.length === 0) { setError("Escribe el nombre y al menos una hora."); return; }
     save([...meds, { name: n, times: ts }]);
     setName(""); setTimes(["09:00"]); setAdding(false); setError(null);
+    // Abre Google Calendar ya relleno con el primer aviso (gesto del usuario).
+    const list = ts.map((t) => ({ med: n, time: t }));
+    openGoogle(list[0]);
+    setQueue(list.slice(1));
   };
 
   const markTaken = (i: number) => {
