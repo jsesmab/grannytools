@@ -91,6 +91,33 @@ function downloadIcs(meds: Med[], filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+function utcStamp(d: Date) {
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+}
+
+// Enlace de Google Calendar: se abre ya relleno y solo hay que pulsar "Guardar".
+function googleCalUrl(medName: string, time: string) {
+  const [hh, mm] = time.split(":");
+  const start = new Date();
+  start.setHours(Number(hh), Number(mm), 0, 0);
+  if (start.getTime() < Date.now()) start.setDate(start.getDate() + 1);
+  const end = new Date(start.getTime() + 10 * 60 * 1000);
+  const p = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `Tomar ${medName}`,
+    details: `Recordatorio de Grannytools para tomar ${medName} a las ${time}`,
+    dates: `${utcStamp(start)}/${utcStamp(end)}`,
+    recur: "RRULE:FREQ=DAILY",
+  });
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
+}
+
+type Pending = { med: string; time: string };
+
+function pendingFor(meds: Med[]): Pending[] {
+  return meds.flatMap((m) => m.times.map((t) => ({ med: m.name, time: t })));
+}
+
 function Pastillas() {
   const [meds, setMeds] = useState<Med[]>([]);
   const [name, setName] = useState("");
