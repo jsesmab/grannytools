@@ -16,11 +16,28 @@ export const Route = createFileRoute("/pastillas")({
   component: Pastillas,
 });
 
-type Med = { name: string; times: string[]; takenAt?: string };
+// from/until en formato YYYY-MM-DD. Sin "until" = tratamiento crónico (todo el calendario).
+type Med = { name: string; times: string[]; takenAt?: string; from?: string; until?: string };
 const KEY = "grannytools.meds";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function localDayKey(d: Date) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function isActiveToday(m: Med) {
+  const today = localDayKey(new Date());
+  if (m.from && today < m.from) return false;
+  if (m.until && today > m.until) return false;
+  return true;
+}
+
+function esDate(iso: string) {
+  const [y, mo, d] = iso.split("-");
+  return `${d}/${mo}/${y}`;
 }
 
 function beep() {
@@ -41,6 +58,38 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
+// Primera ocurrencia teniendo en cuenta la fecha de inicio del tratamiento.
+function firstOccurrence(time: string, from?: string) {
+  const [hh, mm] = time.split(":");
+  const now = new Date();
+  let start: Date;
+  if (from) {
+    const [y, mo, d] = from.split("-").map(Number);
+    start = new Date(y, mo - 1, d, Number(hh), Number(mm), 0, 0);
+  } else {
+    start = new Date();
+    start.setHours(Number(hh), Number(mm), 0, 0);
+  }
+  if (start.getTime() < now.getTime()) {
+    // si la fecha de inicio ya pasó, empezamos hoy/mañana
+    const t = new Date();
+    t.setHours(Number(hh), Number(mm), 0, 0);
+    if (t.getTime() < now.getTime()) t.setDate(t.getDate() + 1);
+    start = t;
+  }
+  return start;
+}
+
+function untilStamp(until: string) {
+  const [y, mo, d] = until.split("-").map(Number);
+  const end = new Date(y, mo - 1, d, 23, 59, 59);
+  return `${end.getUTCFullYear()}${pad(end.getUTCMonth() + 1)}${pad(end.getUTCDate())}T${pad(end.getUTCHours())}${pad(end.getUTCMinutes())}${pad(end.getUTCSeconds())}Z`;
+}
+
+function rrule(until?: string) {
+  return until ? `FREQ=DAILY;UNTIL=${untilStamp(until)}` : "FREQ=DAILY";
+}
+
 function icsForMeds(meds: Med[]) {
   const now = new Date();
   const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
@@ -52,10 +101,7 @@ function icsForMeds(meds: Med[]) {
   ];
   meds.forEach((m, mi) => {
     m.times.forEach((t, ti) => {
-      const [hh, mm] = t.split(":");
-      const start = new Date();
-      start.setHours(Number(hh), Number(mm), 0, 0);
-      if (start.getTime() < now.getTime()) start.setDate(start.getDate() + 1);
+      const start = firstOccurrence(t, m.from);
       const dt = `${start.getFullYear()}${pad(start.getMonth() + 1)}${pad(start.getDate())}T${pad(start.getHours())}${pad(start.getMinutes())}00`;
       lines.push(
         "BEGIN:VEVENT",
@@ -63,7 +109,7 @@ function icsForMeds(meds: Med[]) {
         `DTSTAMP:${stamp}`,
         `DTSTART:${dt}`,
         "DURATION:PT10M",
-        "RRULE:FREQ=DAILY",
+        `RRULE:${rrule(m.until)}`,
         `SUMMARY:Tomar ${m.name}`,
         `DESCRIPTION:Recordatorio de Grannytools para tomar ${m.name} a las ${t}`,
         "BEGIN:VALARM",
@@ -96,26 +142,23 @@ function utcStamp(d: Date) {
 }
 
 // Enlace de Google Calendar: se abre ya relleno y solo hay que pulsar "Guardar".
-function googleCalUrl(medName: string, time: string) {
-  const [hh, mm] = time.split(":");
-  const start = new Date();
-  start.setHours(Number(hh), Number(mm), 0, 0);
-  if (start.getTime() < Date.now()) start.setDate(start.getDate() + 1);
+function googleCalUrl(medName: string, time: string, from?: string, until?: string) {
+  const start = firstOccurrence(time, from);
   const end = new Date(start.getTime() + 10 * 60 * 1000);
   const p = new URLSearchParams({
     action: "TEMPLATE",
     text: `Tomar ${medName}`,
     details: `Recordatorio de Grannytools para tomar ${medName} a las ${time}`,
     dates: `${utcStamp(start)}/${utcStamp(end)}`,
-    recur: "RRULE:FREQ=DAILY",
+    recur: `RRULE:${rrule(until)}`,
   });
   return `https://calendar.google.com/calendar/render?${p.toString()}`;
 }
 
-type Pending = { med: string; time: string };
+type Pending = { med: string; time: string; from?: string; until?: string };
 
 function pendingFor(meds: Med[]): Pending[] {
-  return meds.flatMap((m) => m.times.map((t) => ({ med: m.name, time: t })));
+  return meds.flatMap((m) => m.times.map((t) => ({ med: m.name, time: t, from: m.from, until: m.until })));
 }
 
 function Pastillas() {
@@ -123,6 +166,9 @@ function Pastillas() {
   const [name, setName] = useState("");
   const [times, setTimes] = useState<string[]>(["09:00"]);
   const [adding, setAdding] = useState(false);
+  const [chronic, setChronic] = useState(true);
+  const [from, setFrom] = useState(localDayKey(new Date()));
+  const [until, setUntil] = useState("");
   const [notifOn, setNotifOn] = useState(false);
   const [due, setDue] = useState<{ med: string; time: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +194,7 @@ function Pastillas() {
       const now = new Date();
       const hhmm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       for (const m of meds) {
+        if (!isActiveToday(m)) continue;
         for (const t of m.times) {
           const id = `${todayKey()}|${m.name}|${t}`;
           if (t === hhmm && !firedRef.current.has(id)) {
@@ -175,17 +222,21 @@ function Pastillas() {
   };
 
   const openGoogle = (p: Pending) => {
-    window.open(googleCalUrl(p.med, p.time), "_blank", "noopener");
+    window.open(googleCalUrl(p.med, p.time, p.from, p.until), "_blank", "noopener");
   };
 
   const addMed = () => {
     const n = name.trim();
     const ts = times.filter(Boolean);
     if (!n || ts.length === 0) { setError("Escribe el nombre y al menos una hora."); return; }
-    save([...meds, { name: n, times: ts }]);
+    if (!chronic && (!from || !until)) { setError("Pon la fecha de inicio y la de fin del tratamiento."); return; }
+    if (!chronic && until < from) { setError("La fecha de fin debe ser posterior a la de inicio."); return; }
+    const med: Med = chronic ? { name: n, times: ts } : { name: n, times: ts, from, until };
+    save([...meds, med]);
     setName(""); setTimes(["09:00"]); setAdding(false); setError(null);
+    setChronic(true); setFrom(localDayKey(new Date())); setUntil("");
     // Abre Google Calendar ya relleno con el primer aviso (gesto del usuario).
-    const list = ts.map((t) => ({ med: n, time: t }));
+    const list: Pending[] = ts.map((t) => ({ med: n, time: t, from: med.from, until: med.until }));
     openGoogle(list[0]);
     setQueue(list.slice(1));
   };
@@ -245,6 +296,11 @@ function Pastillas() {
               <div className="min-w-0 flex-1">
                 <div className="truncate text-lg font-black">{m.name}</div>
                 <div className="text-sm text-muted-foreground">{m.times.join("  ·  ")}</div>
+                <div className="text-xs font-bold text-muted-foreground">
+                  {m.until
+                    ? `Tratamiento: ${esDate(m.from ?? todayKey())} → ${esDate(m.until)}${isActiveToday(m) ? "" : " (terminado)"}`
+                    : "Todos los días (crónico)"}
+                </div>
               </div>
               <button
                 onClick={() => markTaken(i)}
@@ -273,6 +329,52 @@ function Pastillas() {
               placeholder="Nombre de la medicina"
               className="w-full rounded-lg border-2 border-border bg-background px-3 py-3 text-base"
             />
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setChronic(true)}
+                className={[
+                  "rounded-xl px-2 py-3 text-base font-black active:scale-[0.97]",
+                  chronic ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                Siempre
+              </button>
+              <button
+                onClick={() => setChronic(false)}
+                className={[
+                  "rounded-xl px-2 py-3 text-base font-black active:scale-[0.97]",
+                  !chronic ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+                ].join(" ")}
+              >
+                Unos días
+              </button>
+            </div>
+
+            {!chronic && (
+              <div className="space-y-2 rounded-xl bg-card p-2">
+                <label className="block text-sm font-bold">
+                  Desde
+                  <input
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    className="mt-1 w-full rounded-lg border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+                  />
+                </label>
+                <label className="block text-sm font-bold">
+                  Hasta
+                  <input
+                    type="date"
+                    value={until}
+                    min={from}
+                    onChange={(e) => setUntil(e.target.value)}
+                    className="mt-1 w-full rounded-lg border-2 border-border bg-background px-3 py-3 text-lg font-bold"
+                  />
+                </label>
+              </div>
+            )}
+
             {times.map((t, i) => (
               <div key={i} className="flex items-center gap-2">
                 <input
@@ -368,7 +470,7 @@ function Pastillas() {
         )}
 
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
-          Al guardar una medicina se abre solo el calendario de Google con el aviso ya escrito: únicamente hay que pulsar «Guardar». El aviso se repite todos los días y suena aunque la aplicación esté cerrada.
+          «Siempre» pone el aviso todos los días sin fin. «Unos días» solo avisa entre las fechas de inicio y fin del tratamiento. Al guardar se abre el calendario de Google con el aviso ya escrito: solo hay que pulsar «Guardar».
         </p>
       </div>
     </main>
