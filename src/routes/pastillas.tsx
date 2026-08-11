@@ -328,14 +328,43 @@ function Pastillas() {
           </div>
         )}
 
+        {queue.length > 0 && (
+          <div className="mt-3 rounded-2xl bg-card p-3 shadow-sm">
+            <p className="mb-2 text-sm">
+              Falta{queue.length > 1 ? "n" : ""} <b>{queue.length}</b> aviso{queue.length > 1 ? "s" : ""} por añadir al calendario.
+            </p>
+            <button
+              onClick={() => { openGoogle(queue[0]); setQueue(queue.slice(1)); }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-4 text-base font-black text-primary-foreground active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-6 w-6" aria-hidden />
+              Añadir el de las {queue[0].time}
+            </button>
+          </div>
+        )}
+
         {meds.length > 0 && (
-          <button
-            onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-4 text-base font-black text-secondary-foreground shadow-sm active:scale-[0.98]"
-          >
-            <CalendarPlus className="h-6 w-6" aria-hidden />
-            Poner avisos en el calendario del móvil
-          </button>
+          <div className="mt-3 space-y-2">
+            <button
+              onClick={() => {
+                const list = pendingFor(meds);
+                if (list.length === 0) return;
+                openGoogle(list[0]);
+                setQueue(list.slice(1));
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-4 text-base font-black text-primary-foreground shadow-sm active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-6 w-6" aria-hidden />
+              Poner avisos en Google Calendar
+            </button>
+            <button
+              onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-3 text-sm font-bold text-secondary-foreground shadow-sm active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-5 w-5" aria-hidden />
+              Si no usas Google: archivo para el calendario
+            </button>
+          </div>
         )}
 
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
