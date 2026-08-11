@@ -37,6 +37,60 @@ function beep() {
   } catch { /* ignore */ }
 }
 
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function icsForMeds(meds: Med[]) {
+  const now = new Date();
+  const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Grannytools//Pastillas//ES",
+    "CALSCALE:GREGORIAN",
+  ];
+  meds.forEach((m, mi) => {
+    m.times.forEach((t, ti) => {
+      const [hh, mm] = t.split(":");
+      const start = new Date();
+      start.setHours(Number(hh), Number(mm), 0, 0);
+      if (start.getTime() < now.getTime()) start.setDate(start.getDate() + 1);
+      const dt = `${start.getFullYear()}${pad(start.getMonth() + 1)}${pad(start.getDate())}T${pad(start.getHours())}${pad(start.getMinutes())}00`;
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:grannytools-${mi}-${ti}-${start.getTime()}@grannytools`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${dt}`,
+        "DURATION:PT10M",
+        "RRULE:FREQ=DAILY",
+        `SUMMARY:Tomar ${m.name}`,
+        `DESCRIPTION:Recordatorio de Grannytools para tomar ${m.name} a las ${t}`,
+        "BEGIN:VALARM",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Tomar ${m.name}`,
+        "TRIGGER:PT0M",
+        "END:VALARM",
+        "END:VEVENT",
+      );
+    });
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function downloadIcs(meds: Med[], filename: string) {
+  const blob = new Blob([icsForMeds(meds)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 function Pastillas() {
   const [meds, setMeds] = useState<Med[]>([]);
   const [name, setName] = useState("");
