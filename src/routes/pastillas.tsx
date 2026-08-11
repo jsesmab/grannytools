@@ -126,6 +126,7 @@ function Pastillas() {
   const [notifOn, setNotifOn] = useState(false);
   const [due, setDue] = useState<{ med: string; time: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [queue, setQueue] = useState<Pending[]>([]);
   const firedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
