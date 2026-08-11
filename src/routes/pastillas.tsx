@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle, CalendarPlus } from "lucide-react";
 
 export const Route = createFileRoute("/pastillas")({
   head: () => ({
