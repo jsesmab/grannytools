@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle, CalendarPlus } from "lucide-react";
 
 export const Route = createFileRoute("/pastillas")({
   head: () => ({
@@ -35,6 +35,60 @@ function beep() {
     osc.start();
     setTimeout(() => { osc.stop(); ctx.close(); }, 1200);
   } catch { /* ignore */ }
+}
+
+function pad(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function icsForMeds(meds: Med[]) {
+  const now = new Date();
+  const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Grannytools//Pastillas//ES",
+    "CALSCALE:GREGORIAN",
+  ];
+  meds.forEach((m, mi) => {
+    m.times.forEach((t, ti) => {
+      const [hh, mm] = t.split(":");
+      const start = new Date();
+      start.setHours(Number(hh), Number(mm), 0, 0);
+      if (start.getTime() < now.getTime()) start.setDate(start.getDate() + 1);
+      const dt = `${start.getFullYear()}${pad(start.getMonth() + 1)}${pad(start.getDate())}T${pad(start.getHours())}${pad(start.getMinutes())}00`;
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:grannytools-${mi}-${ti}-${start.getTime()}@grannytools`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART:${dt}`,
+        "DURATION:PT10M",
+        "RRULE:FREQ=DAILY",
+        `SUMMARY:Tomar ${m.name}`,
+        `DESCRIPTION:Recordatorio de Grannytools para tomar ${m.name} a las ${t}`,
+        "BEGIN:VALARM",
+        "ACTION:DISPLAY",
+        `DESCRIPTION:Tomar ${m.name}`,
+        "TRIGGER:PT0M",
+        "END:VALARM",
+        "END:VEVENT",
+      );
+    });
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+
+function downloadIcs(meds: Med[], filename: string) {
+  const blob = new Blob([icsForMeds(meds)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
 function Pastillas() {
@@ -238,8 +292,18 @@ function Pastillas() {
           </div>
         )}
 
+        {meds.length > 0 && (
+          <button
+            onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-4 text-base font-black text-secondary-foreground shadow-sm active:scale-[0.98]"
+          >
+            <CalendarPlus className="h-6 w-6" aria-hidden />
+            Poner avisos en el calendario del móvil
+          </button>
+        )}
+
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
-          El aviso suena mientras la aplicación está abierta en el móvil.
+          Con el botón del calendario se crean avisos diarios en el calendario de tu móvil: sonarán aunque la aplicación esté cerrada. Al pulsarlo, abre el archivo descargado y acepta añadirlo a tu calendario.
         </p>
       </div>
     </main>

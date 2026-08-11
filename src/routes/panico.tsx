@@ -166,7 +166,7 @@ function Contactos() {
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-3 py-3">
+      <div className="mx-auto max-w-2xl px-3 py-3">
         <div className="sticky top-0 z-20 -mx-3 mb-3 bg-background px-3 pb-2 pt-1">
           <header className="mb-2 flex items-center gap-2">
             <a href="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
@@ -212,9 +212,9 @@ function Contactos() {
         )}
 
         {contacts.length > 0 && (
-          <div className="grid flex-1 grid-cols-2 grid-rows-4 gap-2 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2">
             {contacts.map((c, i) => (
-              <div key={i} className="relative min-h-[18vh]">
+              <div key={i} className="relative h-[21vh] min-h-[130px]">
                 <button
                   onClick={() => (editing ? retakePhotoFor(i, "user") : callPhone(c.phone))}
                   aria-label={editing ? `Cambiar foto de ${c.name}` : `Llamar a ${c.name}`}
