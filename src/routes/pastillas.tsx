@@ -292,8 +292,18 @@ function Pastillas() {
           </div>
         )}
 
+        {meds.length > 0 && (
+          <button
+            onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-4 text-base font-black text-secondary-foreground shadow-sm active:scale-[0.98]"
+          >
+            <CalendarPlus className="h-6 w-6" aria-hidden />
+            Poner avisos en el calendario del móvil
+          </button>
+        )}
+
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
-          El aviso suena mientras la aplicación está abierta en el móvil.
+          Con el botón del calendario se crean avisos diarios en el calendario de tu móvil: sonarán aunque la aplicación esté cerrada. Al pulsarlo, abre el archivo descargado y acepta añadirlo a tu calendario.
         </p>
       </div>
     </main>
