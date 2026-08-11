@@ -368,7 +368,7 @@ function Pastillas() {
         )}
 
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
-          Con el botón del calendario se crean avisos diarios en el calendario de tu móvil: sonarán aunque la aplicación esté cerrada. Al pulsarlo, abre el archivo descargado y acepta añadirlo a tu calendario.
+          Al guardar una medicina se abre solo el calendario de Google con el aviso ya escrito: únicamente hay que pulsar «Guardar». El aviso se repite todos los días y suena aunque la aplicación esté cerrada.
         </p>
       </div>
     </main>
