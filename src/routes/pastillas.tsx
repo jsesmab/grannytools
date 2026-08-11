@@ -91,6 +91,33 @@ function downloadIcs(meds: Med[], filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+function utcStamp(d: Date) {
+  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+}
+
+// Enlace de Google Calendar: se abre ya relleno y solo hay que pulsar "Guardar".
+function googleCalUrl(medName: string, time: string) {
+  const [hh, mm] = time.split(":");
+  const start = new Date();
+  start.setHours(Number(hh), Number(mm), 0, 0);
+  if (start.getTime() < Date.now()) start.setDate(start.getDate() + 1);
+  const end = new Date(start.getTime() + 10 * 60 * 1000);
+  const p = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `Tomar ${medName}`,
+    details: `Recordatorio de Grannytools para tomar ${medName} a las ${time}`,
+    dates: `${utcStamp(start)}/${utcStamp(end)}`,
+    recur: "RRULE:FREQ=DAILY",
+  });
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
+}
+
+type Pending = { med: string; time: string };
+
+function pendingFor(meds: Med[]): Pending[] {
+  return meds.flatMap((m) => m.times.map((t) => ({ med: m.name, time: t })));
+}
+
 function Pastillas() {
   const [meds, setMeds] = useState<Med[]>([]);
   const [name, setName] = useState("");
@@ -99,6 +126,7 @@ function Pastillas() {
   const [notifOn, setNotifOn] = useState(false);
   const [due, setDue] = useState<{ med: string; time: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [queue, setQueue] = useState<Pending[]>([]);
   const firedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -146,12 +174,20 @@ function Pastillas() {
     if (p !== "granted") setError("No se han permitido los avisos.");
   };
 
+  const openGoogle = (p: Pending) => {
+    window.open(googleCalUrl(p.med, p.time), "_blank", "noopener");
+  };
+
   const addMed = () => {
     const n = name.trim();
     const ts = times.filter(Boolean);
     if (!n || ts.length === 0) { setError("Escribe el nombre y al menos una hora."); return; }
     save([...meds, { name: n, times: ts }]);
     setName(""); setTimes(["09:00"]); setAdding(false); setError(null);
+    // Abre Google Calendar ya relleno con el primer aviso (gesto del usuario).
+    const list = ts.map((t) => ({ med: n, time: t }));
+    openGoogle(list[0]);
+    setQueue(list.slice(1));
   };
 
   const markTaken = (i: number) => {
@@ -292,18 +328,47 @@ function Pastillas() {
           </div>
         )}
 
+        {queue.length > 0 && (
+          <div className="mt-3 rounded-2xl bg-card p-3 shadow-sm">
+            <p className="mb-2 text-sm">
+              Falta{queue.length > 1 ? "n" : ""} <b>{queue.length}</b> aviso{queue.length > 1 ? "s" : ""} por añadir al calendario.
+            </p>
+            <button
+              onClick={() => { openGoogle(queue[0]); setQueue(queue.slice(1)); }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-4 text-base font-black text-primary-foreground active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-6 w-6" aria-hidden />
+              Añadir el de las {queue[0].time}
+            </button>
+          </div>
+        )}
+
         {meds.length > 0 && (
-          <button
-            onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-4 text-base font-black text-secondary-foreground shadow-sm active:scale-[0.98]"
-          >
-            <CalendarPlus className="h-6 w-6" aria-hidden />
-            Poner avisos en el calendario del móvil
-          </button>
+          <div className="mt-3 space-y-2">
+            <button
+              onClick={() => {
+                const list = pendingFor(meds);
+                if (list.length === 0) return;
+                openGoogle(list[0]);
+                setQueue(list.slice(1));
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-4 text-base font-black text-primary-foreground shadow-sm active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-6 w-6" aria-hidden />
+              Poner avisos en Google Calendar
+            </button>
+            <button
+              onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-3 text-sm font-bold text-secondary-foreground shadow-sm active:scale-[0.98]"
+            >
+              <CalendarPlus className="h-5 w-5" aria-hidden />
+              Si no usas Google: archivo para el calendario
+            </button>
+          </div>
         )}
 
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
-          Con el botón del calendario se crean avisos diarios en el calendario de tu móvil: sonarán aunque la aplicación esté cerrada. Al pulsarlo, abre el archivo descargado y acepta añadirlo a tu calendario.
+          Al guardar una medicina se abre solo el calendario de Google con el aviso ya escrito: únicamente hay que pulsar «Guardar». El aviso se repite todos los días y suena aunque la aplicación esté cerrada.
         </p>
       </div>
     </main>
