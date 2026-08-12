@@ -241,10 +241,10 @@ function Lupa() {
           )}
           <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs font-bold text-white">
             {busy ? "Enfocando…" : frozen ? "Arrastra para mover · toca para seguir" : "Toca para congelar"}
-
           </span>
           <canvas ref={canvasRef} className="hidden" />
-        </button>
+        </div>
+
 
         <div className="rounded-xl bg-card p-3 shadow-sm">
           <div className="mb-1 flex items-baseline justify-between">
