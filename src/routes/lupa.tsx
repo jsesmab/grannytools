@@ -129,6 +129,7 @@ function Lupa() {
 
   const unfreeze = async () => {
     setFrozen(null);
+    setPan({ x: 0, y: 0 });
     const v = videoRef.current;
     const live = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
     if (!live) {
@@ -144,8 +145,36 @@ function Lupa() {
   const onTapScreen = () => {
     if (busy) return;
     if (frozen) unfreeze();
-    else freeze();
+    else {
+      setPan({ x: 0, y: 0 });
+      freeze();
+    }
   };
+
+  // Arrastrar la imagen congelada para leer cómodamente
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!frozen) return;
+    dragRef.current = { x: e.clientX, y: e.clientY, ox: pan.x, oy: pan.y, moved: false };
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d || !frozen) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) d.moved = true;
+    setPan({ x: d.ox + dx, y: d.oy + dy });
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    if (frozen && d?.moved) return; // fue un arrastre, no un toque
+    onTapScreen();
+  };
+
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
