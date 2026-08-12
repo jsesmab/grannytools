@@ -34,6 +34,9 @@ function Lupa() {
   const [frozen, setFrozen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null);
+
 
   const start = async () => {
     setError(null);
