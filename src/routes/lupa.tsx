@@ -34,6 +34,9 @@ function Lupa() {
   const [frozen, setFrozen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ x: number; y: number; ox: number; oy: number; moved: boolean } | null>(null);
+
 
   const start = async () => {
     setError(null);
@@ -129,6 +132,7 @@ function Lupa() {
 
   const unfreeze = async () => {
     setFrozen(null);
+    setPan({ x: 0, y: 0 });
     const v = videoRef.current;
     const live = streamRef.current?.getVideoTracks().some((t) => t.readyState === "live");
     if (!live) {
@@ -144,8 +148,36 @@ function Lupa() {
   const onTapScreen = () => {
     if (busy) return;
     if (frozen) unfreeze();
-    else freeze();
+    else {
+      setPan({ x: 0, y: 0 });
+      freeze();
+    }
   };
+
+  // Arrastrar la imagen congelada para leer cómodamente
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!frozen) return;
+    dragRef.current = { x: e.clientX, y: e.clientY, ox: pan.x, oy: pan.y, moved: false };
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d || !frozen) return;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) d.moved = true;
+    setPan({ x: d.ox + dx, y: d.oy + dy });
+  };
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    dragRef.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    if (frozen && d?.moved) return; // fue un arrastre, no un toque
+    onTapScreen();
+  };
+
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -179,10 +211,16 @@ function Lupa() {
           </div>
         )}
 
-        <button
-          onClick={onTapScreen}
+        <div
+          role="button"
+          tabIndex={0}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={() => { dragRef.current = null; }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTapScreen(); } }}
           aria-label={frozen ? "Volver a la lupa en directo" : "Congelar imagen"}
-          className="relative mb-2 block w-full overflow-hidden rounded-2xl bg-black"
+          className="relative mb-2 block w-full touch-none select-none overflow-hidden rounded-2xl bg-black"
           style={{ aspectRatio: "3 / 4" }}
         >
           <video
@@ -196,15 +234,17 @@ function Lupa() {
             <img
               src={frozen}
               alt="Imagen ampliada"
+              draggable={false}
               className="absolute inset-0 h-full w-full object-cover"
-              style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}
             />
           )}
           <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs font-bold text-white">
-            {busy ? "Enfocando…" : frozen ? "Toca para seguir" : "Toca para congelar"}
+            {busy ? "Enfocando…" : frozen ? "Arrastra para mover · toca para seguir" : "Toca para congelar"}
           </span>
           <canvas ref={canvasRef} className="hidden" />
-        </button>
+        </div>
+
 
         <div className="rounded-xl bg-card p-3 shadow-sm">
           <div className="mb-1 flex items-baseline justify-between">
