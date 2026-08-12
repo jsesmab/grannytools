@@ -211,10 +211,16 @@ function Lupa() {
           </div>
         )}
 
-        <button
-          onClick={onTapScreen}
+        <div
+          role="button"
+          tabIndex={0}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={() => { dragRef.current = null; }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTapScreen(); } }}
           aria-label={frozen ? "Volver a la lupa en directo" : "Congelar imagen"}
-          className="relative mb-2 block w-full overflow-hidden rounded-2xl bg-black"
+          className="relative mb-2 block w-full touch-none select-none overflow-hidden rounded-2xl bg-black"
           style={{ aspectRatio: "3 / 4" }}
         >
           <video
@@ -228,12 +234,14 @@ function Lupa() {
             <img
               src={frozen}
               alt="Imagen ampliada"
+              draggable={false}
               className="absolute inset-0 h-full w-full object-cover"
-              style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}
             />
           )}
           <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs font-bold text-white">
-            {busy ? "Enfocando…" : frozen ? "Toca para seguir" : "Toca para congelar"}
+            {busy ? "Enfocando…" : frozen ? "Arrastra para mover · toca para seguir" : "Toca para congelar"}
+
           </span>
           <canvas ref={canvasRef} className="hidden" />
         </button>
