@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tile = {
-  to: "/oir" | "/lupa" | "/panico" | "/ubicacion" | "/pastillas" | "/camara";
+  to: "/oir" | "/lupa" | "/panico" | "/ubicacion" | "/pastillas" | "/citas" | "/camara";
   label: string;
   Icon: typeof Ear;
   bg: string;
@@ -35,8 +35,10 @@ const TILES: Tile[] = [
   { to: "/panico", label: "Contactos", Icon: Users, bg: "bg-destructive", fg: "text-destructive-foreground" },
   { to: "/ubicacion", label: "Ubicación", Icon: MapPin, bg: "bg-primary", fg: "text-primary-foreground" },
   { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
+  { to: "/citas", label: "Citas", Icon: CalendarDays, bg: "bg-success", fg: "text-success-foreground" },
   { to: "/camara", label: "Cámara", Icon: Camera, bg: "bg-secondary", fg: "text-secondary-foreground" },
 ];
+
 
 const USER_NAME_KEY = "grannytools.username";
 
