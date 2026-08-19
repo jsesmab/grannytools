@@ -1,0 +1,373 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Clock } from "lucide-react";
+
+export const Route = createFileRoute("/citas")({
+  head: () => ({
+    meta: [
+      { title: "Grannytools — Citas y turnos" },
+      {
+        name: "description",
+        content:
+          "Organiza citas médicas y turnos de cuidadoras o familiares: horarios fijos, turnos periódicos, horas al día y disponibilidad de cada persona.",
+      },
+      { property: "og:title", content: "Grannytools — Citas y turnos" },
+      { property: "og:description", content: "Turnos de cuidadoras, hijos y citas médicas en una sola pantalla." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: Citas,
+});
+
+type Person = { id: string; name: string; role: "cuidadora" | "familiar" | "medico"; color: string };
+type Entry = {
+  id: string;
+  personId: string;
+  title: string;
+  kind: "fija" | "periodica";
+  date?: string; // fija
+  days?: number[]; // periódica 0..6
+  start: string;
+  end: string;
+};
+
+const PEOPLE_KEY = "grannytools.citas.people";
+const ENTRIES_KEY = "grannytools.citas.entries";
+
+const COLORS = [
+  { name: "Azul", cls: "bg-[#2563eb]" },
+  { name: "Verde", cls: "bg-[#16a34a]" },
+  { name: "Naranja", cls: "bg-[#ea580c]" },
+  { name: "Morado", cls: "bg-[#7c3aed]" },
+  { name: "Rosa", cls: "bg-[#db2777]" },
+  { name: "Turquesa", cls: "bg-[#0891b2]" },
+];
+
+const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
+const DAY_INDEX = [1, 2, 3, 4, 5, 6, 0];
+const ROLES: { v: Person["role"]; label: string }[] = [
+  { v: "cuidadora", label: "Cuidadora" },
+  { v: "familiar", label: "Hijo/Familiar" },
+  { v: "medico", label: "Médico" },
+];
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+
+function hoursBetween(start: string, end: string) {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let m = eh * 60 + em - (sh * 60 + sm);
+  if (m < 0) m += 24 * 60;
+  return Math.round((m / 60) * 10) / 10;
+}
+
+function load<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function save(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
+}
+
+function Citas() {
+  const [people, setPeople] = useState<Person[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [tab, setTab] = useState<"agenda" | "personas">("agenda");
+
+  // form persona
+  const [pName, setPName] = useState("");
+  const [pRole, setPRole] = useState<Person["role"]>("cuidadora");
+  const [pColor, setPColor] = useState(COLORS[0].cls);
+
+  // form cita
+  const [eOpen, setEOpen] = useState(false);
+  const [ePerson, setEPerson] = useState("");
+  const [eTitle, setETitle] = useState("");
+  const [eKind, setEKind] = useState<Entry["kind"]>("periodica");
+  const [eDate, setEDate] = useState("");
+  const [eDays, setEDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [eStart, setEStart] = useState("09:00");
+  const [eEnd, setEEnd] = useState("11:00");
+
+  useEffect(() => {
+    setPeople(load<Person[]>(PEOPLE_KEY, []));
+    setEntries(load<Entry[]>(ENTRIES_KEY, []));
+  }, []);
+
+  const personById = useMemo(() => Object.fromEntries(people.map((p) => [p.id, p])), [people]);
+
+  const addPerson = () => {
+    const name = pName.trim();
+    if (!name) return;
+    const next = [...people, { id: uid(), name, role: pRole, color: pColor }];
+    setPeople(next); save(PEOPLE_KEY, next);
+    setPName("");
+    setPColor(COLORS[next.length % COLORS.length].cls);
+  };
+
+  const removePerson = (id: string) => {
+    const np = people.filter((p) => p.id !== id);
+    const ne = entries.filter((e) => e.personId !== id);
+    setPeople(np); save(PEOPLE_KEY, np);
+    setEntries(ne); save(ENTRIES_KEY, ne);
+  };
+
+  const openNew = () => {
+    setEPerson(people[0]?.id ?? "");
+    setETitle("");
+    setEOpen(true);
+  };
+
+  const addEntry = () => {
+    if (!ePerson) return;
+    const entry: Entry = {
+      id: uid(),
+      personId: ePerson,
+      title: eTitle.trim() || (eKind === "fija" ? "Cita" : "Turno"),
+      kind: eKind,
+      start: eStart,
+      end: eEnd,
+      ...(eKind === "fija" ? { date: eDate } : { days: eDays }),
+    };
+    if (eKind === "fija" && !eDate) return;
+    if (eKind === "periodica" && eDays.length === 0) return;
+    const next = [...entries, entry];
+    setEntries(next); save(ENTRIES_KEY, next);
+    setEOpen(false);
+  };
+
+  const removeEntry = (id: string) => {
+    const next = entries.filter((e) => e.id !== id);
+    setEntries(next); save(ENTRIES_KEY, next);
+  };
+
+  const toggleDay = (d: number) =>
+    setEDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+
+  const weeklyHours = (personId: string) =>
+    entries
+      .filter((e) => e.personId === personId && e.kind === "periodica")
+      .reduce((sum, e) => sum + hoursBetween(e.start, e.end) * (e.days?.length ?? 0), 0);
+
+  const fixed = entries.filter((e) => e.kind === "fija").sort((a, b) => (a.date! + a.start).localeCompare(b.date! + b.start));
+
+  return (
+    <main className="min-h-dvh bg-background text-foreground">
+      <div className="mx-auto max-w-2xl px-3 py-3">
+        <header className="mb-3 flex items-center gap-2">
+          <Link to="/" aria-label="Volver" className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95">
+            <ArrowLeft className="h-6 w-6" aria-hidden />
+          </Link>
+          <h1 className="text-2xl font-black">Citas y turnos</h1>
+        </header>
+
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setTab("agenda")}
+            className={`flex items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${tab === "agenda" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+          >
+            <CalendarDays className="h-5 w-5" aria-hidden /> Agenda
+          </button>
+          <button
+            onClick={() => setTab("personas")}
+            className={`flex items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${tab === "personas" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+          >
+            <Users className="h-5 w-5" aria-hidden /> Personas
+          </button>
+        </div>
+
+        {tab === "personas" && (
+          <section className="space-y-3">
+            <div className="rounded-2xl bg-card p-3 shadow">
+              <h2 className="mb-2 text-lg font-bold">Añadir cuidadora o familiar</h2>
+              <input
+                value={pName}
+                onChange={(e) => setPName(e.target.value)}
+                placeholder="Nombre"
+                className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base"
+              />
+              <div className="mb-2 grid grid-cols-3 gap-2">
+                {ROLES.map((r) => (
+                  <button
+                    key={r.v}
+                    onClick={() => setPRole(r.v)}
+                    className={`rounded-lg py-2 text-sm font-bold active:scale-95 ${pRole === r.v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.cls}
+                    aria-label={`Color ${c.name}`}
+                    onClick={() => setPColor(c.cls)}
+                    className={`h-10 w-10 rounded-full ${c.cls} ${pColor === c.cls ? "ring-4 ring-ring" : ""}`}
+                  />
+                ))}
+              </div>
+              <button onClick={addPerson} className="flex w-full items-center justify-center gap-2 rounded-xl bg-success py-3 text-lg font-black text-success-foreground active:scale-95">
+                <Plus className="h-5 w-5" aria-hidden /> Añadir
+              </button>
+            </div>
+
+            {people.map((p) => (
+              <div key={p.id} className={`flex items-center gap-3 rounded-2xl p-3 text-white shadow ${p.color}`}>
+                <div className="flex-1">
+                  <p className="text-xl font-black">{p.name}</p>
+                  <p className="text-sm opacity-90">
+                    {ROLES.find((r) => r.v === p.role)?.label} · {weeklyHours(p.id)} h/semana
+                  </p>
+                </div>
+                <button onClick={() => removePerson(p.id)} aria-label={`Borrar ${p.name}`} className="flex h-11 w-11 items-center justify-center rounded-xl bg-black/25 active:scale-95">
+                  <Trash2 className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
+            ))}
+            {people.length === 0 && <p className="text-center text-muted-foreground">Aún no hay personas.</p>}
+          </section>
+        )}
+
+        {tab === "agenda" && (
+          <section className="space-y-4">
+            <button
+              onClick={openNew}
+              disabled={people.length === 0}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-xl font-black text-primary-foreground shadow active:scale-95 disabled:opacity-50"
+            >
+              <Plus className="h-6 w-6" aria-hidden /> Nueva cita o turno
+            </button>
+            {people.length === 0 && (
+              <p className="text-center text-muted-foreground">Primero añade personas en la pestaña «Personas».</p>
+            )}
+
+            <div>
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Turnos de cada semana</h2>
+              <div className="space-y-2">
+                {DAY_INDEX.map((d, i) => {
+                  const list = entries.filter((e) => e.kind === "periodica" && e.days?.includes(d));
+                  return (
+                    <div key={d} className="rounded-2xl bg-card p-2 shadow">
+                      <p className="mb-1 font-bold">{["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"][i]}</p>
+                      {list.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Sin turnos</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {list.map((e) => (
+                            <div key={e.id + d} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-white ${personById[e.personId]?.color ?? "bg-primary"}`}>
+                              <Clock className="h-4 w-4 shrink-0" aria-hidden />
+                              <span className="flex-1 font-bold">
+                                {personById[e.personId]?.name} · {e.start}–{e.end}
+                                <span className="block text-xs font-normal opacity-90">{e.title} · {hoursBetween(e.start, e.end)} h</span>
+                              </span>
+                              <button onClick={() => removeEntry(e.id)} aria-label="Borrar turno" className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/25 active:scale-95">
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><CalendarDays className="h-5 w-5" aria-hidden /> Citas con fecha</h2>
+              {fixed.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sin citas con fecha.</p>
+              ) : (
+                <div className="space-y-2">
+                  {fixed.map((e) => (
+                    <div key={e.id} className={`flex items-center gap-2 rounded-xl px-3 py-3 text-white ${personById[e.personId]?.color ?? "bg-primary"}`}>
+                      <span className="flex-1 font-bold">
+                        {e.date} · {e.start}–{e.end}
+                        <span className="block text-sm font-normal opacity-90">{e.title} · {personById[e.personId]?.name}</span>
+                      </span>
+                      <button onClick={() => removeEntry(e.id)} aria-label="Borrar cita" className="flex h-10 w-10 items-center justify-center rounded-lg bg-black/25 active:scale-95">
+                        <Trash2 className="h-5 w-5" aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {eOpen && (
+          <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-2" role="dialog" aria-label="Nueva cita">
+            <div className="max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-card p-3 shadow-xl">
+              <h2 className="mb-2 text-xl font-black">Nueva cita o turno</h2>
+
+              <label className="text-sm font-bold">Persona</label>
+              <select value={ePerson} onChange={(e) => setEPerson(e.target.value)} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+
+              <label className="text-sm font-bold">Descripción</label>
+              <input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder="Turno de mañana / Cardiólogo…" className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
+
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                <button onClick={() => setEKind("periodica")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "periodica" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>Periódica</button>
+                <button onClick={() => setEKind("fija")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "fija" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}>Un solo día</button>
+              </div>
+
+              {eKind === "periodica" ? (
+                <div className="mb-2">
+                  <p className="text-sm font-bold">Días</p>
+                  <div className="flex gap-1">
+                    {DAY_INDEX.map((d, i) => (
+                      <button
+                        key={d}
+                        onClick={() => toggleDay(d)}
+                        aria-pressed={eDays.includes(d)}
+                        className={`h-11 flex-1 rounded-lg font-black active:scale-95 ${eDays.includes(d) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                      >
+                        {DAYS[i]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-2">
+                  <label className="text-sm font-bold">Fecha</label>
+                  <input type="date" value={eDate} onChange={(e) => setEDate(e.target.value)} className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
+                </div>
+              )}
+
+              <div className="mb-1 grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-sm font-bold">Desde</label>
+                  <input type="time" value={eStart} onChange={(e) => setEStart(e.target.value)} className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
+                </div>
+                <div>
+                  <label className="text-sm font-bold">Hasta</label>
+                  <input type="time" value={eEnd} onChange={(e) => setEEnd(e.target.value)} className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
+                </div>
+              </div>
+              <p className="mb-3 text-sm text-muted-foreground">
+                {hoursBetween(eStart, eEnd)} horas al día
+                {eKind === "periodica" ? ` · ${Math.round(hoursBetween(eStart, eEnd) * eDays.length * 10) / 10} h a la semana` : ""}
+              </p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setEOpen(false)} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
+                <button onClick={addEntry} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
