@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Ear, Search, Users, MapPin, Pill, Camera, Pencil, Check } from "lucide-react";
+import { Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check } from "lucide-react";
 
 
 export const Route = createFileRoute("/")({
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tile = {
-  to: "/oir" | "/lupa" | "/panico" | "/ubicacion" | "/pastillas" | "/camara";
+  to: "/oir" | "/lupa" | "/panico" | "/ubicacion" | "/pastillas" | "/citas" | "/camara";
   label: string;
   Icon: typeof Ear;
   bg: string;
@@ -35,8 +35,10 @@ const TILES: Tile[] = [
   { to: "/panico", label: "Contactos", Icon: Users, bg: "bg-destructive", fg: "text-destructive-foreground" },
   { to: "/ubicacion", label: "Ubicación", Icon: MapPin, bg: "bg-primary", fg: "text-primary-foreground" },
   { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
+  { to: "/citas", label: "Citas", Icon: CalendarDays, bg: "bg-success", fg: "text-success-foreground" },
   { to: "/camara", label: "Cámara", Icon: Camera, bg: "bg-secondary", fg: "text-secondary-foreground" },
 ];
+
 
 const USER_NAME_KEY = "grannytools.username";
 
@@ -115,14 +117,14 @@ function Home() {
           <p className="text-sm text-muted-foreground">Elige qué quieres hacer</p>
         </header>
 
-        <div className="grid flex-1 grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 pb-3">
 
           {TILES.map(({ to, label, Icon, bg, fg }) => (
             <Link
               key={to}
               to={to}
               className={[
-                "flex flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none",
+                "flex h-[calc((100dvh-11rem)/3)] min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none",
                 "active:scale-[0.97] active:shadow-inner transition-all",
                 bg,
                 fg,
