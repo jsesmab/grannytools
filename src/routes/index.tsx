@@ -117,14 +117,14 @@ function Home() {
           <p className="text-sm text-muted-foreground">Elige qué quieres hacer</p>
         </header>
 
-        <div className="grid flex-1 grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 pb-3">
 
           {TILES.map(({ to, label, Icon, bg, fg }) => (
             <Link
               key={to}
               to={to}
               className={[
-                "flex flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none",
+                "flex h-[calc((100dvh-11rem)/3)] min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none",
                 "active:scale-[0.97] active:shadow-inner transition-all",
                 bg,
                 fg,
