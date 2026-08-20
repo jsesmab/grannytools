@@ -35,6 +35,12 @@ function isActiveToday(m: Med) {
   return true;
 }
 
+// Tratamiento terminado: se guarda en el histórico pero deja de avisar.
+function isFinished(m: Med) {
+  return Boolean(m.until && localDayKey(new Date()) > m.until);
+}
+
+
 function esDate(iso: string) {
   const [y, mo, d] = iso.split("-");
   return `${d}/${mo}/${y}`;
