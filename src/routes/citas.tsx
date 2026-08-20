@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/citas")({
   head: () => ({
@@ -9,10 +9,10 @@ export const Route = createFileRoute("/citas")({
       {
         name: "description",
         content:
-          "Organiza citas médicas y turnos de cuidadoras o familiares: horarios fijos, turnos periódicos, horas al día y disponibilidad de cada persona.",
+          "Organiza citas médicas y turnos de cuidadoras o familiares en barras de tiempo por día: horarios fijos, turnos periódicos, solapamientos y horas de cada persona.",
       },
       { property: "og:title", content: "Grannytools — Citas y turnos" },
-      { property: "og:description", content: "Turnos de cuidadoras, hijos y citas médicas en una sola pantalla." },
+      { property: "og:description", content: "Turnos de cuidadoras, hijos y citas médicas en barras de tiempo por día." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -46,6 +46,7 @@ const COLORS = [
 
 const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
 const DAY_INDEX = [1, 2, 3, 4, 5, 6, 0];
+const DAY_NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const ROLES: { v: Person["role"]; label: string }[] = [
   { v: "cuidadora", label: "Cuidadora" },
   { v: "familiar", label: "Hijo/Familiar" },
@@ -54,12 +55,39 @@ const ROLES: { v: Person["role"]; label: string }[] = [
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+function toMin(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function endMin(start: string, end: string) {
+  const s = toMin(start);
+  let e = toMin(end);
+  if (e <= s) e = 24 * 60; // turnos que cruzan medianoche se cortan a las 24:00
+  return e;
+}
+
 function hoursBetween(start: string, end: string) {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   let m = eh * 60 + em - (sh * 60 + sm);
   if (m < 0) m += 24 * 60;
   return Math.round((m / 60) * 10) / 10;
+}
+
+// Reparte las citas de un día en carriles: si se solapan, van en barras distintas.
+function buildLanes(list: Entry[]): Entry[][] {
+  const sorted = [...list].sort((a, b) => toMin(a.start) - toMin(b.start) || toMin(a.end) - toMin(b.end));
+  const lanes: Entry[][] = [];
+  for (const e of sorted) {
+    const lane = lanes.find((l) => {
+      const last = l[l.length - 1];
+      return endMin(last.start, last.end) <= toMin(e.start);
+    });
+    if (lane) lane.push(e);
+    else lanes.push([e]);
+  }
+  return lanes;
 }
 
 function load<T>(key: string, fallback: T): T {
@@ -86,6 +114,7 @@ function Citas() {
 
   // form cita
   const [eOpen, setEOpen] = useState(false);
+  const [eEditId, setEEditId] = useState<string | null>(null);
   const [ePerson, setEPerson] = useState("");
   const [eTitle, setETitle] = useState("");
   const [eKind, setEKind] = useState<Entry["kind"]>("periodica");
@@ -118,15 +147,35 @@ function Citas() {
   };
 
   const openNew = () => {
+    setEEditId(null);
     setEPerson(people[0]?.id ?? "");
     setETitle("");
+    setEKind("periodica");
+    setEDate("");
+    setEDays([1, 2, 3, 4, 5]);
+    setEStart("09:00");
+    setEEnd("11:00");
     setEOpen(true);
   };
 
-  const addEntry = () => {
+  const openEdit = (e: Entry) => {
+    setEEditId(e.id);
+    setEPerson(e.personId);
+    setETitle(e.title);
+    setEKind(e.kind);
+    setEDate(e.date ?? "");
+    setEDays(e.days ?? [1, 2, 3, 4, 5]);
+    setEStart(e.start);
+    setEEnd(e.end);
+    setEOpen(true);
+  };
+
+  const saveEntry = () => {
     if (!ePerson) return;
-    const entry: Entry = {
-      id: uid(),
+    if (eKind === "fija" && !eDate) return;
+    if (eKind === "periodica" && eDays.length === 0) return;
+    const base: Entry = {
+      id: eEditId ?? uid(),
       personId: ePerson,
       title: eTitle.trim() || (eKind === "fija" ? "Cita" : "Turno"),
       kind: eKind,
@@ -134,16 +183,16 @@ function Citas() {
       end: eEnd,
       ...(eKind === "fija" ? { date: eDate } : { days: eDays }),
     };
-    if (eKind === "fija" && !eDate) return;
-    if (eKind === "periodica" && eDays.length === 0) return;
-    const next = [...entries, entry];
+    const next = eEditId ? entries.map((x) => (x.id === eEditId ? base : x)) : [...entries, base];
     setEntries(next); save(ENTRIES_KEY, next);
     setEOpen(false);
+    setEEditId(null);
   };
 
   const removeEntry = (id: string) => {
     const next = entries.filter((e) => e.id !== id);
     setEntries(next); save(ENTRIES_KEY, next);
+    setEOpen(false);
   };
 
   const toggleDay = (d: number) =>
@@ -154,7 +203,52 @@ function Citas() {
       .filter((e) => e.personId === personId && e.kind === "periodica")
       .reduce((sum, e) => sum + hoursBetween(e.start, e.end) * (e.days?.length ?? 0), 0);
 
-  const fixed = entries.filter((e) => e.kind === "fija").sort((a, b) => (a.date! + a.start).localeCompare(b.date! + b.start));
+  const fixedByDate = useMemo(() => {
+    const map = new Map<string, Entry[]>();
+    entries.filter((e) => e.kind === "fija" && e.date).forEach((e) => {
+      const list = map.get(e.date!) ?? [];
+      list.push(e);
+      map.set(e.date!, list);
+    });
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [entries]);
+
+  // Barra temporal de un día: una fila por carril, colores de cada persona.
+  const Timeline = ({ list }: { list: Entry[] }) => {
+    if (list.length === 0) return <p className="text-sm text-muted-foreground">Sin turnos</p>;
+    const lanes = buildLanes(list);
+    return (
+      <div className="space-y-1">
+        {lanes.map((lane, li) => (
+          <div key={li} className="relative h-10 overflow-hidden rounded-lg bg-secondary">
+            {lane.map((e) => {
+              const s = toMin(e.start);
+              const en = endMin(e.start, e.end);
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => openEdit(e)}
+                  title={`${personById[e.personId]?.name} · ${e.start}–${e.end} · ${e.title}`}
+                  className={`absolute top-0 flex h-full items-center overflow-hidden rounded-lg px-1 text-left text-white active:scale-[0.98] ${personById[e.personId]?.color ?? "bg-primary"}`}
+                  style={{ left: `${(s / 1440) * 100}%`, width: `${Math.max(((en - s) / 1440) * 100, 4)}%` }}
+                >
+                  <span className="truncate text-[11px] font-black leading-tight">
+                    {personById[e.personId]?.name}
+                    <span className="block text-[10px] font-normal opacity-90">{e.start}–{e.end}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        <div className="flex justify-between px-0.5 text-[10px] text-muted-foreground">
+          {["0", "6", "12", "18", "24"].map((h) => (
+            <span key={h}>{h}h</span>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -246,6 +340,7 @@ function Citas() {
             {people.length === 0 && (
               <p className="text-center text-muted-foreground">Primero añade personas en la pestaña «Personas».</p>
             )}
+            <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>
 
             <div>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Turnos de cada semana</h2>
@@ -254,25 +349,8 @@ function Citas() {
                   const list = entries.filter((e) => e.kind === "periodica" && e.days?.includes(d));
                   return (
                     <div key={d} className="rounded-2xl bg-card p-2 shadow">
-                      <p className="mb-1 font-bold">{["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"][i]}</p>
-                      {list.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Sin turnos</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {list.map((e) => (
-                            <div key={e.id + d} className={`flex items-center gap-2 rounded-xl px-3 py-2 text-white ${personById[e.personId]?.color ?? "bg-primary"}`}>
-                              <Clock className="h-4 w-4 shrink-0" aria-hidden />
-                              <span className="flex-1 font-bold">
-                                {personById[e.personId]?.name} · {e.start}–{e.end}
-                                <span className="block text-xs font-normal opacity-90">{e.title} · {hoursBetween(e.start, e.end)} h</span>
-                              </span>
-                              <button onClick={() => removeEntry(e.id)} aria-label="Borrar turno" className="flex h-9 w-9 items-center justify-center rounded-lg bg-black/25 active:scale-95">
-                                <Trash2 className="h-4 w-4" aria-hidden />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <p className="mb-1 font-bold">{DAY_NAMES[i]}</p>
+                      <Timeline list={list} />
                     </div>
                   );
                 })}
@@ -281,19 +359,27 @@ function Citas() {
 
             <div>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><CalendarDays className="h-5 w-5" aria-hidden /> Citas con fecha</h2>
-              {fixed.length === 0 ? (
+              {fixedByDate.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sin citas con fecha.</p>
               ) : (
                 <div className="space-y-2">
-                  {fixed.map((e) => (
-                    <div key={e.id} className={`flex items-center gap-2 rounded-xl px-3 py-3 text-white ${personById[e.personId]?.color ?? "bg-primary"}`}>
-                      <span className="flex-1 font-bold">
-                        {e.date} · {e.start}–{e.end}
-                        <span className="block text-sm font-normal opacity-90">{e.title} · {personById[e.personId]?.name}</span>
-                      </span>
-                      <button onClick={() => removeEntry(e.id)} aria-label="Borrar cita" className="flex h-10 w-10 items-center justify-center rounded-lg bg-black/25 active:scale-95">
-                        <Trash2 className="h-5 w-5" aria-hidden />
-                      </button>
+                  {fixedByDate.map(([date, list]) => (
+                    <div key={date} className="rounded-2xl bg-card p-2 shadow">
+                      <p className="mb-1 font-bold">{date}</p>
+                      <Timeline list={list} />
+                      <div className="mt-1 space-y-1">
+                        {[...list].sort((a, b) => toMin(a.start) - toMin(b.start)).map((e) => (
+                          <button
+                            key={e.id}
+                            onClick={() => openEdit(e)}
+                            className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-left text-sm font-bold text-secondary-foreground active:scale-[0.98]"
+                          >
+                            <span className={`h-4 w-4 shrink-0 rounded-full ${personById[e.personId]?.color ?? "bg-primary"}`} />
+                            <span className="flex-1 truncate">{e.start}–{e.end} · {e.title} · {personById[e.personId]?.name}</span>
+                            <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -303,9 +389,9 @@ function Citas() {
         )}
 
         {eOpen && (
-          <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-2" role="dialog" aria-label="Nueva cita">
+          <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-2" role="dialog" aria-label="Cita">
             <div className="max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-card p-3 shadow-xl">
-              <h2 className="mb-2 text-xl font-black">Nueva cita o turno</h2>
+              <h2 className="mb-2 text-xl font-black">{eEditId ? "Modificar cita o turno" : "Nueva cita o turno"}</h2>
 
               <label className="text-sm font-bold">Persona</label>
               <select value={ePerson} onChange={(e) => setEPerson(e.target.value)} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
@@ -361,9 +447,17 @@ function Citas() {
               </p>
 
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setEOpen(false)} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
-                <button onClick={addEntry} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
+                <button onClick={() => { setEOpen(false); setEEditId(null); }} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
+                <button onClick={saveEntry} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
               </div>
+              {eEditId && (
+                <button
+                  onClick={() => removeEntry(eEditId)}
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-destructive py-3 text-lg font-bold text-destructive-foreground active:scale-95"
+                >
+                  <Trash2 className="h-5 w-5" aria-hidden /> Borrar
+                </button>
+              )}
             </div>
           </div>
         )}
