@@ -35,6 +35,12 @@ function isActiveToday(m: Med) {
   return true;
 }
 
+// Tratamiento terminado: se guarda en el histórico pero deja de avisar.
+function isFinished(m: Med) {
+  return Boolean(m.until && localDayKey(new Date()) > m.until);
+}
+
+
 function esDate(iso: string) {
   const [y, mo, d] = iso.split("-");
   return `${d}/${mo}/${y}`;
@@ -174,6 +180,10 @@ function Pastillas() {
   const [error, setError] = useState<string | null>(null);
   const [queue, setQueue] = useState<Pending[]>([]);
   const firedRef = useRef<Set<string>>(new Set());
+  const [showHistory, setShowHistory] = useState(false);
+  const activeMeds = meds.filter((m) => !isFinished(m));
+  const finishedMeds = meds.filter(isFinished);
+
 
   useEffect(() => {
     try {
@@ -281,14 +291,14 @@ function Pastillas() {
           </div>
         )}
 
-        {meds.length === 0 && !adding && (
+        {activeMeds.length === 0 && !adding && (
           <p className="mb-3 rounded-xl bg-card p-3 text-sm text-muted-foreground shadow-sm">
-            Todavía no hay medicinas. Pulsa <b>Añadir medicina</b>.
+            No hay medicinas en curso. Pulsa <b>Añadir medicina</b>.
           </p>
         )}
 
         <div className="mb-3 space-y-2">
-          {meds.map((m, i) => (
+          {meds.map((m, i) => (isFinished(m) ? null : (
             <div key={i} className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-sm">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning text-warning-foreground">
                 <Pill className="h-6 w-6" aria-hidden />
@@ -298,7 +308,7 @@ function Pastillas() {
                 <div className="text-sm text-muted-foreground">{m.times.join("  ·  ")}</div>
                 <div className="text-xs font-bold text-muted-foreground">
                   {m.until
-                    ? `Tratamiento: ${esDate(m.from ?? todayKey())} → ${esDate(m.until)}${isActiveToday(m) ? "" : " (terminado)"}`
+                    ? `Tratamiento: ${esDate(m.from ?? todayKey())} → ${esDate(m.until)}`
                     : "Todos los días (crónico)"}
                 </div>
               </div>
@@ -317,8 +327,42 @@ function Pastillas() {
                 <Trash2 className="h-5 w-5" aria-hidden />
               </button>
             </div>
-          ))}
+          )))}
         </div>
+
+        {finishedMeds.length > 0 && (
+          <div className="mb-3">
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="w-full rounded-xl bg-secondary px-3 py-3 text-base font-bold text-secondary-foreground active:scale-[0.97]"
+            >
+              {showHistory ? "Ocultar histórico" : `Ver histórico (${finishedMeds.length})`}
+            </button>
+            {showHistory && (
+              <div className="mt-2 space-y-2">
+                {meds.map((m, i) => (isFinished(m) ? (
+                  <div key={i} className="flex items-center gap-3 rounded-2xl bg-card p-3 opacity-70 shadow-sm">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-base font-bold line-through">{m.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Terminado: {esDate(m.from ?? todayKey())} → {esDate(m.until!)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => save(meds.filter((_, idx) => idx !== i))}
+                      aria-label={`Borrar del histórico ${m.name}`}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]"
+                    >
+                      <Trash2 className="h-5 w-5" aria-hidden />
+                    </button>
+                  </div>
+                ) : null))}
+              </div>
+            )}
+          </div>
+        )}
+
+
 
         {adding ? (
           <div className="space-y-2 rounded-2xl border-2 border-dashed border-border p-3">
@@ -445,11 +489,11 @@ function Pastillas() {
           </div>
         )}
 
-        {meds.length > 0 && (
+        {activeMeds.length > 0 && (
           <div className="mt-3 space-y-2">
             <button
               onClick={() => {
-                const list = pendingFor(meds);
+                const list = pendingFor(activeMeds);
                 if (list.length === 0) return;
                 openGoogle(list[0]);
                 setQueue(list.slice(1));
@@ -460,7 +504,7 @@ function Pastillas() {
               Poner avisos en Google Calendar
             </button>
             <button
-              onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
+              onClick={() => downloadIcs(activeMeds, "pastillas-grannytools.ics")}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-3 text-sm font-bold text-secondary-foreground shadow-sm active:scale-[0.98]"
             >
               <CalendarPlus className="h-5 w-5" aria-hidden />
