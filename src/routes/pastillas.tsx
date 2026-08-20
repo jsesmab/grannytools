@@ -489,11 +489,11 @@ function Pastillas() {
           </div>
         )}
 
-        {meds.length > 0 && (
+        {activeMeds.length > 0 && (
           <div className="mt-3 space-y-2">
             <button
               onClick={() => {
-                const list = pendingFor(meds);
+                const list = pendingFor(activeMeds);
                 if (list.length === 0) return;
                 openGoogle(list[0]);
                 setQueue(list.slice(1));
@@ -504,7 +504,7 @@ function Pastillas() {
               Poner avisos en Google Calendar
             </button>
             <button
-              onClick={() => downloadIcs(meds, "pastillas-grannytools.ics")}
+              onClick={() => downloadIcs(activeMeds, "pastillas-grannytools.ics")}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-3 text-sm font-bold text-secondary-foreground shadow-sm active:scale-[0.98]"
             >
               <CalendarPlus className="h-5 w-5" aria-hidden />
