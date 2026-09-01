@@ -180,95 +180,85 @@ function Lupa() {
 
 
   return (
-    <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto max-w-2xl px-3 py-3">
-        <header className="mb-3 flex items-center gap-2">
-          <a href="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
-            <ArrowLeft className="h-5 w-5" aria-hidden />
-          </a>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-success text-success-foreground">
-            <Search className="h-6 w-6" aria-hidden />
-          </div>
-          <h1 className="text-xl font-bold">Lupa</h1>
-          <button
-            onClick={toggleTorch}
-            disabled={!running || !torchAvailable}
-            aria-pressed={torchOn}
-            className={[
-              "ml-auto flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold active:scale-[0.97] active:shadow-inner disabled:opacity-50",
-              torchOn ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            {torchOn ? <LightbulbOff className="h-5 w-5" aria-hidden /> : <Lightbulb className="h-5 w-5" aria-hidden />}
-            {torchOn ? "Apagar luz" : "Encender luz"}
-          </button>
-        </header>
-
-        {error && (
-          <div role="alert" className="mb-3 flex items-start gap-2 rounded-xl border-2 border-destructive/40 bg-destructive/10 p-2">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden />
-            <p className="text-sm">{error}</p>
-          </div>
+    <main className="fixed inset-0 bg-black text-white">
+      <div
+        role="button"
+        tabIndex={0}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => { dragRef.current = null; }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTapScreen(); } }}
+        aria-label={frozen ? "Volver a la lupa en directo" : "Congelar imagen"}
+        className="absolute inset-0 touch-none select-none overflow-hidden"
+      >
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className="h-full w-full object-cover"
+          style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+        />
+        {frozen && (
+          <img
+            src={frozen}
+            alt="Imagen ampliada"
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}
+          />
         )}
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
 
-        <div
-          role="button"
-          tabIndex={0}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={() => { dragRef.current = null; }}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTapScreen(); } }}
-          aria-label={frozen ? "Volver a la lupa en directo" : "Congelar imagen"}
-          className="relative mb-2 block w-full touch-none select-none overflow-hidden rounded-2xl bg-black"
-          style={{ aspectRatio: "3 / 4" }}
+      {/* Barra superior */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start gap-2 p-3">
+        <a
+          href="/"
+          aria-label="Inicio"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-xl bg-black/60 text-white active:scale-[0.95]"
         >
-          <video
-            ref={videoRef}
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-            style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
-          />
-          {frozen && (
-            <img
-              src={frozen}
-              alt="Imagen ampliada"
-              draggable={false}
-              className="absolute inset-0 h-full w-full object-cover"
-              style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}
-            />
-          )}
-          <span className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs font-bold text-white">
-            {busy ? "Enfocando…" : frozen ? "Arrastra para mover · toca para seguir" : "Toca para congelar"}
-          </span>
-          <canvas ref={canvasRef} className="hidden" />
+          <ArrowLeft className="h-6 w-6" aria-hidden />
+        </a>
+        <button
+          onClick={toggleTorch}
+          disabled={!running || !torchAvailable}
+          aria-pressed={torchOn}
+          className={[
+            "pointer-events-auto ml-auto flex items-center gap-2 rounded-xl px-4 py-3 text-base font-bold active:scale-[0.97] disabled:opacity-40",
+            torchOn ? "bg-warning text-warning-foreground" : "bg-black/60 text-white",
+          ].join(" ")}
+        >
+          {torchOn ? <LightbulbOff className="h-6 w-6" aria-hidden /> : <Lightbulb className="h-6 w-6" aria-hidden />}
+          {torchOn ? "Apagar luz" : "Luz"}
+        </button>
+      </div>
+
+      {error && (
+        <div role="alert" className="absolute inset-x-3 top-20 flex items-start gap-2 rounded-xl bg-destructive p-3 text-destructive-foreground">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+          <p className="text-sm">{error}</p>
         </div>
+      )}
 
-
-        <div className="rounded-xl bg-card p-3 shadow-sm">
-          <div className="mb-1 flex items-baseline justify-between">
-            <h2 className="text-base font-bold">Zoom</h2>
-            <span className="text-sm font-semibold tabular-nums text-muted-foreground">×{zoom.toFixed(1)}</span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={6}
-            step={0.1}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-            aria-label="Nivel de zoom"
-            className="h-3 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-          />
+      {/* Barra inferior: estado + zoom */}
+      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-black/60 px-4 pb-5 pt-3">
+        <div className="flex items-baseline justify-between text-sm font-bold">
+          <span>{busy ? "Enfocando…" : frozen ? "Arrastra para mover · toca para seguir" : "Toca para congelar"}</span>
+          <span className="tabular-nums">×{zoom.toFixed(1)}</span>
         </div>
-
-        {!torchAvailable && running && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            Esta cámara o navegador no permite encender la linterna. En iPhone (Safari) la linterna no está disponible desde la web.
-          </p>
-        )}
+        <input
+          type="range"
+          min={1}
+          max={6}
+          step={0.1}
+          value={zoom}
+          onChange={(e) => setZoom(Number(e.target.value))}
+          aria-label="Nivel de zoom"
+          className="h-3 w-full cursor-pointer appearance-none rounded-full bg-white/30 accent-primary"
+        />
       </div>
     </main>
   );
 }
+
