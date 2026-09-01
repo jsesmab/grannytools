@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AppReminders } from "../lib/reminders";
+import { usePrefs } from "../hooks/use-prefs";
 
 function NotFoundComponent() {
   return (
