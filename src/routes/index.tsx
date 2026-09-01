@@ -192,8 +192,33 @@ function Home() {
               <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
             </button>
           )}
-          <p className="text-sm text-muted-foreground">Elige qué quieres hacer</p>
         </header>
+
+        <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-base font-bold">
+              {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
+            </h2>
+            <button
+              onClick={speak}
+              aria-label="Escuchar el saludo y las citas de hoy"
+              className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97]"
+            >
+              <Volume2 className="h-5 w-5" aria-hidden /> Escuchar
+            </button>
+          </div>
+          {todayItems.length > 0 && (
+            <ul className="space-y-1">
+              {todayItems.map((it) => (
+                <li key={it.id} className="flex items-center gap-2 text-sm font-semibold">
+                  <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
+                  <span>{it.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
 
         <div className="grid grid-cols-2 gap-2 pb-3">
 
