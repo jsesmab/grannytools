@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check } from "lucide-react";
+import { Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/")({
@@ -41,6 +41,20 @@ const TILES: Tile[] = [
 
 
 const USER_NAME_KEY = "grannytools.username";
+const PEOPLE_KEY = "grannytools.citas.people";
+const ENTRIES_KEY = "grannytools.citas.entries";
+
+type Person = { id: string; name: string; color: string };
+type Entry = {
+  id: string;
+  personId: string;
+  title: string;
+  kind: "fija" | "periodica";
+  date?: string;
+  days?: number[];
+  start: string;
+  end: string;
+};
 
 function greetingFor(date: Date) {
   const h = date.getHours();
@@ -50,23 +64,86 @@ function greetingFor(date: Date) {
   return "Buenas noches";
 }
 
+function load<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function todayISO(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function Home() {
   const [userName, setUserName] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState("");
   const [greeting, setGreeting] = useState("Hola");
+  const [todayItems, setTodayItems] = useState<{ id: string; text: string; color: string }[]>([]);
+  const [spokenText, setSpokenText] = useState("");
 
   useEffect(() => {
-    setGreeting(greetingFor(new Date()));
+    const now = new Date();
+    setGreeting(greetingFor(now));
+    let saved = "";
     try {
-      const saved = localStorage.getItem(USER_NAME_KEY) ?? "";
+      saved = localStorage.getItem(USER_NAME_KEY) ?? "";
       setUserName(saved);
       setDraft(saved);
       if (!saved) setEditingName(true);
     } catch {
       /* ignore */
     }
+
+    const people = load<Person[]>(PEOPLE_KEY, []);
+    const entries = load<Entry[]>(ENTRIES_KEY, []);
+    const iso = todayISO(now);
+    const dow = now.getDay();
+    const mine = entries
+      .filter((e) => (e.kind === "fija" ? e.date === iso : (e.days ?? []).includes(dow)))
+      .sort((a, b) => a.start.localeCompare(b.start));
+
+    const items = mine.map((e) => {
+      const p = people.find((x) => x.id === e.personId);
+      const who = p?.name ? ` — ${p.name}` : "";
+      return {
+        id: e.id,
+        text: `${e.start} a ${e.end} · ${e.title || "Turno"}${who}`,
+        color: p?.color ?? "bg-secondary",
+      };
+    });
+    setTodayItems(items);
+
+    const hello = `${greetingFor(now)}${saved ? `, ${saved}` : ""}.`;
+    const body = items.length
+      ? ` Hoy tienes ${items.length} ${items.length === 1 ? "cita" : "citas"}: ` +
+        mine
+          .map((e) => {
+            const p = people.find((x) => x.id === e.personId);
+            return `${e.title || "turno"}${p?.name ? ` con ${p.name}` : ""}, de ${e.start.replace(":", " y ")} a ${e.end.replace(":", " y ")}`;
+          })
+          .join("; ") + "."
+      : " Hoy no tienes ninguna cita.";
+    setSpokenText(hello + body);
   }, []);
+
+  const speak = () => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth || !spokenText) return;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(spokenText);
+      u.lang = "es-ES";
+      u.rate = 0.9;
+      u.pitch = 1.1;
+      synth.speak(u);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const saveName = () => {
     const n = draft.trim();
@@ -74,6 +151,7 @@ function Home() {
     setEditingName(false);
     try { localStorage.setItem(USER_NAME_KEY, n); } catch { /* ignore */ }
   };
+
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -114,8 +192,33 @@ function Home() {
               <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
             </button>
           )}
-          <p className="text-sm text-muted-foreground">Elige qué quieres hacer</p>
         </header>
+
+        <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-base font-bold">
+              {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
+            </h2>
+            <button
+              onClick={speak}
+              aria-label="Escuchar el saludo y las citas de hoy"
+              className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97]"
+            >
+              <Volume2 className="h-5 w-5" aria-hidden /> Escuchar
+            </button>
+          </div>
+          {todayItems.length > 0 && (
+            <ul className="space-y-1">
+              {todayItems.map((it) => (
+                <li key={it.id} className="flex items-center gap-2 text-sm font-semibold">
+                  <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
+                  <span>{it.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
 
         <div className="grid grid-cols-2 gap-2 pb-3">
 
