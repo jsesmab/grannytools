@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check } from "lucide-react";
+import { Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2 } from "lucide-react";
 
 
 export const Route = createFileRoute("/")({
