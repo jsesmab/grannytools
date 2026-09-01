@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2 } from "lucide-react";
-
+import { useEffect, useRef, useState } from "react";
+import {
+  Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
+  Pause, Play, Square, Settings2, ChevronRight,
+} from "lucide-react";
+import { usePrefs } from "@/hooks/use-prefs";
+import { askReminderPermission, DEFAULT_REMIND_MIN } from "@/lib/reminders";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -43,6 +47,7 @@ const TILES: Tile[] = [
 const USER_NAME_KEY = "grannytools.username";
 const PEOPLE_KEY = "grannytools.citas.people";
 const ENTRIES_KEY = "grannytools.citas.entries";
+const VOICE_KEY = "grannytools.voz";
 
 type Person = { id: string; name: string; color: string };
 type Entry = {
@@ -54,6 +59,7 @@ type Entry = {
   days?: number[];
   start: string;
   end: string;
+  remindMin?: number;
 };
 
 function greetingFor(date: Date) {
@@ -78,12 +84,19 @@ function todayISO(d: Date) {
 }
 
 function Home() {
+  const { prefs, update } = usePrefs();
   const [userName, setUserName] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [draft, setDraft] = useState("");
   const [greeting, setGreeting] = useState("Hola");
-  const [todayItems, setTodayItems] = useState<{ id: string; text: string; color: string }[]>([]);
+  const [todayItems, setTodayItems] = useState<{ id: string; text: string; color: string; remindMin: number }[]>([]);
   const [spokenText, setSpokenText] = useState("");
+  const [speaking, setSpeaking] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [rate, setRate] = useState(0.9);
+  const [volume, setVolume] = useState(1);
+  const [showPrefs, setShowPrefs] = useState(false);
+  const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
     const now = new Date();
@@ -97,6 +110,10 @@ function Home() {
     } catch {
       /* ignore */
     }
+
+    const voice = load<{ rate: number; volume: number }>(VOICE_KEY, { rate: 0.9, volume: 1 });
+    setRate(voice.rate);
+    setVolume(voice.volume);
 
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
@@ -113,6 +130,7 @@ function Home() {
         id: e.id,
         text: `${e.start} a ${e.end} · ${e.title || "Turno"}${who}`,
         color: p?.color ?? "bg-secondary",
+        remindMin: e.remindMin ?? DEFAULT_REMIND_MIN,
       };
     });
     setTodayItems(items);
@@ -128,7 +146,32 @@ function Home() {
           .join("; ") + "."
       : " Hoy no tienes ninguna cita.";
     setSpokenText(hello + body);
+
+    askReminderPermission();
   }, []);
+
+  useEffect(() => () => {
+    if (pollRef.current) window.clearInterval(pollRef.current);
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+  }, []);
+
+  const saveVoice = (r: number, v: number) => {
+    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v })); } catch { /* ignore */ }
+  };
+
+  const watchSpeech = () => {
+    if (pollRef.current) window.clearInterval(pollRef.current);
+    pollRef.current = window.setInterval(() => {
+      const s = window.speechSynthesis;
+      if (!s) return;
+      setSpeaking(s.speaking);
+      setPaused(s.paused);
+      if (!s.speaking && pollRef.current) {
+        window.clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }, 400);
+  };
 
   const speak = () => {
     try {
@@ -137,12 +180,30 @@ function Home() {
       synth.cancel();
       const u = new SpeechSynthesisUtterance(spokenText);
       u.lang = "es-ES";
-      u.rate = 0.9;
+      u.rate = rate;
+      u.volume = volume;
       u.pitch = 1.1;
+      u.onend = () => { setSpeaking(false); setPaused(false); };
       synth.speak(u);
+      setSpeaking(true);
+      setPaused(false);
+      watchSpeech();
     } catch {
       /* ignore */
     }
+  };
+
+  const togglePause = () => {
+    const s = window.speechSynthesis;
+    if (!s) return;
+    if (s.paused) { s.resume(); setPaused(false); }
+    else { s.pause(); setPaused(true); }
+  };
+
+  const stopSpeech = () => {
+    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+    setSpeaking(false);
+    setPaused(false);
   };
 
   const saveName = () => {
@@ -157,7 +218,18 @@ function Home() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-3 py-3">
         <header className="mb-3 text-center">
-          <h1 className="text-3xl font-black tracking-tight">Grannytools</h1>
+          <div className="flex items-start justify-between gap-2">
+            <span className="h-11 w-11" aria-hidden />
+            <h1 className="flex-1 text-3xl font-black tracking-tight">Grannytools</h1>
+            <button
+              onClick={() => setShowPrefs((v) => !v)}
+              aria-label="Ajustes de visión"
+              aria-expanded={showPrefs}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+            >
+              <Settings2 className="h-6 w-6" aria-hidden />
+            </button>
+          </div>
           {editingName ? (
             <form
               onSubmit={(e) => { e.preventDefault(); saveName(); }}
@@ -194,25 +266,134 @@ function Home() {
           )}
         </header>
 
+        {showPrefs && (
+          <section className="mb-3 space-y-3 rounded-2xl bg-card p-3 shadow-sm">
+            <h2 className="text-base font-bold">Cómo se ve la aplicación</h2>
+            <div>
+              <label htmlFor="fuente" className="text-sm font-bold">
+                Tamaño de letra · {Math.round(prefs.fontScale * 100)}%
+              </label>
+              <input
+                id="fuente"
+                type="range"
+                min={0.85}
+                max={1.6}
+                step={0.05}
+                value={prefs.fontScale}
+                onChange={(e) => update({ fontScale: Number(e.target.value) })}
+                className="h-3 w-full accent-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="brillo" className="text-sm font-bold">
+                Brillo extra en la lupa · ×{prefs.brightness.toFixed(1)}
+              </label>
+              <input
+                id="brillo"
+                type="range"
+                min={1}
+                max={2}
+                step={0.1}
+                value={prefs.brightness}
+                onChange={(e) => update({ brightness: Number(e.target.value) })}
+                className="h-3 w-full accent-primary"
+              />
+            </div>
+            <button
+              onClick={() => update({ highContrast: !prefs.highContrast })}
+              aria-pressed={prefs.highContrast}
+              className={`w-full rounded-xl py-3 text-lg font-bold active:scale-95 ${prefs.highContrast ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+            >
+              Contraste alto: {prefs.highContrast ? "sí" : "no"}
+            </button>
+          </section>
+        )}
+
         <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="text-base font-bold">
               {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
             </h2>
-            <button
-              onClick={speak}
-              aria-label="Escuchar el saludo y las citas de hoy"
-              className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97]"
-            >
-              <Volume2 className="h-5 w-5" aria-hidden /> Escuchar
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={speak}
+                aria-label="Escuchar el saludo y las citas de hoy"
+                className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97]"
+              >
+                <Volume2 className="h-5 w-5" aria-hidden /> Escuchar
+              </button>
+              {speaking && (
+                <>
+                  <button
+                    onClick={togglePause}
+                    aria-label={paused ? "Reanudar lectura" : "Pausar lectura"}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                  >
+                    {paused ? <Play className="h-5 w-5" aria-hidden /> : <Pause className="h-5 w-5" aria-hidden />}
+                  </button>
+                  <button
+                    onClick={stopSpeech}
+                    aria-label="Parar lectura"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                  >
+                    <Square className="h-5 w-5" aria-hidden />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+
+          <div className="mb-2 grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="velocidad" className="text-xs font-bold text-muted-foreground">
+                Velocidad ×{rate.toFixed(1)}
+              </label>
+              <input
+                id="velocidad"
+                type="range"
+                min={0.5}
+                max={1.5}
+                step={0.1}
+                value={rate}
+                onChange={(e) => { const v = Number(e.target.value); setRate(v); saveVoice(v, volume); }}
+                className="h-3 w-full accent-primary"
+              />
+            </div>
+            <div>
+              <label htmlFor="volumen" className="text-xs font-bold text-muted-foreground">
+                Volumen {Math.round(volume * 100)}%
+              </label>
+              <input
+                id="volumen"
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.1}
+                value={volume}
+                onChange={(e) => { const v = Number(e.target.value); setVolume(v); saveVoice(rate, v); }}
+                className="h-3 w-full accent-primary"
+              />
+            </div>
+          </div>
+
           {todayItems.length > 0 && (
             <ul className="space-y-1">
               {todayItems.map((it) => (
-                <li key={it.id} className="flex items-center gap-2 text-sm font-semibold">
-                  <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
-                  <span>{it.text}</span>
+                <li key={it.id}>
+                  <Link
+                    to="/citas"
+                    search={{ edit: it.id }}
+                    className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-sm font-semibold text-secondary-foreground active:scale-[0.98]"
+                  >
+                    <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
+                    <span className="flex-1 text-left">
+                      {it.text}
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        Aviso {it.remindMin} min antes
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+                  </Link>
                 </li>
               ))}
             </ul>

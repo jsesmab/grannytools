@@ -11,6 +11,8 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AppReminders } from "../lib/reminders";
+import { usePrefs } from "../hooks/use-prefs";
 
 function NotFoundComponent() {
   return (
@@ -124,9 +126,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  usePrefs();
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AppReminders />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
