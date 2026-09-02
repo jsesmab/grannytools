@@ -225,7 +225,7 @@ function Citas() {
   const removeEntry = (id: string) => {
     const next = entries.filter((e) => e.id !== id);
     setEntries(next); save(ENTRIES_KEY, next);
-    setEOpen(false);
+    closeForm();
   };
 
   const toggleDay = (d: number) =>
