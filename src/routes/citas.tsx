@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil, Bell, UserPlus } from "lucide-react";
+import { DEFAULT_REMIND_MIN } from "@/lib/reminders";
 
 export const Route = createFileRoute("/citas")({
   validateSearch: (search: Record<string, unknown>): { edit?: string } => ({
