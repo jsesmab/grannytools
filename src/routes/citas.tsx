@@ -363,13 +363,22 @@ function Citas() {
 
         {tab === "agenda" && (
           <section className="space-y-4">
-            <button
-              onClick={openNew}
-              disabled={people.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-xl font-black text-primary-foreground shadow active:scale-95 disabled:opacity-50"
-            >
-              <Plus className="h-6 w-6" aria-hidden /> Nueva cita o turno
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => openNew("fija")}
+                disabled={people.length === 0}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-warning py-4 text-lg font-black text-warning-foreground shadow active:scale-95 disabled:opacity-50"
+              >
+                <CalendarDays className="h-6 w-6" aria-hidden /> Nueva cita
+              </button>
+              <button
+                onClick={() => openNew("periodica")}
+                disabled={people.length === 0}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-lg font-black text-primary-foreground shadow active:scale-95 disabled:opacity-50"
+              >
+                <Repeat className="h-6 w-6" aria-hidden /> Nuevo turno
+              </button>
+            </div>
             {people.length === 0 && (
               <p className="text-center text-muted-foreground">Primero añade personas en la pestaña «Personas».</p>
             )}
