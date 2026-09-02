@@ -59,6 +59,7 @@ type Entry = {
   days?: number[];
   start: string;
   end: string;
+  companion?: string;
   remindMin?: number;
 };
 
@@ -118,17 +119,18 @@ function Home() {
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
     const iso = todayISO(now);
-    const dow = now.getDay();
+    // En el saludo solo se cuentan las CITAS puntuales de hoy (los turnos no).
     const mine = entries
-      .filter((e) => (e.kind === "fija" ? e.date === iso : (e.days ?? []).includes(dow)))
+      .filter((e) => e.kind === "fija" && e.date === iso)
       .sort((a, b) => a.start.localeCompare(b.start));
 
     const items = mine.map((e) => {
       const p = people.find((x) => x.id === e.personId);
       const who = p?.name ? ` — ${p.name}` : "";
+      const withWho = e.companion ? ` · con ${e.companion}` : "";
       return {
         id: e.id,
-        text: `${e.start} a ${e.end} · ${e.title || "Turno"}${who}`,
+        text: `${e.start} a ${e.end} · ${e.title || "Cita"}${who}${withWho}`,
         color: p?.color ?? "bg-secondary",
         remindMin: e.remindMin ?? DEFAULT_REMIND_MIN,
       };
@@ -141,13 +143,47 @@ function Home() {
         mine
           .map((e) => {
             const p = people.find((x) => x.id === e.personId);
-            return `${e.title || "turno"}${p?.name ? ` con ${p.name}` : ""}, de ${e.start.replace(":", " y ")} a ${e.end.replace(":", " y ")}`;
+            return `${e.title || "cita"}${p?.name ? ` con ${p.name}` : ""}, a las ${e.start.replace(":", " y ")}${e.companion ? `, te acompaña ${e.companion}` : ""}`;
           })
           .join("; ") + "."
       : " Hoy no tienes ninguna cita.";
     setSpokenText(hello + body);
 
     askReminderPermission();
+  }, []);
+
+  // Previsión del tiempo de hoy (sin cuenta ni clave: Open-Meteo)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchWeather = async (lat: number, lon: number) => {
+      try {
+        const url =
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(2)}&longitude=${lon.toFixed(2)}` +
+          `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
+        const res = await fetch(url);
+        const json = (await res.json()) as {
+          daily?: { weather_code: number[]; temperature_2m_max: number[]; temperature_2m_min: number[] };
+        };
+        const d = json.daily;
+        if (!d || cancelled) return;
+        const desc = weatherText(d.weather_code[0]);
+        const max = Math.round(d.temperature_2m_max[0]);
+        const min = Math.round(d.temperature_2m_min[0]);
+        setWeather({ desc, max, min });
+      } catch {
+        /* sin tiempo */
+      }
+    };
+    try {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => void fetchWeather(pos.coords.latitude, pos.coords.longitude),
+        () => void fetchWeather(40.42, -3.7), // Madrid por defecto
+        { timeout: 8000, maximumAge: 3_600_000 },
+      );
+    } catch {
+      void fetchWeather(40.42, -3.7);
+    }
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => () => {

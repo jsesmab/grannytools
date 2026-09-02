@@ -1,18 +1,22 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil, Bell, UserPlus } from "lucide-react";
+import { DEFAULT_REMIND_MIN } from "@/lib/reminders";
 
 export const Route = createFileRoute("/citas")({
+  validateSearch: (search: Record<string, unknown>): { edit?: string } => ({
+    edit: typeof search.edit === "string" ? search.edit : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Grannytools — Citas y turnos" },
       {
         name: "description",
         content:
-          "Organiza citas médicas y turnos de cuidadoras o familiares en barras de tiempo por día: horarios fijos, turnos periódicos, solapamientos y horas de cada persona.",
+          "Organiza citas médicas puntuales con acompañante y turnos de cuidadoras o familiares en barras de tiempo por día.",
       },
       { property: "og:title", content: "Grannytools — Citas y turnos" },
-      { property: "og:description", content: "Turnos de cuidadoras, hijos y citas médicas en barras de tiempo por día." },
+      { property: "og:description", content: "Citas puntuales con acompañante y turnos de cuidadoras por día." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -25,11 +29,13 @@ type Entry = {
   id: string;
   personId: string;
   title: string;
-  kind: "fija" | "periodica";
-  date?: string; // fija
-  days?: number[]; // periódica 0..6
+  kind: "fija" | "periodica"; // fija = cita puntual · periodica = turno
+  date?: string; // cita
+  days?: number[]; // turno 0..6
   start: string;
   end: string;
+  companion?: string; // acompañante (solo citas)
+  remindMin?: number;
 };
 
 const PEOPLE_KEY = "grannytools.citas.people";
@@ -102,7 +108,14 @@ function save(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
 }
 
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function Citas() {
+  const { edit: editId } = Route.useSearch();
+  const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [tab, setTab] = useState<"agenda" | "personas">("agenda");
@@ -112,7 +125,7 @@ function Citas() {
   const [pRole, setPRole] = useState<Person["role"]>("cuidadora");
   const [pColor, setPColor] = useState(COLORS[0].cls);
 
-  // form cita
+  // form cita / turno
   const [eOpen, setEOpen] = useState(false);
   const [eEditId, setEEditId] = useState<string | null>(null);
   const [ePerson, setEPerson] = useState("");
@@ -122,11 +135,19 @@ function Citas() {
   const [eDays, setEDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [eStart, setEStart] = useState("09:00");
   const [eEnd, setEEnd] = useState("11:00");
+  const [eCompanion, setECompanion] = useState("");
+  const [eRemind, setERemind] = useState(DEFAULT_REMIND_MIN);
 
   useEffect(() => {
     setPeople(load<Person[]>(PEOPLE_KEY, []));
-    setEntries(load<Entry[]>(ENTRIES_KEY, []));
-  }, []);
+    const loaded = load<Entry[]>(ENTRIES_KEY, []);
+    setEntries(loaded);
+    if (editId) {
+      const found = loaded.find((e) => e.id === editId);
+      if (found) openEdit(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   const personById = useMemo(() => Object.fromEntries(people.map((p) => [p.id, p])), [people]);
 
@@ -146,15 +167,17 @@ function Citas() {
     setEntries(ne); save(ENTRIES_KEY, ne);
   };
 
-  const openNew = () => {
+  const openNew = (kind: Entry["kind"]) => {
     setEEditId(null);
     setEPerson(people[0]?.id ?? "");
     setETitle("");
-    setEKind("periodica");
-    setEDate("");
+    setEKind(kind);
+    setEDate(kind === "fija" ? todayISO() : "");
     setEDays([1, 2, 3, 4, 5]);
-    setEStart("09:00");
-    setEEnd("11:00");
+    setEStart(kind === "fija" ? "10:00" : "09:00");
+    setEEnd(kind === "fija" ? "11:00" : "14:00");
+    setECompanion("");
+    setERemind(DEFAULT_REMIND_MIN);
     setEOpen(true);
   };
 
@@ -167,7 +190,15 @@ function Citas() {
     setEDays(e.days ?? [1, 2, 3, 4, 5]);
     setEStart(e.start);
     setEEnd(e.end);
+    setECompanion(e.companion ?? "");
+    setERemind(e.remindMin ?? DEFAULT_REMIND_MIN);
     setEOpen(true);
+  };
+
+  const closeForm = () => {
+    setEOpen(false);
+    setEEditId(null);
+    if (editId) void navigate({ to: "/citas", search: {} });
   };
 
   const saveEntry = () => {
@@ -181,18 +212,20 @@ function Citas() {
       kind: eKind,
       start: eStart,
       end: eEnd,
-      ...(eKind === "fija" ? { date: eDate } : { days: eDays }),
+      remindMin: eRemind,
+      ...(eKind === "fija"
+        ? { date: eDate, companion: eCompanion.trim() || undefined }
+        : { days: eDays }),
     };
     const next = eEditId ? entries.map((x) => (x.id === eEditId ? base : x)) : [...entries, base];
     setEntries(next); save(ENTRIES_KEY, next);
-    setEOpen(false);
-    setEEditId(null);
+    closeForm();
   };
 
   const removeEntry = (id: string) => {
     const next = entries.filter((e) => e.id !== id);
     setEntries(next); save(ENTRIES_KEY, next);
-    setEOpen(false);
+    closeForm();
   };
 
   const toggleDay = (d: number) =>
@@ -330,13 +363,22 @@ function Citas() {
 
         {tab === "agenda" && (
           <section className="space-y-4">
-            <button
-              onClick={openNew}
-              disabled={people.length === 0}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-xl font-black text-primary-foreground shadow active:scale-95 disabled:opacity-50"
-            >
-              <Plus className="h-6 w-6" aria-hidden /> Nueva cita o turno
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => openNew("fija")}
+                disabled={people.length === 0}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-warning py-4 text-lg font-black text-warning-foreground shadow active:scale-95 disabled:opacity-50"
+              >
+                <CalendarDays className="h-6 w-6" aria-hidden /> Nueva cita
+              </button>
+              <button
+                onClick={() => openNew("periodica")}
+                disabled={people.length === 0}
+                className="flex items-center justify-center gap-2 rounded-2xl bg-primary py-4 text-lg font-black text-primary-foreground shadow active:scale-95 disabled:opacity-50"
+              >
+                <Repeat className="h-6 w-6" aria-hidden /> Nuevo turno
+              </button>
+            </div>
             {people.length === 0 && (
               <p className="text-center text-muted-foreground">Primero añade personas en la pestaña «Personas».</p>
             )}
@@ -375,7 +417,10 @@ function Citas() {
                             className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-left text-sm font-bold text-secondary-foreground active:scale-[0.98]"
                           >
                             <span className={`h-4 w-4 shrink-0 rounded-full ${personById[e.personId]?.color ?? "bg-primary"}`} />
-                            <span className="flex-1 truncate">{e.start}–{e.end} · {e.title} · {personById[e.personId]?.name}</span>
+                            <span className="flex-1 truncate">
+                              {e.start}–{e.end} · {e.title} · {personById[e.personId]?.name}
+                              {e.companion ? ` · con ${e.companion}` : ""}
+                            </span>
                             <Pencil className="h-4 w-4 shrink-0" aria-hidden />
                           </button>
                         ))}
@@ -391,9 +436,16 @@ function Citas() {
         {eOpen && (
           <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-2" role="dialog" aria-label="Cita">
             <div className="max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-card p-3 shadow-xl">
-              <h2 className="mb-2 text-xl font-black">{eEditId ? "Modificar cita o turno" : "Nueva cita o turno"}</h2>
+              <h2 className="mb-2 text-xl font-black">
+                {eEditId ? (eKind === "fija" ? "Modificar cita" : "Modificar turno") : eKind === "fija" ? "Nueva cita" : "Nuevo turno"}
+              </h2>
 
-              <label className="text-sm font-bold">Persona</label>
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                <button onClick={() => setEKind("fija")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "fija" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}>Cita puntual</button>
+                <button onClick={() => setEKind("periodica")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "periodica" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>Turno</button>
+              </div>
+
+              <label className="text-sm font-bold">{eKind === "fija" ? "¿Con quién es la cita?" : "Persona del turno"}</label>
               <select value={ePerson} onChange={(e) => setEPerson(e.target.value)} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -401,12 +453,23 @@ function Citas() {
               </select>
 
               <label className="text-sm font-bold">Descripción</label>
-              <input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder="Turno de mañana / Cardiólogo…" className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
+              <input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder={eKind === "fija" ? "Cardiólogo, peluquería…" : "Turno de mañana…"} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
 
-              <div className="mb-2 grid grid-cols-2 gap-2">
-                <button onClick={() => setEKind("periodica")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "periodica" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>Periódica</button>
-                <button onClick={() => setEKind("fija")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "fija" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}>Un solo día</button>
-              </div>
+              {eKind === "fija" && (
+                <div className="mb-2">
+                  <label className="flex items-center gap-1 text-sm font-bold"><UserPlus className="h-4 w-4" aria-hidden /> Acompañante (opcional)</label>
+                  <input
+                    value={eCompanion}
+                    onChange={(e) => setECompanion(e.target.value)}
+                    placeholder="Quién te acompaña"
+                    className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base"
+                    list="acompanantes"
+                  />
+                  <datalist id="acompanantes">
+                    {people.map((p) => <option key={p.id} value={p.name} />)}
+                  </datalist>
+                </div>
+              )}
 
               {eKind === "periodica" ? (
                 <div className="mb-2">
@@ -441,13 +504,31 @@ function Citas() {
                   <input type="time" value={eEnd} onChange={(e) => setEEnd(e.target.value)} className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
                 </div>
               </div>
+
+              {eKind === "periodica" && (
+                <div className="mb-2 grid grid-cols-3 gap-2">
+                  <button onClick={() => { setEStart("00:00"); setEEnd("23:59"); }} className="rounded-lg bg-secondary py-2 text-sm font-bold text-secondary-foreground active:scale-95">Todo el día</button>
+                  <button onClick={() => { setEStart("08:00"); setEEnd("15:00"); }} className="rounded-lg bg-secondary py-2 text-sm font-bold text-secondary-foreground active:scale-95">Mañana</button>
+                  <button onClick={() => { setEStart("15:00"); setEEnd("22:00"); }} className="rounded-lg bg-secondary py-2 text-sm font-bold text-secondary-foreground active:scale-95">Tarde</button>
+                </div>
+              )}
+
+              <label className="flex items-center gap-1 text-sm font-bold"><Bell className="h-4 w-4" aria-hidden /> Avisarme antes</label>
+              <select value={eRemind} onChange={(e) => setERemind(Number(e.target.value))} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
+                <option value={0}>Sin aviso</option>
+                <option value={5}>5 minutos antes</option>
+                <option value={15}>15 minutos antes</option>
+                <option value={30}>30 minutos antes</option>
+                <option value={60}>1 hora antes</option>
+              </select>
+
               <p className="mb-3 text-sm text-muted-foreground">
                 {hoursBetween(eStart, eEnd)} horas al día
                 {eKind === "periodica" ? ` · ${Math.round(hoursBetween(eStart, eEnd) * eDays.length * 10) / 10} h a la semana` : ""}
               </p>
 
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => { setEOpen(false); setEEditId(null); }} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
+                <button onClick={closeForm} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
                 <button onClick={saveEntry} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
               </div>
               {eEditId && (
