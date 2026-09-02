@@ -118,17 +118,18 @@ function Home() {
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
     const iso = todayISO(now);
-    const dow = now.getDay();
+    // En el saludo solo se cuentan las CITAS puntuales de hoy (los turnos no).
     const mine = entries
-      .filter((e) => (e.kind === "fija" ? e.date === iso : (e.days ?? []).includes(dow)))
+      .filter((e) => e.kind === "fija" && e.date === iso)
       .sort((a, b) => a.start.localeCompare(b.start));
 
     const items = mine.map((e) => {
       const p = people.find((x) => x.id === e.personId);
       const who = p?.name ? ` — ${p.name}` : "";
+      const withWho = e.companion ? ` · con ${e.companion}` : "";
       return {
         id: e.id,
-        text: `${e.start} a ${e.end} · ${e.title || "Turno"}${who}`,
+        text: `${e.start} a ${e.end} · ${e.title || "Cita"}${who}${withWho}`,
         color: p?.color ?? "bg-secondary",
         remindMin: e.remindMin ?? DEFAULT_REMIND_MIN,
       };
@@ -141,7 +142,7 @@ function Home() {
         mine
           .map((e) => {
             const p = people.find((x) => x.id === e.personId);
-            return `${e.title || "turno"}${p?.name ? ` con ${p.name}` : ""}, de ${e.start.replace(":", " y ")} a ${e.end.replace(":", " y ")}`;
+            return `${e.title || "cita"}${p?.name ? ` con ${p.name}` : ""}, a las ${e.start.replace(":", " y ")}${e.companion ? `, te acompaña ${e.companion}` : ""}`;
           })
           .join("; ") + "."
       : " Hoy no tienes ninguna cita.";
