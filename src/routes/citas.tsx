@@ -3,16 +3,19 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil } from "lucide-react";
 
 export const Route = createFileRoute("/citas")({
+  validateSearch: (search: Record<string, unknown>): { edit?: string } => ({
+    edit: typeof search.edit === "string" ? search.edit : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Grannytools — Citas y turnos" },
       {
         name: "description",
         content:
-          "Organiza citas médicas y turnos de cuidadoras o familiares en barras de tiempo por día: horarios fijos, turnos periódicos, solapamientos y horas de cada persona.",
+          "Organiza citas médicas puntuales con acompañante y turnos de cuidadoras o familiares en barras de tiempo por día.",
       },
       { property: "og:title", content: "Grannytools — Citas y turnos" },
-      { property: "og:description", content: "Turnos de cuidadoras, hijos y citas médicas en barras de tiempo por día." },
+      { property: "og:description", content: "Citas puntuales con acompañante y turnos de cuidadoras por día." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -25,11 +28,13 @@ type Entry = {
   id: string;
   personId: string;
   title: string;
-  kind: "fija" | "periodica";
-  date?: string; // fija
-  days?: number[]; // periódica 0..6
+  kind: "fija" | "periodica"; // fija = cita puntual · periodica = turno
+  date?: string; // cita
+  days?: number[]; // turno 0..6
   start: string;
   end: string;
+  companion?: string; // acompañante (solo citas)
+  remindMin?: number;
 };
 
 const PEOPLE_KEY = "grannytools.citas.people";
