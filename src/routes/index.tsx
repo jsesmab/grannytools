@@ -59,6 +59,7 @@ type Entry = {
   days?: number[];
   start: string;
   end: string;
+  companion?: string;
   remindMin?: number;
 };
 
