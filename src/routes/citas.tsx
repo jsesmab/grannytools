@@ -117,7 +117,7 @@ function Citas() {
   const [pRole, setPRole] = useState<Person["role"]>("cuidadora");
   const [pColor, setPColor] = useState(COLORS[0].cls);
 
-  // form cita
+  // form cita / turno
   const [eOpen, setEOpen] = useState(false);
   const [eEditId, setEEditId] = useState<string | null>(null);
   const [ePerson, setEPerson] = useState("");
@@ -127,11 +127,19 @@ function Citas() {
   const [eDays, setEDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [eStart, setEStart] = useState("09:00");
   const [eEnd, setEEnd] = useState("11:00");
+  const [eCompanion, setECompanion] = useState("");
+  const [eRemind, setERemind] = useState(DEFAULT_REMIND_MIN);
 
   useEffect(() => {
     setPeople(load<Person[]>(PEOPLE_KEY, []));
-    setEntries(load<Entry[]>(ENTRIES_KEY, []));
-  }, []);
+    const loaded = load<Entry[]>(ENTRIES_KEY, []);
+    setEntries(loaded);
+    if (editId) {
+      const found = loaded.find((e) => e.id === editId);
+      if (found) openEdit(found);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   const personById = useMemo(() => Object.fromEntries(people.map((p) => [p.id, p])), [people]);
 
@@ -151,15 +159,17 @@ function Citas() {
     setEntries(ne); save(ENTRIES_KEY, ne);
   };
 
-  const openNew = () => {
+  const openNew = (kind: Entry["kind"]) => {
     setEEditId(null);
     setEPerson(people[0]?.id ?? "");
     setETitle("");
-    setEKind("periodica");
-    setEDate("");
+    setEKind(kind);
+    setEDate(kind === "fija" ? todayISO() : "");
     setEDays([1, 2, 3, 4, 5]);
-    setEStart("09:00");
-    setEEnd("11:00");
+    setEStart(kind === "fija" ? "10:00" : "09:00");
+    setEEnd(kind === "fija" ? "11:00" : "14:00");
+    setECompanion("");
+    setERemind(DEFAULT_REMIND_MIN);
     setEOpen(true);
   };
 
@@ -172,7 +182,15 @@ function Citas() {
     setEDays(e.days ?? [1, 2, 3, 4, 5]);
     setEStart(e.start);
     setEEnd(e.end);
+    setECompanion(e.companion ?? "");
+    setERemind(e.remindMin ?? DEFAULT_REMIND_MIN);
     setEOpen(true);
+  };
+
+  const closeForm = () => {
+    setEOpen(false);
+    setEEditId(null);
+    if (editId) void navigate({ to: "/citas", search: {} });
   };
 
   const saveEntry = () => {
@@ -186,12 +204,14 @@ function Citas() {
       kind: eKind,
       start: eStart,
       end: eEnd,
-      ...(eKind === "fija" ? { date: eDate } : { days: eDays }),
+      remindMin: eRemind,
+      ...(eKind === "fija"
+        ? { date: eDate, companion: eCompanion.trim() || undefined }
+        : { days: eDays }),
     };
     const next = eEditId ? entries.map((x) => (x.id === eEditId ? base : x)) : [...entries, base];
     setEntries(next); save(ENTRIES_KEY, next);
-    setEOpen(false);
-    setEEditId(null);
+    closeForm();
   };
 
   const removeEntry = (id: string) => {
