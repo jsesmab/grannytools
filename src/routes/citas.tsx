@@ -433,9 +433,16 @@ function Citas() {
         {eOpen && (
           <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-2" role="dialog" aria-label="Cita">
             <div className="max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-card p-3 shadow-xl">
-              <h2 className="mb-2 text-xl font-black">{eEditId ? "Modificar cita o turno" : "Nueva cita o turno"}</h2>
+              <h2 className="mb-2 text-xl font-black">
+                {eEditId ? (eKind === "fija" ? "Modificar cita" : "Modificar turno") : eKind === "fija" ? "Nueva cita" : "Nuevo turno"}
+              </h2>
 
-              <label className="text-sm font-bold">Persona</label>
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                <button onClick={() => setEKind("fija")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "fija" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}>Cita puntual</button>
+                <button onClick={() => setEKind("periodica")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "periodica" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>Turno</button>
+              </div>
+
+              <label className="text-sm font-bold">{eKind === "fija" ? "¿Con quién es la cita?" : "Persona del turno"}</label>
               <select value={ePerson} onChange={(e) => setEPerson(e.target.value)} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -443,12 +450,23 @@ function Citas() {
               </select>
 
               <label className="text-sm font-bold">Descripción</label>
-              <input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder="Turno de mañana / Cardiólogo…" className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
+              <input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder={eKind === "fija" ? "Cardiólogo, peluquería…" : "Turno de mañana…"} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
 
-              <div className="mb-2 grid grid-cols-2 gap-2">
-                <button onClick={() => setEKind("periodica")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "periodica" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>Periódica</button>
-                <button onClick={() => setEKind("fija")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "fija" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}>Un solo día</button>
-              </div>
+              {eKind === "fija" && (
+                <div className="mb-2">
+                  <label className="flex items-center gap-1 text-sm font-bold"><UserPlus className="h-4 w-4" aria-hidden /> Acompañante (opcional)</label>
+                  <input
+                    value={eCompanion}
+                    onChange={(e) => setECompanion(e.target.value)}
+                    placeholder="Quién te acompaña"
+                    className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base"
+                    list="acompanantes"
+                  />
+                  <datalist id="acompanantes">
+                    {people.map((p) => <option key={p.id} value={p.name} />)}
+                  </datalist>
+                </div>
+              )}
 
               {eKind === "periodica" ? (
                 <div className="mb-2">
@@ -483,13 +501,31 @@ function Citas() {
                   <input type="time" value={eEnd} onChange={(e) => setEEnd(e.target.value)} className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
                 </div>
               </div>
+
+              {eKind === "periodica" && (
+                <div className="mb-2 grid grid-cols-3 gap-2">
+                  <button onClick={() => { setEStart("00:00"); setEEnd("23:59"); }} className="rounded-lg bg-secondary py-2 text-sm font-bold text-secondary-foreground active:scale-95">Todo el día</button>
+                  <button onClick={() => { setEStart("08:00"); setEEnd("15:00"); }} className="rounded-lg bg-secondary py-2 text-sm font-bold text-secondary-foreground active:scale-95">Mañana</button>
+                  <button onClick={() => { setEStart("15:00"); setEEnd("22:00"); }} className="rounded-lg bg-secondary py-2 text-sm font-bold text-secondary-foreground active:scale-95">Tarde</button>
+                </div>
+              )}
+
+              <label className="flex items-center gap-1 text-sm font-bold"><Bell className="h-4 w-4" aria-hidden /> Avisarme antes</label>
+              <select value={eRemind} onChange={(e) => setERemind(Number(e.target.value))} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
+                <option value={0}>Sin aviso</option>
+                <option value={5}>5 minutos antes</option>
+                <option value={15}>15 minutos antes</option>
+                <option value={30}>30 minutos antes</option>
+                <option value={60}>1 hora antes</option>
+              </select>
+
               <p className="mb-3 text-sm text-muted-foreground">
                 {hoursBetween(eStart, eEnd)} horas al día
                 {eKind === "periodica" ? ` · ${Math.round(hoursBetween(eStart, eEnd) * eDays.length * 10) / 10} h a la semana` : ""}
               </p>
 
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => { setEOpen(false); setEEditId(null); }} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
+                <button onClick={closeForm} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
                 <button onClick={saveEntry} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
               </div>
               {eEditId && (
