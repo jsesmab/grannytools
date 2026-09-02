@@ -417,7 +417,10 @@ function Citas() {
                             className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-left text-sm font-bold text-secondary-foreground active:scale-[0.98]"
                           >
                             <span className={`h-4 w-4 shrink-0 rounded-full ${personById[e.personId]?.color ?? "bg-primary"}`} />
-                            <span className="flex-1 truncate">{e.start}–{e.end} · {e.title} · {personById[e.personId]?.name}</span>
+                            <span className="flex-1 truncate">
+                              {e.start}–{e.end} · {e.title} · {personById[e.personId]?.name}
+                              {e.companion ? ` · con ${e.companion}` : ""}
+                            </span>
                             <Pencil className="h-4 w-4 shrink-0" aria-hidden />
                           </button>
                         ))}
