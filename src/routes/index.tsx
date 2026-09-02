@@ -152,6 +152,40 @@ function Home() {
     askReminderPermission();
   }, []);
 
+  // Previsión del tiempo de hoy (sin cuenta ni clave: Open-Meteo)
+  useEffect(() => {
+    let cancelled = false;
+    const fetchWeather = async (lat: number, lon: number) => {
+      try {
+        const url =
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(2)}&longitude=${lon.toFixed(2)}` +
+          `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
+        const res = await fetch(url);
+        const json = (await res.json()) as {
+          daily?: { weather_code: number[]; temperature_2m_max: number[]; temperature_2m_min: number[] };
+        };
+        const d = json.daily;
+        if (!d || cancelled) return;
+        const desc = weatherText(d.weather_code[0]);
+        const max = Math.round(d.temperature_2m_max[0]);
+        const min = Math.round(d.temperature_2m_min[0]);
+        setWeather({ desc, max, min });
+      } catch {
+        /* sin tiempo */
+      }
+    };
+    try {
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => void fetchWeather(pos.coords.latitude, pos.coords.longitude),
+        () => void fetchWeather(40.42, -3.7), // Madrid por defecto
+        { timeout: 8000, maximumAge: 3_600_000 },
+      );
+    } catch {
+      void fetchWeather(40.42, -3.7);
+    }
+    return () => { cancelled = true; };
+  }, []);
+
   useEffect(() => () => {
     if (pollRef.current) window.clearInterval(pollRef.current);
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
