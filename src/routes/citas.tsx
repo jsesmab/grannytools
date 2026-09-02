@@ -108,7 +108,14 @@ function save(key: string, value: unknown) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
 }
 
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function Citas() {
+  const { edit: editId } = Route.useSearch();
+  const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [tab, setTab] = useState<"agenda" | "personas">("agenda");
