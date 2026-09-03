@@ -133,9 +133,10 @@ function Home() {
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
     const iso = todayISO(now);
-    // En el saludo solo se cuentan las CITAS puntuales de hoy (los turnos no).
+    const dow = now.getDay();
+    // En el saludo solo se cuentan las CITAS de hoy (puntuales o recurrentes), los turnos no.
     const mine = entries
-      .filter((e) => e.kind === "fija" && e.date === iso)
+      .filter((e) => e.kind === "fija" && (e.date ? e.date === iso : (e.days ?? []).includes(dow)))
       .sort((a, b) => a.start.localeCompare(b.start));
 
     const items = mine.map((e) => {
@@ -151,17 +152,16 @@ function Home() {
     });
     setTodayItems(items);
 
-    const hello = `${greetingFor(now)}${saved ? `, ${saved}` : ""}.`;
-    const body = items.length
-      ? ` Hoy tienes ${items.length} ${items.length === 1 ? "cita" : "citas"}: ` +
+    const citasTxt = items.length
+      ? `Tus citas de hoy son: ` +
         mine
           .map((e) => {
             const p = people.find((x) => x.id === e.personId);
             return `${e.title || "cita"}${p?.name ? ` con ${p.name}` : ""}, a las ${e.start.replace(":", " y ")}${e.companion ? `, te acompaña ${e.companion}` : ""}`;
           })
           .join("; ") + "."
-      : " Hoy no tienes ninguna cita.";
-    setSpokenText(hello + body);
+      : "Hoy no tienes ninguna cita.";
+    setSpokenText(citasTxt);
 
     askReminderPermission();
   }, []);

@@ -137,6 +137,7 @@ function Citas() {
   const [eEnd, setEEnd] = useState("11:00");
   const [eCompanion, setECompanion] = useState("");
   const [eRemind, setERemind] = useState(DEFAULT_REMIND_MIN);
+  const [eRepeat, setERepeat] = useState<"once" | "weekly">("once");
 
   useEffect(() => {
     setPeople(load<Person[]>(PEOPLE_KEY, []));
@@ -172,8 +173,9 @@ function Citas() {
     setEPerson(people[0]?.id ?? "");
     setETitle("");
     setEKind(kind);
+    setERepeat(kind === "fija" ? "once" : "weekly");
     setEDate(kind === "fija" ? todayISO() : "");
-    setEDays([1, 2, 3, 4, 5]);
+    setEDays(kind === "fija" ? [] : [1, 2, 3, 4, 5]);
     setEStart(kind === "fija" ? "10:00" : "09:00");
     setEEnd(kind === "fija" ? "11:00" : "14:00");
     setECompanion("");
@@ -186,8 +188,9 @@ function Citas() {
     setEPerson(e.personId);
     setETitle(e.title);
     setEKind(e.kind);
+    setERepeat(e.kind === "periodica" || !e.date ? "weekly" : "once");
     setEDate(e.date ?? "");
-    setEDays(e.days ?? [1, 2, 3, 4, 5]);
+    setEDays(e.days ?? (e.kind === "fija" ? [] : [1, 2, 3, 4, 5]));
     setEStart(e.start);
     setEEnd(e.end);
     setECompanion(e.companion ?? "");
@@ -203,8 +206,9 @@ function Citas() {
 
   const saveEntry = () => {
     if (!ePerson) return;
-    if (eKind === "fija" && !eDate) return;
-    if (eKind === "periodica" && eDays.length === 0) return;
+    const repeats = eKind === "periodica" || eRepeat === "weekly";
+    if (!repeats && !eDate) return;
+    if (repeats && eDays.length === 0) return;
     const base: Entry = {
       id: eEditId ?? uid(),
       personId: ePerson,
@@ -213,9 +217,8 @@ function Citas() {
       start: eStart,
       end: eEnd,
       remindMin: eRemind,
-      ...(eKind === "fija"
-        ? { date: eDate, companion: eCompanion.trim() || undefined }
-        : { days: eDays }),
+      ...(repeats ? { days: eDays } : { date: eDate }),
+      ...(eKind === "fija" ? { companion: eCompanion.trim() || undefined } : {}),
     };
     const next = eEditId ? entries.map((x) => (x.id === eEditId ? base : x)) : [...entries, base];
     setEntries(next); save(ENTRIES_KEY, next);
@@ -385,10 +388,10 @@ function Citas() {
             <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>
 
             <div>
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Turnos de cada semana</h2>
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Cada semana (turnos y citas repetidas)</h2>
               <div className="space-y-2">
                 {DAY_INDEX.map((d, i) => {
-                  const list = entries.filter((e) => e.kind === "periodica" && e.days?.includes(d));
+                  const list = entries.filter((e) => e.days?.includes(d));
                   return (
                     <div key={d} className="rounded-2xl bg-card p-2 shadow">
                       <p className="mb-1 font-bold">{DAY_NAMES[i]}</p>
@@ -471,9 +474,28 @@ function Citas() {
                 </div>
               )}
 
-              {eKind === "periodica" ? (
+              {eKind === "fija" && (
+                <div className="mb-2 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { setERepeat("once"); if (!eDate) setEDate(todayISO()); }}
+                    aria-pressed={eRepeat === "once"}
+                    className={`rounded-xl py-3 font-bold active:scale-95 ${eRepeat === "once" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    Un día
+                  </button>
+                  <button
+                    onClick={() => { setERepeat("weekly"); if (eDays.length === 0) setEDays([2, 5]); }}
+                    aria-pressed={eRepeat === "weekly"}
+                    className={`flex items-center justify-center gap-1 rounded-xl py-3 font-bold active:scale-95 ${eRepeat === "weekly" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    <Repeat className="h-4 w-4" aria-hidden /> Se repite
+                  </button>
+                </div>
+              )}
+
+              {eKind === "periodica" || eRepeat === "weekly" ? (
                 <div className="mb-2">
-                  <p className="text-sm font-bold">Días</p>
+                  <p className="text-sm font-bold">Días de la semana</p>
                   <div className="flex gap-1">
                     {DAY_INDEX.map((d, i) => (
                       <button
