@@ -80,6 +80,19 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
+function weatherText(code: number) {
+  if (code === 0) return "despejado";
+  if (code <= 2) return "poco nuboso";
+  if (code === 3) return "nublado";
+  if (code <= 48) return "con niebla";
+  if (code <= 57) return "con llovizna";
+  if (code <= 67) return "con lluvia";
+  if (code <= 77) return "con nieve";
+  if (code <= 82) return "con chubascos";
+  if (code <= 86) return "con nieve";
+  return "con tormenta";
+}
+
 function todayISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
