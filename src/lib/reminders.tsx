@@ -102,7 +102,7 @@ function check() {
 
   let changed = false;
   for (const e of entries) {
-    const today = e.kind === "fija" ? e.date === iso : (e.days ?? []).includes(dow);
+    const today = e.date ? e.date === iso : (e.days ?? []).includes(dow);
     if (!today) continue;
     const lead = e.remindMin ?? DEFAULT_REMIND_MIN;
     if (lead <= 0) continue;

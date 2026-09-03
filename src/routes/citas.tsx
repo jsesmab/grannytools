@@ -137,6 +137,7 @@ function Citas() {
   const [eEnd, setEEnd] = useState("11:00");
   const [eCompanion, setECompanion] = useState("");
   const [eRemind, setERemind] = useState(DEFAULT_REMIND_MIN);
+  const [eRepeat, setERepeat] = useState<"once" | "weekly">("once");
 
   useEffect(() => {
     setPeople(load<Person[]>(PEOPLE_KEY, []));
@@ -172,8 +173,9 @@ function Citas() {
     setEPerson(people[0]?.id ?? "");
     setETitle("");
     setEKind(kind);
+    setERepeat(kind === "fija" ? "once" : "weekly");
     setEDate(kind === "fija" ? todayISO() : "");
-    setEDays([1, 2, 3, 4, 5]);
+    setEDays(kind === "fija" ? [] : [1, 2, 3, 4, 5]);
     setEStart(kind === "fija" ? "10:00" : "09:00");
     setEEnd(kind === "fija" ? "11:00" : "14:00");
     setECompanion("");
@@ -186,8 +188,9 @@ function Citas() {
     setEPerson(e.personId);
     setETitle(e.title);
     setEKind(e.kind);
+    setERepeat(e.kind === "periodica" || !e.date ? "weekly" : "once");
     setEDate(e.date ?? "");
-    setEDays(e.days ?? [1, 2, 3, 4, 5]);
+    setEDays(e.days ?? (e.kind === "fija" ? [] : [1, 2, 3, 4, 5]));
     setEStart(e.start);
     setEEnd(e.end);
     setECompanion(e.companion ?? "");
