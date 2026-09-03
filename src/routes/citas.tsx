@@ -388,10 +388,10 @@ function Citas() {
             <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>
 
             <div>
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Turnos de cada semana</h2>
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Cada semana (turnos y citas repetidas)</h2>
               <div className="space-y-2">
                 {DAY_INDEX.map((d, i) => {
-                  const list = entries.filter((e) => e.kind === "periodica" && e.days?.includes(d));
+                  const list = entries.filter((e) => e.days?.includes(d));
                   return (
                     <div key={d} className="rounded-2xl bg-card p-2 shadow">
                       <p className="mb-1 font-bold">{DAY_NAMES[i]}</p>
