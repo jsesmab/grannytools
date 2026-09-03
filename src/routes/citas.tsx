@@ -474,9 +474,28 @@ function Citas() {
                 </div>
               )}
 
-              {eKind === "periodica" ? (
+              {eKind === "fija" && (
+                <div className="mb-2 grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => { setERepeat("once"); if (!eDate) setEDate(todayISO()); }}
+                    aria-pressed={eRepeat === "once"}
+                    className={`rounded-xl py-3 font-bold active:scale-95 ${eRepeat === "once" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    Un día
+                  </button>
+                  <button
+                    onClick={() => { setERepeat("weekly"); if (eDays.length === 0) setEDays([2, 5]); }}
+                    aria-pressed={eRepeat === "weekly"}
+                    className={`flex items-center justify-center gap-1 rounded-xl py-3 font-bold active:scale-95 ${eRepeat === "weekly" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    <Repeat className="h-4 w-4" aria-hidden /> Se repite
+                  </button>
+                </div>
+              )}
+
+              {eKind === "periodica" || eRepeat === "weekly" ? (
                 <div className="mb-2">
-                  <p className="text-sm font-bold">Días</p>
+                  <p className="text-sm font-bold">Días de la semana</p>
                   <div className="flex gap-1">
                     {DAY_INDEX.map((d, i) => (
                       <button
