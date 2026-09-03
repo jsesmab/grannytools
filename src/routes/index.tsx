@@ -228,7 +228,10 @@ function Home() {
       const synth = window.speechSynthesis;
       if (!synth || !spokenText) return;
       synth.cancel();
-      const u = new SpeechSynthesisUtterance(spokenText);
+      const clima = weather
+        ? ` Hoy el tiempo estará ${weather.desc}, con ${weather.max} grados de máxima y ${weather.min} de mínima.`
+        : "";
+      const u = new SpeechSynthesisUtterance(spokenText + clima);
       u.lang = "es-ES";
       u.rate = rate;
       u.volume = volume;
