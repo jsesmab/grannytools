@@ -206,8 +206,9 @@ function Citas() {
 
   const saveEntry = () => {
     if (!ePerson) return;
-    if (eKind === "fija" && !eDate) return;
-    if (eKind === "periodica" && eDays.length === 0) return;
+    const repeats = eKind === "periodica" || eRepeat === "weekly";
+    if (!repeats && !eDate) return;
+    if (repeats && eDays.length === 0) return;
     const base: Entry = {
       id: eEditId ?? uid(),
       personId: ePerson,
@@ -216,9 +217,8 @@ function Citas() {
       start: eStart,
       end: eEnd,
       remindMin: eRemind,
-      ...(eKind === "fija"
-        ? { date: eDate, companion: eCompanion.trim() || undefined }
-        : { days: eDays }),
+      ...(repeats ? { days: eDays } : { date: eDate }),
+      ...(eKind === "fija" ? { companion: eCompanion.trim() || undefined } : {}),
     };
     const next = eEditId ? entries.map((x) => (x.id === eEditId ? base : x)) : [...entries, base];
     setEntries(next); save(ENTRIES_KEY, next);
