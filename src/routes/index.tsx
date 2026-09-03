@@ -317,6 +317,11 @@ function Home() {
               <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
             </button>
           )}
+          {weather && (
+            <p className="mt-1 text-base font-semibold text-muted-foreground">
+              Hoy: {weather.desc} · {weather.max}° / {weather.min}°
+            </p>
+          )}
         </header>
 
         {showPrefs && (
