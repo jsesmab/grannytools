@@ -227,11 +227,35 @@ function Contactos() {
                       {initials(c.name)}
                     </div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-2 py-1.5">
-                    <Phone className="h-4 w-4 shrink-0 text-white" aria-hidden />
-                    <span className="truncate text-base font-black text-white">{c.name}</span>
-                  </div>
+                  {editing && (
+                    <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-2 py-1.5">
+                      <Phone className="h-4 w-4 shrink-0 text-white" aria-hidden />
+                      <span className="truncate text-base font-black text-white">{c.name}</span>
+                    </div>
+                  )}
                 </button>
+                {editing && (
+                  <div className="mt-1 space-y-1">
+                    <input
+                      type="text"
+                      value={c.name}
+                      aria-label={`Nombre del contacto ${i + 1}`}
+                      onChange={(e) =>
+                        save(contacts.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))
+                      }
+                      className="w-full rounded-lg border-2 border-border bg-background px-2 py-1 text-sm font-bold"
+                    />
+                    <input
+                      type="tel"
+                      value={c.phone}
+                      aria-label={`Teléfono del contacto ${i + 1}`}
+                      onChange={(e) =>
+                        save(contacts.map((x, idx) => (idx === i ? { ...x, phone: e.target.value } : x)))
+                      }
+                      className="w-full rounded-lg border-2 border-border bg-background px-2 py-1 text-sm"
+                    />
+                  </div>
+                )}
                 {editing && (
                   <>
                     <div className="absolute inset-x-1 top-1 flex gap-1">
