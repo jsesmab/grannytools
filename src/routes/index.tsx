@@ -80,6 +80,19 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
+function weatherText(code: number) {
+  if (code === 0) return "despejado";
+  if (code <= 2) return "poco nuboso";
+  if (code === 3) return "nublado";
+  if (code <= 48) return "con niebla";
+  if (code <= 57) return "con llovizna";
+  if (code <= 67) return "con lluvia";
+  if (code <= 77) return "con nieve";
+  if (code <= 82) return "con chubascos";
+  if (code <= 86) return "con nieve";
+  return "con tormenta";
+}
+
 function todayISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -97,6 +110,7 @@ function Home() {
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -214,7 +228,10 @@ function Home() {
       const synth = window.speechSynthesis;
       if (!synth || !spokenText) return;
       synth.cancel();
-      const u = new SpeechSynthesisUtterance(spokenText);
+      const clima = weather
+        ? ` Hoy el tiempo estará ${weather.desc}, con ${weather.max} grados de máxima y ${weather.min} de mínima.`
+        : "";
+      const u = new SpeechSynthesisUtterance(spokenText + clima);
       u.lang = "es-ES";
       u.rate = rate;
       u.volume = volume;
@@ -299,6 +316,11 @@ function Home() {
               </span>
               <Pencil className="h-4 w-4 text-muted-foreground" aria-hidden />
             </button>
+          )}
+          {weather && (
+            <p className="mt-1 text-base font-semibold text-muted-foreground">
+              Hoy: {weather.desc} · {weather.max}° / {weather.min}°
+            </p>
           )}
         </header>
 
