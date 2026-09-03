@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Search, Lightbulb, LightbulbOff, AlertTriangle } from "lucide-react";
+import { usePrefs } from "@/hooks/use-prefs";
 
 export const Route = createFileRoute("/lupa")({
   head: () => ({
@@ -24,6 +25,7 @@ type TrackWithTorch = MediaStreamTrack & {
 type ImageCaptureLike = { grabFrame: () => Promise<ImageBitmap> };
 
 function Lupa() {
+  const { prefs } = usePrefs();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -197,7 +199,11 @@ function Lupa() {
           playsInline
           muted
           className="h-full w-full object-cover"
-          style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: "center",
+            filter: `brightness(${prefs.brightness}) contrast(${1 + (prefs.brightness - 1) * 0.4})`,
+          }}
         />
         {frozen && (
           <img
@@ -205,7 +211,11 @@ function Lupa() {
             alt="Imagen ampliada"
             draggable={false}
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}
+            style={{
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: "center",
+              filter: `brightness(${prefs.brightness}) contrast(${1 + (prefs.brightness - 1) * 0.4})`,
+            }}
           />
         )}
         <canvas ref={canvasRef} className="hidden" />
