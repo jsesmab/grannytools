@@ -115,6 +115,7 @@ function Home() {
   const [paused, setPaused] = useState(false);
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
+  const [autoMode, setAutoMode] = useState<"auto" | "boton" | "ambos">("boton");
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const pollRef = useRef<number | null>(null);
