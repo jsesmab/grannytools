@@ -213,6 +213,24 @@ function Home() {
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
   }, []);
 
+  // Saludo automático al abrir la app (modo "auto" o "ambos")
+  const autoSpokeRef = useRef(false);
+  useEffect(() => {
+    if (autoSpokeRef.current) return;
+    if (autoMode !== "auto" && autoMode !== "ambos") return;
+    if (!spokenText) return;
+    // Esperamos al tiempo; si tarda más de 6 s, saludamos sin él.
+    if (!weather) {
+      const t = window.setTimeout(() => {
+        if (!autoSpokeRef.current) { autoSpokeRef.current = true; speak(); }
+      }, 6000);
+      return () => window.clearTimeout(t);
+    }
+    autoSpokeRef.current = true;
+    speak();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode, spokenText, weather]);
+
   const saveVoice = (r: number, v: number, m: "auto" | "boton" | "ambos" = autoMode) => {
     try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v, mode: m })); } catch { /* ignore */ }
   };
