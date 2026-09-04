@@ -486,7 +486,7 @@ function Home() {
           )}
 
           {todayItems.length > 0 && (
-            <ul className="space-y-1">
+            <ul className="mt-2 space-y-1">
               {todayItems.map((it) => (
                 <li key={it.id}>
                   <Link
