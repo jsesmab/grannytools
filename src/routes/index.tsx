@@ -93,6 +93,12 @@ function weatherText(code: number) {
   return "con tormenta";
 }
 
+function weatherPhrase(desc: string) {
+  if (desc === "despejado" || desc === "poco nuboso") return "hace buen tiempo";
+  if (desc === "nublado") return "está nublado";
+  return `hace un día ${desc}`;
+}
+
 function todayISO(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -228,10 +234,15 @@ function Home() {
       const synth = window.speechSynthesis;
       if (!synth || !spokenText) return;
       synth.cancel();
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const hora = `son las ${h} ${m === 0 ? "en punto" : `y ${m}`}`;
       const clima = weather
-        ? ` Hoy el tiempo estará ${weather.desc}, con ${weather.max} grados de máxima y ${weather.min} de mínima.`
+        ? ` y ${weatherPhrase(weather.desc)}, con ${weather.max} grados de máxima y ${weather.min} de mínima`
         : "";
-      const u = new SpeechSynthesisUtterance(spokenText + clima);
+      const hello = `${greetingFor(now)}${userName ? `, ${userName}` : ""}, ${hora}${clima}. `;
+      const u = new SpeechSynthesisUtterance(hello + spokenText);
       u.lang = "es-ES";
       u.rate = rate;
       u.volume = volume;
