@@ -133,9 +133,10 @@ function Home() {
       /* ignore */
     }
 
-    const voice = load<{ rate: number; volume: number }>(VOICE_KEY, { rate: 0.9, volume: 1 });
+    const voice = load<{ rate: number; volume: number; mode?: "auto" | "boton" | "ambos" }>(VOICE_KEY, { rate: 0.9, volume: 1 });
     setRate(voice.rate);
     setVolume(voice.volume);
+    setAutoMode(voice.mode ?? "boton");
 
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
@@ -212,8 +213,8 @@ function Home() {
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
   }, []);
 
-  const saveVoice = (r: number, v: number) => {
-    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v })); } catch { /* ignore */ }
+  const saveVoice = (r: number, v: number, m: "auto" | "boton" | "ambos" = autoMode) => {
+    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v, mode: m })); } catch { /* ignore */ }
   };
 
   const watchSpeech = () => {
