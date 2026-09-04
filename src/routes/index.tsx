@@ -395,6 +395,61 @@ function Home() {
             >
               Contraste alto: {prefs.highContrast ? "sí" : "no"}
             </button>
+
+            <h2 className="pt-1 text-base font-bold">El saludo</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="velocidad" className="text-sm font-bold">
+                  Velocidad ×{rate.toFixed(1)}
+                </label>
+                <input
+                  id="velocidad"
+                  type="range"
+                  min={0.5}
+                  max={1.5}
+                  step={0.1}
+                  value={rate}
+                  onChange={(e) => { const v = Number(e.target.value); setRate(v); saveVoice(v, volume); }}
+                  className="h-3 w-full accent-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="volumen" className="text-sm font-bold">
+                  Volumen {Math.round(volume * 100)}%
+                </label>
+                <input
+                  id="volumen"
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={volume}
+                  onChange={(e) => { const v = Number(e.target.value); setVolume(v); saveVoice(rate, v); }}
+                  className="h-3 w-full accent-primary"
+                />
+              </div>
+            </div>
+            <fieldset>
+              <legend className="text-sm font-bold">¿Cuándo saludo?</legend>
+              <div className="mt-1 grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { v: "auto", label: "Al abrir" },
+                    { v: "boton", label: "Al pulsar" },
+                    { v: "ambos", label: "Ambos" },
+                  ] as const
+                ).map(({ v, label }) => (
+                  <button
+                    key={v}
+                    onClick={() => { setAutoMode(v); saveVoice(rate, volume, v); }}
+                    aria-pressed={autoMode === v}
+                    className={`rounded-xl py-2 text-sm font-bold active:scale-95 ${autoMode === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </section>
         )}
 
