@@ -115,6 +115,7 @@ function Home() {
   const [paused, setPaused] = useState(false);
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
+  const [autoMode, setAutoMode] = useState<"auto" | "boton" | "ambos">("boton");
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -132,9 +133,10 @@ function Home() {
       /* ignore */
     }
 
-    const voice = load<{ rate: number; volume: number }>(VOICE_KEY, { rate: 0.9, volume: 1 });
+    const voice = load<{ rate: number; volume: number; mode?: "auto" | "boton" | "ambos" }>(VOICE_KEY, { rate: 0.9, volume: 1 });
     setRate(voice.rate);
     setVolume(voice.volume);
+    setAutoMode(voice.mode ?? "boton");
 
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
@@ -211,8 +213,26 @@ function Home() {
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
   }, []);
 
-  const saveVoice = (r: number, v: number) => {
-    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v })); } catch { /* ignore */ }
+  // Saludo automático al abrir la app (modo "auto" o "ambos")
+  const autoSpokeRef = useRef(false);
+  useEffect(() => {
+    if (autoSpokeRef.current) return;
+    if (autoMode !== "auto" && autoMode !== "ambos") return;
+    if (!spokenText) return;
+    // Esperamos al tiempo; si tarda más de 6 s, saludamos sin él.
+    if (!weather) {
+      const t = window.setTimeout(() => {
+        if (!autoSpokeRef.current) { autoSpokeRef.current = true; speak(); }
+      }, 6000);
+      return () => window.clearTimeout(t);
+    }
+    autoSpokeRef.current = true;
+    speak();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode, spokenText, weather]);
+
+  const saveVoice = (r: number, v: number, m: "auto" | "boton" | "ambos" = autoMode) => {
+    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v, mode: m })); } catch { /* ignore */ }
   };
 
   const watchSpeech = () => {
@@ -375,78 +395,98 @@ function Home() {
             >
               Contraste alto: {prefs.highContrast ? "sí" : "no"}
             </button>
+
+            <h2 className="pt-1 text-base font-bold">El saludo</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="velocidad" className="text-sm font-bold">
+                  Velocidad ×{rate.toFixed(1)}
+                </label>
+                <input
+                  id="velocidad"
+                  type="range"
+                  min={0.5}
+                  max={1.5}
+                  step={0.1}
+                  value={rate}
+                  onChange={(e) => { const v = Number(e.target.value); setRate(v); saveVoice(v, volume); }}
+                  className="h-3 w-full accent-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="volumen" className="text-sm font-bold">
+                  Volumen {Math.round(volume * 100)}%
+                </label>
+                <input
+                  id="volumen"
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={volume}
+                  onChange={(e) => { const v = Number(e.target.value); setVolume(v); saveVoice(rate, v); }}
+                  className="h-3 w-full accent-primary"
+                />
+              </div>
+            </div>
+            <fieldset>
+              <legend className="text-sm font-bold">¿Cuándo saludo?</legend>
+              <div className="mt-1 grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { v: "auto", label: "Al abrir" },
+                    { v: "boton", label: "Al pulsar" },
+                    { v: "ambos", label: "Ambos" },
+                  ] as const
+                ).map(({ v, label }) => (
+                  <button
+                    key={v}
+                    onClick={() => { setAutoMode(v); saveVoice(rate, volume, v); }}
+                    aria-pressed={autoMode === v}
+                    className={`rounded-xl py-2 text-sm font-bold active:scale-95 ${autoMode === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </section>
         )}
 
         <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-base font-bold">
-              {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
-            </h2>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={speak}
-                aria-label="Escuchar el saludo y las citas de hoy"
-                className="flex items-center gap-1 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground active:scale-[0.97]"
-              >
-                <Volume2 className="h-5 w-5" aria-hidden /> Escuchar
-              </button>
-              {speaking && (
-                <>
-                  <button
-                    onClick={togglePause}
-                    aria-label={paused ? "Reanudar lectura" : "Pausar lectura"}
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
-                  >
-                    {paused ? <Play className="h-5 w-5" aria-hidden /> : <Pause className="h-5 w-5" aria-hidden />}
-                  </button>
-                  <button
-                    onClick={stopSpeech}
-                    aria-label="Parar lectura"
-                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
-                  >
-                    <Square className="h-5 w-5" aria-hidden />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+          <h2 className="mb-2 text-base font-bold">
+            {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
+          </h2>
 
-          <div className="mb-2 grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="velocidad" className="text-xs font-bold text-muted-foreground">
-                Velocidad ×{rate.toFixed(1)}
-              </label>
-              <input
-                id="velocidad"
-                type="range"
-                min={0.5}
-                max={1.5}
-                step={0.1}
-                value={rate}
-                onChange={(e) => { const v = Number(e.target.value); setRate(v); saveVoice(v, volume); }}
-                className="h-3 w-full accent-primary"
-              />
+          <button
+            onClick={speak}
+            aria-label="Escuchar el saludo y las citas de hoy"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-xl font-black text-primary-foreground shadow-md active:scale-[0.98]"
+          >
+            <Volume2 className="h-8 w-8" aria-hidden /> Saludo
+          </button>
+          {speaking && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                onClick={togglePause}
+                aria-label={paused ? "Reanudar lectura" : "Pausar lectura"}
+                className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
+              >
+                {paused ? <Play className="h-6 w-6" aria-hidden /> : <Pause className="h-6 w-6" aria-hidden />}
+                {paused ? "Seguir" : "Pausa"}
+              </button>
+              <button
+                onClick={stopSpeech}
+                aria-label="Parar lectura"
+                className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
+              >
+                <Square className="h-6 w-6" aria-hidden /> Parar
+              </button>
             </div>
-            <div>
-              <label htmlFor="volumen" className="text-xs font-bold text-muted-foreground">
-                Volumen {Math.round(volume * 100)}%
-              </label>
-              <input
-                id="volumen"
-                type="range"
-                min={0.1}
-                max={1}
-                step={0.1}
-                value={volume}
-                onChange={(e) => { const v = Number(e.target.value); setVolume(v); saveVoice(rate, v); }}
-                className="h-3 w-full accent-primary"
-              />
-            </div>
-          </div>
+          )}
 
           {todayItems.length > 0 && (
-            <ul className="space-y-1">
+            <ul className="mt-2 space-y-1">
               {todayItems.map((it) => (
                 <li key={it.id}>
                   <Link
