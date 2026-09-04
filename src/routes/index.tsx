@@ -119,10 +119,20 @@ function Home() {
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const pollRef = useRef<number | null>(null);
+  const [hasGreetedToday, setHasGreetedToday] = useState(false);
+  const [showCitas, setShowCitas] = useState(true);
 
   useEffect(() => {
     const now = new Date();
     setGreeting(greetingFor(now));
+
+    const today = todayISO(now);
+    let greeted = "";
+    try { greeted = localStorage.getItem("grannytools.greetedDate") ?? ""; } catch {}
+    const already = greeted === today;
+    setHasGreetedToday(already);
+    setShowCitas(!already);
+
     let saved = "";
     try {
       saved = localStorage.getItem(USER_NAME_KEY) ?? "";
@@ -230,6 +240,12 @@ function Home() {
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoMode, spokenText, weather]);
+
+  const markGreeted = () => {
+    try { localStorage.setItem("grannytools.greetedDate", todayISO(new Date())); } catch { /* ignore */ }
+    setHasGreetedToday(true);
+    setShowCitas(false);
+  };
 
   const saveVoice = (r: number, v: number, m: "auto" | "boton" | "ambos" = autoMode) => {
     try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v, mode: m })); } catch { /* ignore */ }
