@@ -228,6 +228,7 @@ function Home() {
   useEffect(() => {
     if (autoSpokeRef.current) return;
     if (autoMode !== "auto" && autoMode !== "ambos") return;
+    if (hasGreetedToday) return;
     if (!spokenText) return;
     // Esperamos al tiempo; si tarda más de 6 s, saludamos sin él.
     if (!weather) {
@@ -270,6 +271,7 @@ function Home() {
       const synth = window.speechSynthesis;
       if (!synth || !spokenText) return;
       synth.cancel();
+      markGreeted();
       const now = new Date();
       const h = now.getHours();
       const m = now.getMinutes();
@@ -470,9 +472,36 @@ function Home() {
         )}
 
         <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
-          <h2 className="mb-2 text-base font-bold">
-            {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
-          </h2>
+          {showCitas && (
+            <>
+              <h2 className="mb-2 text-base font-bold">
+                {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
+              </h2>
+
+              {todayItems.length > 0 && (
+                <ul className="mb-3 space-y-1">
+                  {todayItems.map((it) => (
+                    <li key={it.id}>
+                      <Link
+                        to="/citas"
+                        search={{ edit: it.id }}
+                        className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-sm font-semibold text-secondary-foreground active:scale-[0.98]"
+                      >
+                        <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
+                        <span className="flex-1 text-left">
+                          {it.text}
+                          <span className="block text-xs font-normal text-muted-foreground">
+                            Aviso {it.remindMin} min antes
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
 
           <button
             onClick={speak}
@@ -499,29 +528,6 @@ function Home() {
                 <Square className="h-6 w-6" aria-hidden /> Parar
               </button>
             </div>
-          )}
-
-          {todayItems.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {todayItems.map((it) => (
-                <li key={it.id}>
-                  <Link
-                    to="/citas"
-                    search={{ edit: it.id }}
-                    className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-sm font-semibold text-secondary-foreground active:scale-[0.98]"
-                  >
-                    <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
-                    <span className="flex-1 text-left">
-                      {it.text}
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        Aviso {it.remindMin} min antes
-                      </span>
-                    </span>
-                    <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                  </Link>
-                </li>
-              ))}
-            </ul>
           )}
         </section>
 
