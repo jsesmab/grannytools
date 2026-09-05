@@ -118,6 +118,7 @@ function Home() {
   const [autoMode, setAutoMode] = useState<"auto" | "boton" | "ambos">("boton");
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const pollRef = useRef<number | null>(null);
   const [showCitas, setShowCitas] = useState(true);
 
@@ -223,19 +224,29 @@ function Home() {
     if (autoSpokeRef.current) return;
     if (autoMode !== "auto" && autoMode !== "ambos") return;
     if (!spokenText) return;
-    // Esperamos al tiempo, pero poco: si tarda más de 2 s, saludamos sin él.
+    setPreparing(true);
+    // Esperamos al tiempo; si tarda más de 4 s, saludamos sin él.
     if (!weather) {
       const t = window.setTimeout(() => {
-        if (!autoSpokeRef.current) { autoSpokeRef.current = true; speak(); }
-      }, 2000);
-      return () => window.clearTimeout(t);
+        if (!autoSpokeRef.current) {
+          autoSpokeRef.current = true;
+          setPreparing(false);
+          speak();
+        }
+      }, 4000);
+      return () => {
+        window.clearTimeout(t);
+        setPreparing(false);
+      };
     }
     autoSpokeRef.current = true;
+    setPreparing(false);
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoMode, spokenText, weather]);
 
   const markGreeted = () => {
+    setPreparing(false);
     setShowCitas(false);
   };
 
@@ -494,6 +505,11 @@ function Home() {
             </>
           )}
 
+          {preparing && (
+            <div className="mb-3 rounded-2xl bg-secondary p-5 text-center text-2xl font-black text-secondary-foreground animate-pulse">
+              Preparando saludo…
+            </div>
+          )}
           <button
             onClick={speak}
             aria-label="Escuchar el saludo y las citas de hoy"
