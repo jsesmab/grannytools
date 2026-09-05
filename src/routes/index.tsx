@@ -119,7 +119,6 @@ function Home() {
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const pollRef = useRef<number | null>(null);
-  const [hasGreetedToday, setHasGreetedToday] = useState(false);
   const [showCitas, setShowCitas] = useState(true);
 
   useEffect(() => {
@@ -127,11 +126,6 @@ function Home() {
     setGreeting(greetingFor(now));
 
     const today = todayISO(now);
-    let greeted = "";
-    try { greeted = localStorage.getItem("grannytools.greetedDate") ?? ""; } catch {}
-    const already = greeted === today;
-    setHasGreetedToday(already);
-    setShowCitas(!already);
 
     let saved = "";
     try {
@@ -228,23 +222,20 @@ function Home() {
   useEffect(() => {
     if (autoSpokeRef.current) return;
     if (autoMode !== "auto" && autoMode !== "ambos") return;
-    if (hasGreetedToday) return;
     if (!spokenText) return;
-    // Esperamos al tiempo; si tarda más de 6 s, saludamos sin él.
+    // Esperamos al tiempo, pero poco: si tarda más de 2 s, saludamos sin él.
     if (!weather) {
       const t = window.setTimeout(() => {
         if (!autoSpokeRef.current) { autoSpokeRef.current = true; speak(); }
-      }, 6000);
+      }, 2000);
       return () => window.clearTimeout(t);
     }
     autoSpokeRef.current = true;
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, spokenText, weather, hasGreetedToday]);
+  }, [autoMode, spokenText, weather]);
 
   const markGreeted = () => {
-    try { localStorage.setItem("grannytools.greetedDate", todayISO(new Date())); } catch { /* ignore */ }
-    setHasGreetedToday(true);
     setShowCitas(false);
   };
 
