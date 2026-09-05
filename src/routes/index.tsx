@@ -240,7 +240,7 @@ function Home() {
     autoSpokeRef.current = true;
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, spokenText, weather]);
+  }, [autoMode, spokenText, weather, hasGreetedToday]);
 
   const markGreeted = () => {
     try { localStorage.setItem("grannytools.greetedDate", todayISO(new Date())); } catch { /* ignore */ }
