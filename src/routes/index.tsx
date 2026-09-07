@@ -120,6 +120,7 @@ function Home() {
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const [preparing, setPreparing] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
   const pollRef = useRef<number | null>(null);
   const [showCitas, setShowCitas] = useState(true);
 
@@ -293,22 +294,59 @@ function Home() {
         ? ` y ${weatherPhrase(weather.desc)}, con ${weather.max} grados de máxima y ${weather.min} de mínima`
         : "";
       const hello = `${greetingFor(now)}${userName ? `, ${userName}` : ""}, ${hora}${clima}. `;
-      const u = new SpeechSynthesisUtterance(hello + spokenText);
-      u.lang = "es-ES";
-      u.rate = rate;
-      u.volume = volume;
-      u.pitch = 1.1;
-      u.onend = () => { setSpeaking(false); setPaused(false); };
-      synth.speak(u);
-      setSpeaking(true);
-      setPaused(false);
-      watchSpeech();
+      const text = hello + spokenText;
+
+      const doSpeak = () => {
+        const u = new SpeechSynthesisUtterance(text);
+        const es = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith("es"));
+        if (es) u.voice = es;
+        u.lang = "es-ES";
+        u.rate = rate;
+        u.volume = volume;
+        u.pitch = 1.1;
+        u.onstart = () => { setNeedsTap(false); setSpeaking(true); };
+        u.onend = () => { setSpeaking(false); setPaused(false); };
+        u.onerror = () => { setSpeaking(false); setPaused(false); setNeedsTap(true); };
+        synth.speak(u);
+        setSpeaking(true);
+        setPaused(false);
+        watchSpeech();
+        // Si el navegador bloquea la voz (necesita un toque), lo avisamos.
+        window.setTimeout(() => {
+          if (!synth.speaking && !synth.pending) setNeedsTap(true);
+        }, 900);
+      };
+
+      if (synth.getVoices().length === 0) {
+        const onVoices = () => {
+          synth.removeEventListener("voiceschanged", onVoices);
+          doSpeak();
+        };
+        synth.addEventListener("voiceschanged", onVoices);
+        window.setTimeout(() => {
+          synth.removeEventListener("voiceschanged", onVoices);
+          doSpeak();
+        }, 800);
+        return;
+      }
+      doSpeak();
     } catch {
       /* ignore */
     }
   };
 
+
+  // Si el navegador exige un toque previo, saludamos en cuanto el usuario toque la pantalla.
+  useEffect(() => {
+    if (!needsTap) return;
+    const onTap = () => speak();
+    window.addEventListener("pointerdown", onTap, { once: true });
+    return () => window.removeEventListener("pointerdown", onTap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsTap, spokenText, weather, rate, volume, userName]);
+
   const togglePause = () => {
+
     const s = window.speechSynthesis;
     if (!s) return;
     if (s.paused) { s.resume(); setPaused(false); }
@@ -516,11 +554,20 @@ function Home() {
             </>
           )}
 
-          {preparing && (
+          {preparing && !needsTap && (
             <div className="mb-3 rounded-2xl bg-secondary p-5 text-center text-2xl font-black text-secondary-foreground animate-pulse">
               Preparando saludo…
             </div>
           )}
+          {needsTap && (
+            <button
+              onClick={speak}
+              className="mb-3 w-full rounded-2xl bg-warning p-5 text-center text-2xl font-black text-warning-foreground active:scale-[0.98]"
+            >
+              Toca aquí para escuchar el saludo
+            </button>
+          )}
+
           <button
             onClick={speak}
             aria-label="Escuchar el saludo y las citas de hoy"
