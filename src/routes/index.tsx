@@ -293,20 +293,47 @@ function Home() {
         ? ` y ${weatherPhrase(weather.desc)}, con ${weather.max} grados de máxima y ${weather.min} de mínima`
         : "";
       const hello = `${greetingFor(now)}${userName ? `, ${userName}` : ""}, ${hora}${clima}. `;
-      const u = new SpeechSynthesisUtterance(hello + spokenText);
-      u.lang = "es-ES";
-      u.rate = rate;
-      u.volume = volume;
-      u.pitch = 1.1;
-      u.onend = () => { setSpeaking(false); setPaused(false); };
-      synth.speak(u);
-      setSpeaking(true);
-      setPaused(false);
-      watchSpeech();
+      const text = hello + spokenText;
+
+      const doSpeak = () => {
+        const u = new SpeechSynthesisUtterance(text);
+        const es = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith("es"));
+        if (es) u.voice = es;
+        u.lang = "es-ES";
+        u.rate = rate;
+        u.volume = volume;
+        u.pitch = 1.1;
+        u.onstart = () => { setNeedsTap(false); setSpeaking(true); };
+        u.onend = () => { setSpeaking(false); setPaused(false); };
+        u.onerror = () => { setSpeaking(false); setPaused(false); setNeedsTap(true); };
+        synth.speak(u);
+        setSpeaking(true);
+        setPaused(false);
+        watchSpeech();
+        // Si el navegador bloquea la voz (necesita un toque), lo avisamos.
+        window.setTimeout(() => {
+          if (!synth.speaking && !synth.pending) setNeedsTap(true);
+        }, 900);
+      };
+
+      if (synth.getVoices().length === 0) {
+        const onVoices = () => {
+          synth.removeEventListener("voiceschanged", onVoices);
+          doSpeak();
+        };
+        synth.addEventListener("voiceschanged", onVoices);
+        window.setTimeout(() => {
+          synth.removeEventListener("voiceschanged", onVoices);
+          doSpeak();
+        }, 800);
+        return;
+      }
+      doSpeak();
     } catch {
       /* ignore */
     }
   };
+
 
   const togglePause = () => {
     const s = window.speechSynthesis;
