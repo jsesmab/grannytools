@@ -232,13 +232,13 @@ function Home() {
       autoSpokeRef.current = true;
       return;
     }
-    appGreeted = true;
     setPreparing(true);
     // Esperamos al tiempo; si tarda más de 4 s, saludamos sin él.
     if (!weather) {
       const t = window.setTimeout(() => {
         if (!autoSpokeRef.current) {
           autoSpokeRef.current = true;
+          appGreeted = true;
           setPreparing(false);
           speak();
         }
@@ -249,6 +249,7 @@ function Home() {
       };
     }
     autoSpokeRef.current = true;
+    appGreeted = true;
     setPreparing(false);
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
