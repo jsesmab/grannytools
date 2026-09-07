@@ -336,7 +336,17 @@ function Home() {
   };
 
 
+  // Si el navegador exige un toque previo, saludamos en cuanto el usuario toque la pantalla.
+  useEffect(() => {
+    if (!needsTap) return;
+    const onTap = () => speak();
+    window.addEventListener("pointerdown", onTap, { once: true });
+    return () => window.removeEventListener("pointerdown", onTap);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsTap, spokenText, weather, rate, volume, userName]);
+
   const togglePause = () => {
+
     const s = window.speechSynthesis;
     if (!s) return;
     if (s.paused) { s.resume(); setPaused(false); }
