@@ -48,8 +48,12 @@ const USER_NAME_KEY = "grannytools.username";
 const PEOPLE_KEY = "grannytools.citas.people";
 const ENTRIES_KEY = "grannytools.citas.entries";
 const VOICE_KEY = "grannytools.voz";
-// Se reinicia al abrir/recargar la aplicación, pero no al navegar entre pantallas.
-let appGreeted = false;
+// Vive en la ventana actual: se conserva al navegar entre pantallas y se
+// reinicia únicamente al cerrar o recargar la aplicación.
+const hasAppGreeted = () => Boolean((window as Window & { __grannytoolsGreeted?: boolean }).__grannytoolsGreeted);
+const setAppGreeted = () => {
+  (window as Window & { __grannytoolsGreeted?: boolean }).__grannytoolsGreeted = true;
+};
 
 type Person = { id: string; name: string; color: string };
 type Entry = {
@@ -228,7 +232,7 @@ function Home() {
     if (autoMode !== "auto" && autoMode !== "ambos") return;
     if (!spokenText) return;
     // Solo una vez por apertura de la aplicación (no al volver a esta pantalla)
-    if (appGreeted) {
+    if (hasAppGreeted()) {
       autoSpokeRef.current = true;
       return;
     }
@@ -238,7 +242,7 @@ function Home() {
       const t = window.setTimeout(() => {
         if (!autoSpokeRef.current) {
           autoSpokeRef.current = true;
-          appGreeted = true;
+          setAppGreeted();
           setPreparing(false);
           speak();
         }
@@ -249,7 +253,7 @@ function Home() {
       };
     }
     autoSpokeRef.current = true;
-    appGreeted = true;
+    setAppGreeted();
     setPreparing(false);
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
