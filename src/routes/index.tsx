@@ -120,6 +120,7 @@ function Home() {
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const [preparing, setPreparing] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
   const pollRef = useRef<number | null>(null);
   const [showCitas, setShowCitas] = useState(true);
 
