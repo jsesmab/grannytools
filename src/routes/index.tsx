@@ -293,8 +293,11 @@ function Home() {
         : "";
       const hello = `${greetingFor(now)}${userName ? `, ${userName}` : ""}, ${hora}${clima}. `;
       const text = hello + spokenText;
+      let speechStarted = false;
 
       const doSpeak = () => {
+        if (speechStarted) return;
+        speechStarted = true;
         const u = new SpeechSynthesisUtterance(text);
         const es = synth.getVoices().find((v) => v.lang?.toLowerCase().startsWith("es"));
         if (es) u.voice = es;
