@@ -48,7 +48,8 @@ const USER_NAME_KEY = "grannytools.username";
 const PEOPLE_KEY = "grannytools.citas.people";
 const ENTRIES_KEY = "grannytools.citas.entries";
 const VOICE_KEY = "grannytools.voz";
-const AUTO_GREET_KEY = "grannytools.saludo.auto";
+// Se reinicia al abrir/recargar la aplicación, pero no al navegar entre pantallas.
+let appGreeted = false;
 
 type Person = { id: string; name: string; color: string };
 type Entry = {
@@ -226,16 +227,12 @@ function Home() {
     if (autoSpokeRef.current) return;
     if (autoMode !== "auto" && autoMode !== "ambos") return;
     if (!spokenText) return;
-    // Solo la primera vez que se abre la aplicación (no al volver a esta pantalla)
-    try {
-      if (sessionStorage.getItem(AUTO_GREET_KEY)) {
-        autoSpokeRef.current = true;
-        return;
-      }
-      sessionStorage.setItem(AUTO_GREET_KEY, "1");
-    } catch {
-      /* ignore */
+    // Solo una vez por apertura de la aplicación (no al volver a esta pantalla)
+    if (appGreeted) {
+      autoSpokeRef.current = true;
+      return;
     }
+    appGreeted = true;
     setPreparing(true);
     // Esperamos al tiempo; si tarda más de 4 s, saludamos sin él.
     if (!weather) {
