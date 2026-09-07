@@ -544,11 +544,20 @@ function Home() {
             </>
           )}
 
-          {preparing && (
+          {preparing && !needsTap && (
             <div className="mb-3 rounded-2xl bg-secondary p-5 text-center text-2xl font-black text-secondary-foreground animate-pulse">
               Preparando saludo…
             </div>
           )}
+          {needsTap && (
+            <button
+              onClick={speak}
+              className="mb-3 w-full rounded-2xl bg-warning p-5 text-center text-2xl font-black text-warning-foreground active:scale-[0.98]"
+            >
+              Toca aquí para escuchar el saludo
+            </button>
+          )}
+
           <button
             onClick={speak}
             aria-label="Escuchar el saludo y las citas de hoy"
