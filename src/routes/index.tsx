@@ -48,6 +48,7 @@ const USER_NAME_KEY = "grannytools.username";
 const PEOPLE_KEY = "grannytools.citas.people";
 const ENTRIES_KEY = "grannytools.citas.entries";
 const VOICE_KEY = "grannytools.voz";
+const WEATHER_CACHE_KEY = "grannytools.weather.today";
 // Vive en la ventana actual: se conserva al navegar entre pantallas y se
 // reinicia únicamente al cerrar o recargar la aplicación.
 const hasAppGreeted = () => Boolean((window as Window & { __grannytoolsGreeted?: boolean }).__grannytoolsGreeted);
@@ -67,6 +68,13 @@ type Entry = {
   end: string;
   companion?: string;
   remindMin?: number;
+};
+
+type CachedWeather = {
+  date: string;
+  desc: string;
+  max: number;
+  min: number;
 };
 
 function greetingFor(date: Date) {
@@ -148,7 +156,9 @@ function Home() {
     const voice = load<{ rate: number; volume: number; mode?: "auto" | "boton" | "ambos" }>(VOICE_KEY, { rate: 0.9, volume: 1 });
     setRate(voice.rate);
     setVolume(voice.volume);
-    setAutoMode(voice.mode ?? "boton");
+    // En una instalación nueva, el saludo se activa al abrir la aplicación.
+    // Si la persona ya eligió un modo, respetamos esa preferencia.
+    setAutoMode(voice.mode ?? "auto");
 
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
@@ -189,6 +199,14 @@ function Home() {
   // Previsión del tiempo de hoy (sin cuenta ni clave: Open-Meteo)
   useEffect(() => {
     let cancelled = false;
+    const today = todayISO(new Date());
+
+    // La caché permite preparar los saludos siguientes sin esperar a la red.
+    const cached = load<CachedWeather | null>(WEATHER_CACHE_KEY, null);
+    if (cached?.date === today) {
+      setWeather({ desc: cached.desc, max: cached.max, min: cached.min });
+    }
+
     const fetchWeather = async (lat: number, lon: number) => {
       try {
         const url =
@@ -203,11 +221,22 @@ function Home() {
         const desc = weatherText(d.weather_code[0]);
         const max = Math.round(d.temperature_2m_max[0]);
         const min = Math.round(d.temperature_2m_min[0]);
-        setWeather({ desc, max, min });
+        const forecast = { desc, max, min };
+        setWeather(forecast);
+        try {
+          localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ date: today, ...forecast }));
+        } catch {
+          /* la caché es opcional */
+        }
       } catch {
         /* sin tiempo */
       }
     };
+
+    // Si hay una previsión válida, ya podemos saludar. Solo consultamos la red
+    // cuando falta la caché o pertenece a otro día.
+    if (cached?.date === today) return () => { cancelled = true; };
+
     try {
       navigator.geolocation?.getCurrentPosition(
         (pos) => void fetchWeather(pos.coords.latitude, pos.coords.longitude),
@@ -575,10 +604,10 @@ function Home() {
 
           <button
             onClick={speak}
-            aria-label="Escuchar el saludo y las citas de hoy"
+            aria-label="Escuchar el saludo inicial y las citas de hoy"
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-xl font-black text-primary-foreground shadow-md active:scale-[0.98]"
           >
-            <Volume2 className="h-8 w-8" aria-hidden /> Saludo
+            <Volume2 className="h-8 w-8" aria-hidden /> Saludo inicial
           </button>
           {speaking && (
             <div className="mt-2 grid grid-cols-2 gap-2">
