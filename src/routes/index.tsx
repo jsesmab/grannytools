@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
-  Pause, Play, Square, Settings2, ChevronRight, Bell, BellOff,
+  Pause, Play, Square, Settings, ChevronRight, Bell, BellOff, X,
 } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";
 import { askReminderPermission, DEFAULT_REMIND_MIN } from "@/lib/reminders";
@@ -34,14 +34,22 @@ type Tile = {
 };
 
 const TILES: Tile[] = [
-  { to: "/oir", label: "Oír", Icon: Ear, bg: "bg-primary", fg: "text-primary-foreground" },
-  { to: "/lupa", label: "Lupa", Icon: Search, bg: "bg-success", fg: "text-success-foreground" },
   { to: "/panico", label: "Contactos", Icon: Users, bg: "bg-destructive", fg: "text-destructive-foreground" },
   { to: "/ubicacion", label: "Ubicación", Icon: MapPin, bg: "bg-primary", fg: "text-primary-foreground" },
-  { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
   { to: "/citas", label: "Citas", Icon: CalendarDays, bg: "bg-success", fg: "text-success-foreground" },
+  { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
+  { to: "/oir", label: "Oír", Icon: Ear, bg: "bg-primary", fg: "text-primary-foreground" },
+  { to: "/lupa", label: "Lupa", Icon: Search, bg: "bg-success", fg: "text-success-foreground" },
   { to: "/camara", label: "Cámara", Icon: Camera, bg: "bg-secondary", fg: "text-secondary-foreground" },
 ];
+
+// Qué ajustes abre cada botón cuando el modo ajustes está activo.
+type SheetKey = "vista" | "voz" | "lupa" | "avisos";
+const TILE_SHEET: Partial<Record<Tile["to"], SheetKey>> = {
+  "/lupa": "lupa",
+  "/citas": "avisos",
+  "/pastillas": "avisos",
+};
 
 
 const USER_NAME_KEY = "grannytools.username";
@@ -132,6 +140,7 @@ function Home() {
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [sheet, setSheet] = useState<SheetKey | null>(null);
   const [notifOn, setNotifOn] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
 
@@ -450,12 +459,12 @@ function Home() {
             <span className="h-11 w-11" aria-hidden />
             <h1 className="flex-1 text-3xl font-black tracking-tight">Grannytools</h1>
             <button
-              onClick={() => setShowPrefs((v) => !v)}
-              aria-label="Ajustes de visión"
+              onClick={() => { setShowPrefs((v) => !v); setSheet(null); }}
+              aria-label="Ajustes"
               aria-expanded={showPrefs}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+              className={`flex h-11 w-11 items-center justify-center rounded-xl active:scale-95 ${showPrefs ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
             >
-              <Settings2 className="h-6 w-6" aria-hidden />
+              <Settings className="h-6 w-6" aria-hidden />
             </button>
           </div>
           {editingName ? (
@@ -500,96 +509,141 @@ function Home() {
         </header>
 
         {showPrefs && (
-          <section className="mb-3 space-y-3 rounded-2xl bg-card p-3 shadow-sm">
-            <h2 className="text-base font-bold">Cómo se ve la aplicación</h2>
-            <div>
-              <label htmlFor="fuente" className="text-sm font-bold">
-                Tamaño de letra · {Math.round(prefs.fontScale * 100)}%
-              </label>
-              <input
-                id="fuente"
-                type="range"
-                min={0.85}
-                max={1.6}
-                step={0.05}
-                value={prefs.fontScale}
-                onChange={(e) => update({ fontScale: Number(e.target.value) })}
-                className="h-3 w-full accent-primary"
-              />
-            </div>
-            <div>
-              <label htmlFor="brillo" className="text-sm font-bold">
-                Brillo extra en la lupa · ×{prefs.brightness.toFixed(1)}
-              </label>
-              <input
-                id="brillo"
-                type="range"
-                min={1}
-                max={2}
-                step={0.1}
-                value={prefs.brightness}
-                onChange={(e) => update({ brightness: Number(e.target.value) })}
-                className="h-3 w-full accent-primary"
-              />
-            </div>
+          <div className="mb-3 space-y-2">
+            <p className="rounded-2xl bg-warning p-3 text-center text-base font-bold text-warning-foreground">
+              Modo ajustes: toca un botón para cambiar sus opciones.
+            </p>
             <button
-              onClick={() => update({ highContrast: !prefs.highContrast })}
-              aria-pressed={prefs.highContrast}
-              className={`w-full rounded-xl py-3 text-lg font-bold active:scale-95 ${prefs.highContrast ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+              onClick={() => setSheet("vista")}
+              className="w-full rounded-2xl bg-card py-3 text-lg font-bold shadow-sm active:scale-[0.98]"
             >
-              Contraste alto: {prefs.highContrast ? "sí" : "no"}
+              Cómo se ve la aplicación
             </button>
+          </div>
+        )}
 
-            <h2 className="pt-1 text-base font-bold">El saludo</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="velocidad" className="text-sm font-bold">
-                  Velocidad ×{rate.toFixed(1)}
-                </label>
-                <input
-                  id="velocidad"
-                  type="range"
-                  min={0.5}
-                  max={1.5}
-                  step={0.1}
-                  value={rate}
-                  onChange={(e) => { const v = Number(e.target.value); setRate(v); saveVoice(v, volume); }}
-                  className="h-3 w-full accent-primary"
-                />
+        {sheet && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3" onClick={() => setSheet(null)}>
+            <section
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl space-y-3 rounded-2xl bg-card p-4 shadow-xl"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xl font-black">
+                  {sheet === "vista" && "Cómo se ve la aplicación"}
+                  {sheet === "voz" && "El saludo"}
+                  {sheet === "lupa" && "La lupa"}
+                  {sheet === "avisos" && "Avisos en el móvil"}
+                </h2>
+                <button
+                  onClick={() => setSheet(null)}
+                  aria-label="Cerrar ajustes"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                >
+                  <X className="h-6 w-6" aria-hidden />
+                </button>
               </div>
-              <div>
-                <label htmlFor="volumen" className="text-sm font-bold">
-                  Volumen {Math.round(volume * 100)}%
-                </label>
-                <input
-                  id="volumen"
-                  type="range"
-                  min={0.1}
-                  max={1}
-                  step={0.1}
-                  value={volume}
-                  onChange={(e) => { const v = Number(e.target.value); setVolume(v); saveVoice(rate, v); }}
-                  className="h-3 w-full accent-primary"
-                />
-              </div>
-            </div>
 
-            <h2 className="pt-1 text-base font-bold">Avisos en el móvil</h2>
-            <button
-              onClick={askNotif}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${notifOn ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground"}`}
-            >
-              {notifOn ? <Bell className="h-6 w-6" aria-hidden /> : <BellOff className="h-6 w-6" aria-hidden />}
-              {notifOn ? "Avisos activados" : "Activar avisos"}
-            </button>
-            {notifMsg && <p className="text-sm font-semibold text-muted-foreground">{notifMsg}</p>}
-            <button
-              onClick={testNotif}
-              className="w-full rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
-            >
-              Probar aviso (suena en 5 segundos)
-            </button>
-          </section>
+              {sheet === "vista" && (
+                <>
+                  <div>
+                    <label htmlFor="fuente" className="text-sm font-bold">
+                      Tamaño de letra · {Math.round(prefs.fontScale * 100)}%
+                    </label>
+                    <input
+                      id="fuente"
+                      type="range"
+                      min={0.85}
+                      max={1.6}
+                      step={0.05}
+                      value={prefs.fontScale}
+                      onChange={(e) => update({ fontScale: Number(e.target.value) })}
+                      className="h-3 w-full accent-primary"
+                    />
+                  </div>
+                  <button
+                    onClick={() => update({ highContrast: !prefs.highContrast })}
+                    aria-pressed={prefs.highContrast}
+                    className={`w-full rounded-xl py-3 text-lg font-bold active:scale-95 ${prefs.highContrast ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                  >
+                    Contraste alto: {prefs.highContrast ? "sí" : "no"}
+                  </button>
+                </>
+              )}
+
+              {sheet === "lupa" && (
+                <div>
+                  <label htmlFor="brillo" className="text-sm font-bold">
+                    Brillo extra en la lupa · ×{prefs.brightness.toFixed(1)}
+                  </label>
+                  <input
+                    id="brillo"
+                    type="range"
+                    min={1}
+                    max={2}
+                    step={0.1}
+                    value={prefs.brightness}
+                    onChange={(e) => update({ brightness: Number(e.target.value) })}
+                    className="h-3 w-full accent-primary"
+                  />
+                </div>
+              )}
+
+              {sheet === "voz" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="velocidad" className="text-sm font-bold">
+                      Velocidad ×{rate.toFixed(1)}
+                    </label>
+                    <input
+                      id="velocidad"
+                      type="range"
+                      min={0.5}
+                      max={1.5}
+                      step={0.1}
+                      value={rate}
+                      onChange={(e) => { const v = Number(e.target.value); setRate(v); saveVoice(v, volume); }}
+                      className="h-3 w-full accent-primary"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="volumen" className="text-sm font-bold">
+                      Volumen {Math.round(volume * 100)}%
+                    </label>
+                    <input
+                      id="volumen"
+                      type="range"
+                      min={0.1}
+                      max={1}
+                      step={0.1}
+                      value={volume}
+                      onChange={(e) => { const v = Number(e.target.value); setVolume(v); saveVoice(rate, v); }}
+                      className="h-3 w-full accent-primary"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {sheet === "avisos" && (
+                <>
+                  <button
+                    onClick={askNotif}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${notifOn ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground"}`}
+                  >
+                    {notifOn ? <Bell className="h-6 w-6" aria-hidden /> : <BellOff className="h-6 w-6" aria-hidden />}
+                    {notifOn ? "Avisos activados" : "Activar avisos"}
+                  </button>
+                  {notifMsg && <p className="text-sm font-semibold text-muted-foreground">{notifMsg}</p>}
+                  <button
+                    onClick={testNotif}
+                    className="w-full rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
+                  >
+                    Probar aviso (suena en 5 segundos)
+                  </button>
+                </>
+              )}
+            </section>
+          </div>
         )}
 
         <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
@@ -639,11 +693,12 @@ function Home() {
           )}
 
           <button
-            onClick={speak}
-            aria-label="Escuchar el saludo inicial y las citas de hoy"
+            onClick={showPrefs ? () => setSheet("voz") : speak}
+            aria-label={showPrefs ? "Ajustes del saludo" : "Escuchar el saludo inicial y las citas de hoy"}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-xl font-black text-primary-foreground shadow-md active:scale-[0.98]"
           >
-            <Volume2 className="h-8 w-8" aria-hidden /> Saludo inicial
+            {showPrefs ? <Settings className="h-8 w-8" aria-hidden /> : <Volume2 className="h-8 w-8" aria-hidden />}
+            {showPrefs ? "Ajustes del saludo" : "Saludo inicial"}
           </button>
           {speaking && (
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -669,21 +724,38 @@ function Home() {
 
         <div className="grid grid-cols-2 gap-2 pb-3">
 
-          {TILES.map(({ to, label, Icon, bg, fg }) => (
-            <Link
-              key={to}
-              to={to}
-              className={[
-                "flex h-[calc((100dvh-11rem)/3)] min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none",
-                "active:scale-[0.97] active:shadow-inner transition-all",
-                bg,
-                fg,
-              ].join(" ")}
-            >
-              <Icon className="h-12 w-12" aria-hidden />
-              <span className="text-xl font-black leading-tight">{label}</span>
-            </Link>
-          ))}
+          {TILES.map(({ to, label, Icon, bg, fg }) => {
+            const cls = [
+              "flex h-[calc((100dvh-11rem)/3)] min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none text-center",
+              "active:scale-[0.97] active:shadow-inner transition-all",
+              bg,
+              fg,
+            ].join(" ");
+            const inner = (
+              <>
+                {showPrefs ? <Settings className="h-12 w-12" aria-hidden /> : <Icon className="h-12 w-12" aria-hidden />}
+                <span className="text-xl font-black leading-tight">{label}</span>
+              </>
+            );
+            if (showPrefs) {
+              const key = TILE_SHEET[to];
+              return (
+                <button
+                  key={to}
+                  onClick={() => (key ? setSheet(key) : undefined)}
+                  className={`${cls} ${key ? "" : "opacity-50"}`}
+                >
+                  {inner}
+                  {!key && <span className="text-xs font-semibold">Se ajusta dentro</span>}
+                </button>
+              );
+            }
+            return (
+              <Link key={to} to={to} className={cls}>
+                {inner}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </main>
