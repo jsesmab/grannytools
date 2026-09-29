@@ -132,6 +132,50 @@ function Home() {
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [notifOn, setNotifOn] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted") setNotifOn(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  const askNotif = async () => {
+    try {
+      if (!("Notification" in window)) { setNotifMsg("Este navegador no permite avisos."); return; }
+      const p = await Notification.requestPermission();
+      setNotifOn(p === "granted");
+      setNotifMsg(p === "granted" ? "Listo, los avisos ya están activados." : "El móvil no ha permitido los avisos. Revísalo en los ajustes del navegador.");
+    } catch { setNotifMsg("No se han podido activar los avisos."); }
+  };
+
+  const testNotif = () => {
+    setNotifMsg("El aviso de prueba sonará en 5 segundos…");
+    window.setTimeout(() => {
+      try {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = 880;
+          gain.gain.value = 0.2;
+          osc.connect(gain).connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+          setTimeout(() => ctx.close().catch(() => {}), 900);
+        }
+      } catch { /* ignore */ }
+      try {
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Grannytools", { body: "Esto es un aviso de prueba. Todo funciona bien.", icon: "/icon-192.png" });
+        }
+      } catch { /* ignore */ }
+      try { navigator.vibrate?.([300, 150, 300]); } catch { /* ignore */ }
+      setNotifMsg(null);
+    }, 5000);
+  };
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
