@@ -69,8 +69,6 @@ class SirenEngine {
   }
 }
 
-const EMERGENCY_KEY = "grannytools.emergency";
-
 function Contactos() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [name, setName] = useState("");
@@ -80,6 +78,8 @@ function Contactos() {
   const [capturing, setCapturing] = useState(false);
   const [alarmOn, setAlarmOn] = useState(false);
   const [emergency, setEmergency] = useState("");
+  const [fallOn, setFallOn] = useState(false);
+  const [fallMsg, setFallMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sirenRef = useRef<SirenEngine>(new SirenEngine());
   const galleryNewRef = useRef<HTMLInputElement | null>(null);
@@ -89,6 +89,7 @@ function Contactos() {
   useEffect(() => {
     setContacts(loadContacts());
     try { setEmergency(localStorage.getItem(EMERGENCY_KEY) ?? ""); } catch { /* ignore */ }
+    setFallOn(isFallEnabled());
     return () => { sirenRef.current.stop(); };
   }, []);
 
@@ -100,6 +101,29 @@ function Contactos() {
   const saveEmergency = (p: string) => {
     setEmergency(p);
     try { localStorage.setItem(EMERGENCY_KEY, p); } catch { /* ignore */ }
+  };
+
+  const emergencyContact = contacts.find((c) => c.phone === emergency) ?? null;
+
+  const toggleFall = async () => {
+    if (fallOn) {
+      setFallEnabled(false);
+      setFallOn(false);
+      setFallMsg("Aviso de caídas desactivado.");
+      return;
+    }
+    if (!motionAvailable()) {
+      setFallMsg("Este móvil no deja usar el sensor de movimiento desde la web.");
+      return;
+    }
+    const ok = await requestMotionPermission();
+    if (!ok) {
+      setFallMsg("Hay que dar permiso al movimiento para detectar caídas.");
+      return;
+    }
+    setFallEnabled(true);
+    setFallOn(true);
+    setFallMsg("Listo. Vigila las caídas mientras la aplicación está abierta.");
   };
 
   const addContact = () => {
