@@ -117,6 +117,37 @@ function check() {
     changed = true;
   }
 
+  // Pastillas: aviso a la hora exacta
+  type Med = { name: string; times: string[]; from?: string; until?: string };
+  const meds = read<Med[]>("grannytools.meds", []).filter(
+    (m) => (!m.from || m.from <= iso) && (!m.until || m.until >= iso),
+  );
+  for (const m of meds) {
+    for (const t of m.times) {
+      const id = `med:${m.name}:${t}`;
+      const tm = toMin(t);
+      if (nowMin < tm || nowMin > tm + 2 || fired.ids.includes(id)) continue;
+      announce(`Es hora de tomar ${m.name}.`);
+      fired.ids.push(id);
+      changed = true;
+    }
+  }
+
+  // Globo con número en el icono: avisos pendientes de hoy
+  let pending = 0;
+  for (const e of entries) {
+    const today = e.date ? e.date === iso : (e.days ?? []).includes(dow);
+    if (today && toMin(e.start) >= nowMin) pending++;
+  }
+  for (const m of meds) for (const t of m.times) if (toMin(t) >= nowMin) pending++;
+  try {
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    if (pending > 0) void nav.setAppBadge?.(pending).catch(() => {});
+    else void nav.clearAppBadge?.().catch(() => {});
+  } catch {
+    /* ignore */
+  }
+
   if (changed || fired.day === iso) {
     try {
       localStorage.setItem(FIRED_KEY, JSON.stringify(fired));
@@ -129,6 +160,8 @@ function check() {
 export function AppReminders() {
   useEffect(() => {
     check();
+    const ask = () => askReminderPermission();
+    window.addEventListener("pointerdown", ask, { once: true });
     const id = window.setInterval(check, 30_000);
     const onVisible = () => { if (document.visibilityState === "visible") check(); };
     document.addEventListener("visibilitychange", onVisible);
