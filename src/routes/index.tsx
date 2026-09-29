@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
-  Pause, Play, Square, Settings2, ChevronRight,
+  Pause, Play, Square, Settings2, ChevronRight, Bell, BellOff,
 } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";
 import { askReminderPermission, DEFAULT_REMIND_MIN } from "@/lib/reminders";
@@ -132,6 +132,50 @@ function Home() {
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [notifOn, setNotifOn] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      if ("Notification" in window && Notification.permission === "granted") setNotifOn(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  const askNotif = async () => {
+    try {
+      if (!("Notification" in window)) { setNotifMsg("Este navegador no permite avisos."); return; }
+      const p = await Notification.requestPermission();
+      setNotifOn(p === "granted");
+      setNotifMsg(p === "granted" ? "Listo, los avisos ya están activados." : "El móvil no ha permitido los avisos. Revísalo en los ajustes del navegador.");
+    } catch { setNotifMsg("No se han podido activar los avisos."); }
+  };
+
+  const testNotif = () => {
+    setNotifMsg("El aviso de prueba sonará en 5 segundos…");
+    window.setTimeout(() => {
+      try {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = 880;
+          gain.gain.value = 0.2;
+          osc.connect(gain).connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.4);
+          setTimeout(() => ctx.close().catch(() => {}), 900);
+        }
+      } catch { /* ignore */ }
+      try {
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Grannytools", { body: "Esto es un aviso de prueba. Todo funciona bien.", icon: "/icon-192.png" });
+        }
+      } catch { /* ignore */ }
+      try { navigator.vibrate?.([300, 150, 300]); } catch { /* ignore */ }
+      setNotifMsg(null);
+    }, 5000);
+  };
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [needsTap, setNeedsTap] = useState(false);
@@ -529,6 +573,22 @@ function Home() {
                 />
               </div>
             </div>
+
+            <h2 className="pt-1 text-base font-bold">Avisos en el móvil</h2>
+            <button
+              onClick={askNotif}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${notifOn ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground"}`}
+            >
+              {notifOn ? <Bell className="h-6 w-6" aria-hidden /> : <BellOff className="h-6 w-6" aria-hidden />}
+              {notifOn ? "Avisos activados" : "Activar avisos"}
+            </button>
+            {notifMsg && <p className="text-sm font-semibold text-muted-foreground">{notifMsg}</p>}
+            <button
+              onClick={testNotif}
+              className="w-full rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
+            >
+              Probar aviso (suena en 5 segundos)
+            </button>
           </section>
         )}
 
