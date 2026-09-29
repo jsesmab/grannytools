@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, MapPin, AlertTriangle, MessageCircle, Send } from "lucide-react";
 import { type Contact, loadContacts, initials } from "@/lib/contacts";
@@ -77,9 +77,9 @@ function Ubicacion() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-3 py-3">
         <header className="mb-3 flex items-center gap-2">
-          <a href="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
+          <Link to="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
             <ArrowLeft className="h-5 w-5" aria-hidden />
-          </a>
+          </Link>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <MapPin className="h-6 w-6" aria-hidden />
           </div>

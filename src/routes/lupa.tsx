@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Search, Lightbulb, LightbulbOff, AlertTriangle } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";
@@ -223,13 +223,13 @@ function Lupa() {
 
       {/* Barra superior */}
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start gap-2 p-3">
-        <a
-          href="/"
+        <Link
+          to="/"
           aria-label="Inicio"
           className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-xl bg-black/60 text-white active:scale-[0.95]"
         >
           <ArrowLeft className="h-6 w-6" aria-hidden />
-        </a>
+        </Link>
         <button
           onClick={toggleTorch}
           disabled={!running || !torchAvailable}

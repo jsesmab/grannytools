@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Users, Phone, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX, SwitchCamera, Image as ImageIcon } from "lucide-react";
 import {
@@ -169,9 +169,9 @@ function Contactos() {
       <div className="mx-auto max-w-2xl px-3 py-3">
         <div className="sticky top-0 z-20 -mx-3 mb-3 bg-background px-3 pb-2 pt-1">
           <header className="mb-2 flex items-center gap-2">
-            <a href="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
+            <Link to="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
               <ArrowLeft className="h-5 w-5" aria-hidden />
-            </a>
+            </Link>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive text-destructive-foreground">
               <Users className="h-6 w-6" aria-hidden />
             </div>

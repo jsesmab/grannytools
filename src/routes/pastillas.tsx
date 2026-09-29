@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle, CalendarPlus } from "lucide-react";
 
@@ -262,9 +262,9 @@ function Pastillas() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-3 py-3">
         <header className="mb-3 flex items-center gap-2">
-          <a href="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
+          <Link to="/" aria-label="Inicio" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]">
             <ArrowLeft className="h-5 w-5" aria-hidden />
-          </a>
+          </Link>
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning text-warning-foreground">
             <Pill className="h-6 w-6" aria-hidden />
           </div>
