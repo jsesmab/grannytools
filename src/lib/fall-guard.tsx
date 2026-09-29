@@ -118,10 +118,19 @@ export function FallGuard() {
   }, []);
 
   useEffect(() => {
-    if (!isFallEnabled()) return;
     const det = createFallDetector(() => startCountdown());
-    det.start();
-    return () => det.stop();
+    let running = false;
+    const sync = () => {
+      const want = isFallEnabled();
+      if (want && !running) { det.start(); running = true; }
+      if (!want && running) { det.stop(); running = false; }
+    };
+    sync();
+    const id = window.setInterval(sync, 3000);
+    return () => {
+      window.clearInterval(id);
+      if (running) det.stop();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
