@@ -140,6 +140,7 @@ function Home() {
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
   const [showPrefs, setShowPrefs] = useState(false);
+  const [sheet, setSheet] = useState<SheetKey | null>(null);
   const [notifOn, setNotifOn] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
 
@@ -458,12 +459,12 @@ function Home() {
             <span className="h-11 w-11" aria-hidden />
             <h1 className="flex-1 text-3xl font-black tracking-tight">Grannytools</h1>
             <button
-              onClick={() => setShowPrefs((v) => !v)}
-              aria-label="Ajustes de visión"
+              onClick={() => { setShowPrefs((v) => !v); setSheet(null); }}
+              aria-label="Ajustes"
               aria-expanded={showPrefs}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+              className={`flex h-11 w-11 items-center justify-center rounded-xl active:scale-95 ${showPrefs ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
             >
-              <Settings2 className="h-6 w-6" aria-hidden />
+              <Settings className="h-6 w-6" aria-hidden />
             </button>
           </div>
           {editingName ? (
