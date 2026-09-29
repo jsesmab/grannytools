@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Users, Phone, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX, SwitchCamera, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Users, Phone, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX, SwitchCamera, Image as ImageIcon, Star, ShieldCheck } from "lucide-react";
+import {
+  EMERGENCY_KEY,
+  isFallEnabled,
+  setFallEnabled,
+  requestMotionPermission,
+  motionAvailable,
+} from "@/lib/fall-detection";
+import { simulateFall } from "@/lib/fall-guard";
 import {
   type Contact,
   MAX_CONTACTS,
@@ -282,6 +290,14 @@ function Contactos() {
                       </button>
                     </div>
                     <button
+                      onClick={() => saveEmergency(emergency === c.phone ? "" : c.phone)}
+                      aria-label={`Elegir a ${c.name} como contacto de emergencia`}
+                      aria-pressed={emergency === c.phone}
+                      className={`absolute -left-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full shadow active:scale-[0.9] ${emergency === c.phone ? "bg-success text-success-foreground" : "bg-background text-muted-foreground"}`}
+                    >
+                      <Star className="h-4 w-4" aria-hidden />
+                    </button>
+                    <button
                       onClick={() => save(contacts.filter((_, idx) => idx !== i))}
                       aria-label={`Borrar ${c.name}`}
                       className="absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow active:scale-[0.9]"
@@ -299,34 +315,59 @@ function Contactos() {
         <input ref={galleryEditRef} type="file" accept="image/*" className="hidden" onChange={onPickExisting} />
 
         {editing && (
-          <div className="mt-3 space-y-2 rounded-2xl bg-card p-3 shadow-sm">
-            <label htmlFor="emergencia" className="block text-sm font-bold">Contacto de emergencia (botón ALERTA)</label>
-            <select
-              id="emergencia"
-              value={emergency}
-              onChange={(e) => saveEmergency(e.target.value)}
-              className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base"
+          <div className="mt-3 space-y-3 rounded-2xl bg-card p-3 shadow-sm">
+            <h2 className="text-base font-black">1 · Quién recibe la ayuda</h2>
+            {emergencyContact ? (
+              <div className="flex items-center gap-3 rounded-xl bg-destructive/10 p-2">
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary">
+                  {emergencyContact.photo ? (
+                    <img src={emergencyContact.photo} alt={emergencyContact.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-xl font-black">
+                      {initials(emergencyContact.name)}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-base font-black">{emergencyContact.name}</p>
+                  <p className="truncate text-sm text-muted-foreground">{emergencyContact.phone}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="rounded-xl bg-secondary p-2 text-sm font-semibold text-secondary-foreground">
+                Todavía no has elegido a nadie. Toca la estrella de una foto para elegirlo.
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              A esta persona se le llama con el botón ALERTA y si te caes y no contestas.
+            </p>
+
+            <h2 className="pt-1 text-base font-black">2 · Aviso de caídas</h2>
+            <button
+              onClick={toggleFall}
+              aria-pressed={fallOn}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-lg font-black active:scale-95 ${fallOn ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}
             >
-              <option value="">Sin contacto</option>
-              {contacts.map((c, i) => (
-                <option key={i} value={c.phone}>{c.name} — {c.phone}</option>
-              ))}
-              {emergency && !contacts.some((c) => c.phone === emergency) && (
-                <option value={emergency}>{emergency}</option>
-              )}
-            </select>
-            <input
-              type="tel"
-              value={emergency}
-              onChange={(e) => saveEmergency(e.target.value)}
-              placeholder="O escribe un teléfono (+34...)"
-              className="w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base"
-            />
+              <ShieldCheck className="h-6 w-6" aria-hidden />
+              {fallOn ? "Aviso de caídas activado" : "Activar aviso de caídas"}
+            </button>
+            {fallMsg && <p className="text-sm font-semibold text-muted-foreground">{fallMsg}</p>}
+            <button
+              onClick={simulateFall}
+              className="w-full rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
+            >
+              Probar (sin tirar el móvil)
+            </button>
+            <p className="text-xs text-muted-foreground">
+              Si te caes, el móvil suena y espera 30 segundos. Si no pulsas «Estoy bien», envía tu ubicación y llama.
+            </p>
           </div>
         )}
 
         {editing && contacts.length < MAX_CONTACTS && (
-          <div className="mt-3 space-y-2 rounded-2xl border-2 border-dashed border-border p-2">
+          <div className="mt-3 space-y-2 rounded-2xl border-2 border-dashed border-border p-3">
+            <h2 className="text-base font-black">3 · Añadir una persona nueva</h2>
+            <p className="text-sm text-muted-foreground">Ponle una foto, su nombre y su teléfono.</p>
             <div className="flex items-center gap-3">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary text-secondary-foreground">
                 {newPhoto ? (
