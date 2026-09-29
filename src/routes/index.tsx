@@ -693,11 +693,12 @@ function Home() {
           )}
 
           <button
-            onClick={speak}
-            aria-label="Escuchar el saludo inicial y las citas de hoy"
+            onClick={showPrefs ? () => setSheet("voz") : speak}
+            aria-label={showPrefs ? "Ajustes del saludo" : "Escuchar el saludo inicial y las citas de hoy"}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-xl font-black text-primary-foreground shadow-md active:scale-[0.98]"
           >
-            <Volume2 className="h-8 w-8" aria-hidden /> Saludo inicial
+            {showPrefs ? <Settings className="h-8 w-8" aria-hidden /> : <Volume2 className="h-8 w-8" aria-hidden />}
+            {showPrefs ? "Ajustes del saludo" : "Saludo inicial"}
           </button>
           {speaking && (
             <div className="mt-2 grid grid-cols-2 gap-2">
@@ -723,21 +724,38 @@ function Home() {
 
         <div className="grid grid-cols-2 gap-2 pb-3">
 
-          {TILES.map(({ to, label, Icon, bg, fg }) => (
-            <Link
-              key={to}
-              to={to}
-              className={[
-                "flex h-[calc((100dvh-11rem)/3)] min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none",
-                "active:scale-[0.97] active:shadow-inner transition-all",
-                bg,
-                fg,
-              ].join(" ")}
-            >
-              <Icon className="h-12 w-12" aria-hidden />
-              <span className="text-xl font-black leading-tight">{label}</span>
-            </Link>
-          ))}
+          {TILES.map(({ to, label, Icon, bg, fg }) => {
+            const cls = [
+              "flex h-[calc((100dvh-11rem)/3)] min-h-28 flex-col items-center justify-center gap-2 rounded-2xl p-3 shadow-lg select-none text-center",
+              "active:scale-[0.97] active:shadow-inner transition-all",
+              bg,
+              fg,
+            ].join(" ");
+            const inner = (
+              <>
+                {showPrefs ? <Settings className="h-12 w-12" aria-hidden /> : <Icon className="h-12 w-12" aria-hidden />}
+                <span className="text-xl font-black leading-tight">{label}</span>
+              </>
+            );
+            if (showPrefs) {
+              const key = TILE_SHEET[to];
+              return (
+                <button
+                  key={to}
+                  onClick={() => (key ? setSheet(key) : undefined)}
+                  className={`${cls} ${key ? "" : "opacity-50"}`}
+                >
+                  {inner}
+                  {!key && <span className="text-xs font-semibold">Se ajusta dentro</span>}
+                </button>
+              );
+            }
+            return (
+              <Link key={to} to={to} className={cls}>
+                {inner}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </main>
