@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
-  Pause, Play, Square, Settings2, ChevronRight, Bell, BellOff,
+  Pause, Play, Square, Settings, ChevronRight, Bell, BellOff, X,
 } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";
 import { askReminderPermission, DEFAULT_REMIND_MIN } from "@/lib/reminders";
@@ -34,14 +34,22 @@ type Tile = {
 };
 
 const TILES: Tile[] = [
-  { to: "/oir", label: "Oír", Icon: Ear, bg: "bg-primary", fg: "text-primary-foreground" },
-  { to: "/lupa", label: "Lupa", Icon: Search, bg: "bg-success", fg: "text-success-foreground" },
   { to: "/panico", label: "Contactos", Icon: Users, bg: "bg-destructive", fg: "text-destructive-foreground" },
   { to: "/ubicacion", label: "Ubicación", Icon: MapPin, bg: "bg-primary", fg: "text-primary-foreground" },
-  { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
   { to: "/citas", label: "Citas", Icon: CalendarDays, bg: "bg-success", fg: "text-success-foreground" },
+  { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
+  { to: "/oir", label: "Oír", Icon: Ear, bg: "bg-primary", fg: "text-primary-foreground" },
+  { to: "/lupa", label: "Lupa", Icon: Search, bg: "bg-success", fg: "text-success-foreground" },
   { to: "/camara", label: "Cámara", Icon: Camera, bg: "bg-secondary", fg: "text-secondary-foreground" },
 ];
+
+// Qué ajustes abre cada botón cuando el modo ajustes está activo.
+type SheetKey = "vista" | "voz" | "lupa" | "avisos";
+const TILE_SHEET: Partial<Record<Tile["to"], SheetKey>> = {
+  "/lupa": "lupa",
+  "/citas": "avisos",
+  "/pastillas": "avisos",
+};
 
 
 const USER_NAME_KEY = "grannytools.username";
