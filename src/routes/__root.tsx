@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppReminders } from "../lib/reminders";
+import { FallGuard } from "../lib/fall-guard";
 import { usePrefs } from "../hooks/use-prefs";
 
 function NotFoundComponent() {
@@ -131,6 +132,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AppReminders />
+      <FallGuard />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
