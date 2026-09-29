@@ -254,7 +254,6 @@ function Home() {
   const autoSpokeRef = useRef(false);
   useEffect(() => {
     if (autoSpokeRef.current) return;
-    if (autoMode !== "auto" && autoMode !== "ambos") return;
     if (!spokenText) return;
     // Solo una vez por apertura de la aplicación (no al volver a esta pantalla)
     if (hasAppGreeted()) {
@@ -282,14 +281,14 @@ function Home() {
     setPreparing(false);
     speak();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoMode, spokenText, weather]);
+  }, [spokenText, weather]);
 
   const markGreeted = () => {
     setPreparing(false);
     setShowCitas(false);
   };
 
-  const saveVoice = (r: number, v: number, m: "auto" | "boton" | "ambos" = autoMode) => {
+  const saveVoice = (r: number, v: number) => {
     try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v, mode: m })); } catch { /* ignore */ }
   };
 
