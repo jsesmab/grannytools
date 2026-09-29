@@ -182,12 +182,11 @@ export async function sendEmergency(phone: string) {
   const text = link
     ? `¡EMERGENCIA! Posible caída y no respondo. Mi ubicación: ${link}`
     : "¡EMERGENCIA! Posible caída y no respondo. No se ha podido obtener la ubicación.";
+  const { emergencySms, emergencyCall, isNativeApp } = await import("./native-emergency");
   try {
-    window.location.href = `sms:${tel}?&body=${encodeURIComponent(text)}`;
+    await emergencySms(tel, text);
   } catch {
     /* ignore */
   }
-  window.setTimeout(() => {
-    window.location.href = `tel:${tel}`;
-  }, 2500);
+  window.setTimeout(() => void emergencyCall(tel), isNativeApp() ? 1000 : 2500);
 }

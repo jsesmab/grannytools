@@ -1,0 +1,1 @@
+- Emergencias pasan por src/lib/native-emergency.ts: web usa sms:/tel:, app de tienda usa plugin nativo DirectEmergency (sin confirmación en Android).
