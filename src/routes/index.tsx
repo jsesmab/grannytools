@@ -129,7 +129,6 @@ function Home() {
   const [paused, setPaused] = useState(false);
   const [rate, setRate] = useState(0.9);
   const [volume, setVolume] = useState(1);
-  const [autoMode, setAutoMode] = useState<"auto" | "boton" | "ambos">("boton");
   const [showPrefs, setShowPrefs] = useState(false);
   const [weather, setWeather] = useState<{ desc: string; max: number; min: number } | null>(null);
   const [preparing, setPreparing] = useState(false);
@@ -153,12 +152,9 @@ function Home() {
       /* ignore */
     }
 
-    const voice = load<{ rate: number; volume: number; mode?: "auto" | "boton" | "ambos" }>(VOICE_KEY, { rate: 0.9, volume: 1 });
+    const voice = load<{ rate: number; volume: number }>(VOICE_KEY, { rate: 0.9, volume: 1 });
     setRate(voice.rate);
     setVolume(voice.volume);
-    // En una instalación nueva, el saludo se activa al abrir la aplicación.
-    // Si la persona ya eligió un modo, respetamos esa preferencia.
-    setAutoMode(voice.mode ?? "auto");
 
     const people = load<Person[]>(PEOPLE_KEY, []);
     const entries = load<Entry[]>(ENTRIES_KEY, []);
@@ -532,27 +528,6 @@ function Home() {
                 />
               </div>
             </div>
-            <fieldset>
-              <legend className="text-sm font-bold">¿Cuándo saludo?</legend>
-              <div className="mt-1 grid grid-cols-3 gap-2">
-                {(
-                  [
-                    { v: "auto", label: "Al abrir" },
-                    { v: "boton", label: "Al pulsar" },
-                    { v: "ambos", label: "Ambos" },
-                  ] as const
-                ).map(({ v, label }) => (
-                  <button
-                    key={v}
-                    onClick={() => { setAutoMode(v); saveVoice(rate, volume, v); }}
-                    aria-pressed={autoMode === v}
-                    className={`rounded-xl py-2 text-sm font-bold active:scale-95 ${autoMode === v ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
           </section>
         )}
 
