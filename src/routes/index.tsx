@@ -289,7 +289,7 @@ function Home() {
   };
 
   const saveVoice = (r: number, v: number) => {
-    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v, mode: m })); } catch { /* ignore */ }
+    try { localStorage.setItem(VOICE_KEY, JSON.stringify({ rate: r, volume: v })); } catch { /* ignore */ }
   };
 
   const watchSpeech = () => {
