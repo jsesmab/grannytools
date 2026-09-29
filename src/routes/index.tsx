@@ -49,11 +49,13 @@ const PEOPLE_KEY = "grannytools.citas.people";
 const ENTRIES_KEY = "grannytools.citas.entries";
 const VOICE_KEY = "grannytools.voz";
 const WEATHER_CACHE_KEY = "grannytools.weather.today";
-// Vive en la ventana actual: se conserva al navegar entre pantallas y se
-// reinicia únicamente al cerrar o recargar la aplicación.
-const hasAppGreeted = () => Boolean((window as Window & { __grannytoolsGreeted?: boolean }).__grannytoolsGreeted);
+// Se guarda en la sesión: se conserva al navegar y se borra al cerrar la aplicación.
+const GREETED_KEY = "grannytools.greeted";
+const hasAppGreeted = () => {
+  try { return sessionStorage.getItem(GREETED_KEY) === "1"; } catch { return false; }
+};
 const setAppGreeted = () => {
-  (window as Window & { __grannytoolsGreeted?: boolean }).__grannytoolsGreeted = true;
+  try { sessionStorage.setItem(GREETED_KEY, "1"); } catch { /* ignore */ }
 };
 
 type Person = { id: string; name: string; color: string };
