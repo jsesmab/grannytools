@@ -95,8 +95,6 @@ function Contactos() {
     try { localStorage.setItem(EMERGENCY_KEY, p); } catch { /* ignore */ }
   };
 
-  const emergencyContact = contacts.find((c) => c.phone === emergency) ?? null;
-
   const closeForm = () => {
     setFormOpen(false);
     setEditingContact(null);
