@@ -429,14 +429,6 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsTap, spokenText, weather, rate, volume, userName]);
 
-  const togglePause = () => {
-
-    const s = window.speechSynthesis;
-    if (!s) return;
-    if (s.paused) { s.resume(); setPaused(false); }
-    else { s.pause(); setPaused(true); }
-  };
-
   const stopSpeech = () => {
     try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
     setSpeaking(false);

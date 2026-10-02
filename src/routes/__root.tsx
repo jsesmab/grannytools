@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppReminders } from "../lib/reminders";
 import { FallGuard } from "../lib/fall-guard";
+import { TaskAlert } from "../lib/tasks";
 import { usePrefs } from "../hooks/use-prefs";
 
 function NotFoundComponent() {
@@ -133,6 +134,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AppReminders />
       <FallGuard />
+      <TaskAlert />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
