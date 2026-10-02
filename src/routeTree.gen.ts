@@ -9,43 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UbicacionRouteImport } from './routes/ubicacion'
-import { Route as PastillasRouteImport } from './routes/pastillas'
-import { Route as PanicoRouteImport } from './routes/panico'
-import { Route as OirRouteImport } from './routes/oir'
-import { Route as LupaRouteImport } from './routes/lupa'
-import { Route as CitasRouteImport } from './routes/citas'
-import { Route as CamaraRouteImport } from './routes/camara'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CamaraRouteImport } from './routes/camara'
+import { Route as CitasRouteImport } from './routes/citas'
+import { Route as LupaRouteImport } from './routes/lupa'
+import { Route as OirRouteImport } from './routes/oir'
+import { Route as PanicoRouteImport } from './routes/panico'
+import { Route as PastillasRouteImport } from './routes/pastillas'
+import { Route as UbicacionRouteImport } from './routes/ubicacion'
 
-const UbicacionRoute = UbicacionRouteImport.update({
-  id: '/ubicacion',
-  path: '/ubicacion',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PastillasRoute = PastillasRouteImport.update({
-  id: '/pastillas',
-  path: '/pastillas',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PanicoRoute = PanicoRouteImport.update({
-  id: '/panico',
-  path: '/panico',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OirRoute = OirRouteImport.update({
-  id: '/oir',
-  path: '/oir',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LupaRoute = LupaRouteImport.update({
-  id: '/lupa',
-  path: '/lupa',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CitasRoute = CitasRouteImport.update({
-  id: '/citas',
-  path: '/citas',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CamaraRoute = CamaraRouteImport.update({
@@ -53,9 +28,34 @@ const CamaraRoute = CamaraRouteImport.update({
   path: '/camara',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CitasRoute = CitasRouteImport.update({
+  id: '/citas',
+  path: '/citas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LupaRoute = LupaRouteImport.update({
+  id: '/lupa',
+  path: '/lupa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OirRoute = OirRouteImport.update({
+  id: '/oir',
+  path: '/oir',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PanicoRoute = PanicoRouteImport.update({
+  id: '/panico',
+  path: '/panico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PastillasRoute = PastillasRouteImport.update({
+  id: '/pastillas',
+  path: '/pastillas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UbicacionRoute = UbicacionRouteImport.update({
+  id: '/ubicacion',
+  path: '/ubicacion',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -136,46 +136,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/ubicacion': {
-      id: '/ubicacion'
-      path: '/ubicacion'
-      fullPath: '/ubicacion'
-      preLoaderRoute: typeof UbicacionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pastillas': {
-      id: '/pastillas'
-      path: '/pastillas'
-      fullPath: '/pastillas'
-      preLoaderRoute: typeof PastillasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/panico': {
-      id: '/panico'
-      path: '/panico'
-      fullPath: '/panico'
-      preLoaderRoute: typeof PanicoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oir': {
-      id: '/oir'
-      path: '/oir'
-      fullPath: '/oir'
-      preLoaderRoute: typeof OirRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/lupa': {
-      id: '/lupa'
-      path: '/lupa'
-      fullPath: '/lupa'
-      preLoaderRoute: typeof LupaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/citas': {
-      id: '/citas'
-      path: '/citas'
-      fullPath: '/citas'
-      preLoaderRoute: typeof CitasRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/camara': {
@@ -185,11 +150,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CamaraRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/citas': {
+      id: '/citas'
+      path: '/citas'
+      fullPath: '/citas'
+      preLoaderRoute: typeof CitasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lupa': {
+      id: '/lupa'
+      path: '/lupa'
+      fullPath: '/lupa'
+      preLoaderRoute: typeof LupaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oir': {
+      id: '/oir'
+      path: '/oir'
+      fullPath: '/oir'
+      preLoaderRoute: typeof OirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/panico': {
+      id: '/panico'
+      path: '/panico'
+      fullPath: '/panico'
+      preLoaderRoute: typeof PanicoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pastillas': {
+      id: '/pastillas'
+      path: '/pastillas'
+      fullPath: '/pastillas'
+      preLoaderRoute: typeof PastillasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ubicacion': {
+      id: '/ubicacion'
+      path: '/ubicacion'
+      fullPath: '/ubicacion'
+      preLoaderRoute: typeof UbicacionRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
