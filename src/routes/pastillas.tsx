@@ -87,7 +87,7 @@ function firstOccurrence(time: string, from?: string) {
   return start;
 }
 
-function untilStamp(until: string) {
+function Pastillas() {
   const [y, mo, d] = until.split("-").map(Number);
   const end = new Date(y, mo - 1, d, 23, 59, 59);
   return `${end.getUTCFullYear()}${pad(end.getUTCMonth() + 1)}${pad(end.getUTCDate())}T${pad(end.getUTCHours())}${pad(end.getUTCMinutes())}${pad(end.getUTCSeconds())}Z`;
