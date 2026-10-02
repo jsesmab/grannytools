@@ -160,10 +160,6 @@ function Pastillas() {
     save([...meds, med]);
     setName(""); setTimes(["09:00"]); setAdding(false); setError(null);
     setChronic(true); setFrom(localDayKey(new Date())); setUntil("");
-    // Abre Google Calendar ya relleno con el primer aviso (gesto del usuario).
-    const list: Pending[] = ts.map((t) => ({ med: n, time: t, from: med.from, until: med.until }));
-    openGoogle(list[0]);
-    setQueue(list.slice(1));
   };
 
   const [taken, setTaken] = useState<Record<string, string>>({});
