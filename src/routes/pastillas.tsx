@@ -65,28 +65,6 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-// Primera ocurrencia teniendo en cuenta la fecha de inicio del tratamiento.
-function firstOccurrence(time: string, from?: string) {
-  const [hh, mm] = time.split(":");
-  const now = new Date();
-  let start: Date;
-  if (from) {
-    const [y, mo, d] = from.split("-").map(Number);
-    start = new Date(y, mo - 1, d, Number(hh), Number(mm), 0, 0);
-  } else {
-    start = new Date();
-    start.setHours(Number(hh), Number(mm), 0, 0);
-  }
-  if (start.getTime() < now.getTime()) {
-    // si la fecha de inicio ya pasó, empezamos hoy/mañana
-    const t = new Date();
-    t.setHours(Number(hh), Number(mm), 0, 0);
-    if (t.getTime() < now.getTime()) t.setDate(t.getDate() + 1);
-    start = t;
-  }
-  return start;
-}
-
 function Pastillas() {
   const [meds, setMeds] = useState<Med[]>([]);
   const [name, setName] = useState("");
