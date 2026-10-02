@@ -68,6 +68,8 @@ Cadena Web Audio: micrófono → RNNoise (WASM) → puerta de ruido → EQ (grav
 - `FallGuard` sincroniza cada 3 s con `isFallEnabled()`; overlay con `AlarmTone`, voz, vibración, cuenta atrás `FALL_COUNTDOWN_SEC = 30`. `simulateFall()` para pruebas.
 - Al llegar a 0: `sendEmergency(phone)` → ubicación (`currentLocationLink`, Google Maps) → `emergencySms` → `emergencyCall` (1 s en nativo, 2,5 s en web).
 
+La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar llama) y ajustes (solo estrella y borrar sobre las fotos). Tocar una foto en ajustes abre un único formulario reutilizado para altas y modificaciones; el botón superior «Nuevo contacto» sustituye a «ALERTA» mientras los ajustes están abiertos.
+
 ## 8. Puente de emergencia (`native-emergency.ts`)
 - Web: `sms:` y `tel:` (el sistema pide confirmar).
 - Nativo: `window.Capacitor.Plugins.DirectEmergency.sendSms({phone,text})` y `.call({phone})`; si falla, cae a web.

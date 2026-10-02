@@ -32,11 +32,13 @@ Amplifica las conversaciones con auriculares.
 Cámara a pantalla completa con zoom y linterna. Tocar la imagen la congela para leer con calma; la imagen congelada se puede desplazar con el dedo.
 
 ## 6. Contactos y botón de pánico
-- Contactos con foto grande; un toque llama directamente.
+- La pantalla muestra únicamente las fotos grandes de los contactos, sin nombres ni teléfonos; un toque llama directamente.
 - Compartir ubicación con un contacto.
-- **Contacto de ayuda**: se elige tocando la estrella de su foto. Aparece destacado arriba.
+- Al pulsar la rueda dentada, sobre cada foto aparecen únicamente la estrella para elegir el contacto de ayuda y el botón de borrar.
+- Tocar una foto mientras están abiertos los ajustes muestra un formulario para modificar su foto, nombre o teléfono.
+- En ajustes, el botón superior es **Nuevo contacto** y abre el mismo formulario vacío.
+- **Contacto de ayuda**: se elige tocando la estrella de su foto.
 - **Botón ALERTA**: sirena, vibración SOS y llamada al contacto de ayuda.
-- Para editar o añadir: rueda dentada → pasos guiados (foto, nombre y teléfono, «Guardar»).
 
 ## 7. Aviso de caídas
 - Se activa en Contactos con «Activar aviso de caídas» (el móvil pide permiso de movimiento la primera vez).

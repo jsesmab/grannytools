@@ -1,14 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Users, Phone, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX, SwitchCamera, Image as ImageIcon, Star, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Users, Trash2, Plus, Settings, X, Camera, AlertTriangle, Siren, VolumeX, SwitchCamera, Image as ImageIcon, Star } from "lucide-react";
 import {
   EMERGENCY_KEY,
-  isFallEnabled,
-  setFallEnabled,
-  requestMotionPermission,
-  motionAvailable,
 } from "@/lib/fall-detection";
-import { simulateFall } from "@/lib/fall-guard";
 import {
   type Contact,
   MAX_CONTACTS,
@@ -75,21 +70,18 @@ function Contactos() {
   const [phone, setPhone] = useState("");
   const [newPhoto, setNewPhoto] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editingContact, setEditingContact] = useState<number | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [alarmOn, setAlarmOn] = useState(false);
   const [emergency, setEmergency] = useState("");
-  const [fallOn, setFallOn] = useState(false);
-  const [fallMsg, setFallMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const sirenRef = useRef<SirenEngine>(new SirenEngine());
   const galleryNewRef = useRef<HTMLInputElement | null>(null);
-  const galleryEditRef = useRef<HTMLInputElement | null>(null);
-  const galleryTargetRef = useRef<number | null>(null);
 
   useEffect(() => {
     setContacts(loadContacts());
     try { setEmergency(localStorage.getItem(EMERGENCY_KEY) ?? ""); } catch { /* ignore */ }
-    setFallOn(isFallEnabled());
     return () => { sirenRef.current.stop(); };
   }, []);
 
@@ -105,34 +97,51 @@ function Contactos() {
 
   const emergencyContact = contacts.find((c) => c.phone === emergency) ?? null;
 
-  const toggleFall = async () => {
-    if (fallOn) {
-      setFallEnabled(false);
-      setFallOn(false);
-      setFallMsg("Aviso de caídas desactivado.");
-      return;
-    }
-    if (!motionAvailable()) {
-      setFallMsg("Este móvil no deja usar el sensor de movimiento desde la web.");
-      return;
-    }
-    const ok = await requestMotionPermission();
-    if (!ok) {
-      setFallMsg("Hay que dar permiso al movimiento para detectar caídas.");
-      return;
-    }
-    setFallEnabled(true);
-    setFallOn(true);
-    setFallMsg("Listo. Vigila las caídas mientras la aplicación está abierta.");
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditingContact(null);
+    setName("");
+    setPhone("");
+    setNewPhoto(null);
+    setError(null);
   };
 
-  const addContact = () => {
+  const openNewContact = () => {
+    setEditingContact(null);
+    setName("");
+    setPhone("");
+    setNewPhoto(null);
+    setError(null);
+    setFormOpen(true);
+  };
+
+  const openContact = (index: number) => {
+    const contact = contacts[index];
+    if (!contact) return;
+    setEditingContact(index);
+    setName(contact.name);
+    setPhone(contact.phone);
+    setNewPhoto(contact.photo ?? null);
+    setError(null);
+    setFormOpen(true);
+  };
+
+  const saveContact = () => {
     const n = name.trim();
     const p = phone.trim();
     if (!n || !p) { setError("Escribe nombre y teléfono."); return; }
-    if (contacts.length >= MAX_CONTACTS) { setError(`Máximo ${MAX_CONTACTS} contactos.`); return; }
-    save([...contacts, { name: n, phone: p, photo: newPhoto ?? undefined }]);
-    setName(""); setPhone(""); setNewPhoto(null); setError(null);
+    if (editingContact === null && contacts.length >= MAX_CONTACTS) { setError(`Máximo ${MAX_CONTACTS} contactos.`); return; }
+    if (editingContact === null) {
+      save([...contacts, { name: n, phone: p, photo: newPhoto ?? undefined }]);
+    } else {
+      const previous = contacts[editingContact];
+      if (!previous) return;
+      const next = contacts.slice();
+      next[editingContact] = { name: n, phone: p, photo: newPhoto ?? undefined };
+      save(next);
+      if (emergency === previous.phone && previous.phone !== p) saveEmergency(p);
+    }
+    closeForm();
   };
 
   const takePhoto = async (facing: "user" | "environment") => {
@@ -141,16 +150,6 @@ function Contactos() {
     setCapturing(false);
     if (d) setNewPhoto(d);
     else setError("No se pudo hacer la foto.");
-  };
-
-  const retakePhotoFor = async (i: number, facing: "user" | "environment") => {
-    setCapturing(true);
-    const d = await capturePhoto(facing);
-    setCapturing(false);
-    if (!d) return;
-    const next = contacts.slice();
-    next[i] = { ...next[i], photo: d };
-    save(next);
   };
 
   const readFile = (file: File) =>
@@ -166,20 +165,6 @@ function Contactos() {
     e.target.value = "";
     if (!f) return;
     try { setNewPhoto(await readFile(f)); } catch { setError("No se pudo leer la foto."); }
-  };
-
-  const onPickExisting = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    const idx = galleryTargetRef.current;
-    e.target.value = "";
-    galleryTargetRef.current = null;
-    if (!f || idx == null) return;
-    try {
-      const d = await readFile(f);
-      const next = contacts.slice();
-      next[idx] = { ...next[idx], photo: d };
-      save(next);
-    } catch { setError("No se pudo leer la foto."); }
   };
 
   const triggerAlert = async () => {
@@ -209,7 +194,10 @@ function Contactos() {
             </div>
             <h1 className="text-xl font-bold">Contactos</h1>
             <button
-              onClick={() => setEditing((v) => !v)}
+              onClick={() => {
+                if (editing) closeForm();
+                setEditing((v) => !v);
+              }}
               aria-label="Configuración y contactos"
               className="ml-auto flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]"
             >
@@ -217,17 +205,28 @@ function Contactos() {
             </button>
           </header>
 
-          <button
-            onClick={triggerAlert}
-            aria-pressed={alarmOn}
-            className={[
-              "flex w-full items-center justify-center gap-3 rounded-2xl py-6 text-2xl font-black shadow-lg active:scale-[0.98] active:shadow-inner",
-              alarmOn ? "bg-warning text-warning-foreground animate-pulse" : "bg-destructive text-destructive-foreground",
-            ].join(" ")}
-          >
-            {alarmOn ? <VolumeX className="h-9 w-9" aria-hidden /> : <Siren className="h-9 w-9" aria-hidden />}
-            {alarmOn ? "PARAR ALERTA" : "ALERTA"}
-          </button>
+          {editing ? (
+            <button
+              onClick={openNewContact}
+              disabled={contacts.length >= MAX_CONTACTS}
+              className="flex w-full items-center justify-center gap-3 rounded-2xl bg-primary py-5 text-xl font-black text-primary-foreground shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
+              <Plus className="h-8 w-8" aria-hidden />
+              Nuevo contacto
+            </button>
+          ) : (
+            <button
+              onClick={triggerAlert}
+              aria-pressed={alarmOn}
+              className={[
+                "flex w-full items-center justify-center gap-3 rounded-2xl py-6 text-2xl font-black shadow-lg active:scale-[0.98] active:shadow-inner",
+                alarmOn ? "bg-warning text-warning-foreground animate-pulse" : "bg-destructive text-destructive-foreground",
+              ].join(" ")}
+            >
+              {alarmOn ? <VolumeX className="h-9 w-9" aria-hidden /> : <Siren className="h-9 w-9" aria-hidden />}
+              {alarmOn ? "PARAR ALERTA" : "ALERTA"}
+            </button>
+          )}
         </div>
 
         {error && (
@@ -248,8 +247,8 @@ function Contactos() {
             {contacts.map((c, i) => (
               <div key={i} className="relative h-[21vh] min-h-[130px]">
                 <button
-                  onClick={() => (editing ? retakePhotoFor(i, "user") : callPhone(c.phone))}
-                  aria-label={editing ? `Cambiar foto de ${c.name}` : `Llamar a ${c.name}`}
+                  onClick={() => (editing ? openContact(i) : callPhone(c.phone))}
+                  aria-label={editing ? `Modificar contacto ${c.name}` : `Llamar a ${c.name}`}
                   className="relative h-full w-full overflow-hidden rounded-2xl bg-secondary shadow-lg active:scale-[0.97] active:shadow-inner transition-all"
                 >
                   {c.photo ? (
@@ -259,74 +258,26 @@ function Contactos() {
                       {initials(c.name)}
                     </div>
                   )}
-                  {editing && (
-                    <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-black/55 px-2 py-1.5">
-                      <Phone className="h-4 w-4 shrink-0 text-white" aria-hidden />
-                      <span className="truncate text-base font-black text-white">{c.name}</span>
-                    </div>
-                  )}
                 </button>
                 {editing && (
-                  <div className="mt-1 space-y-1">
-                    <input
-                      type="text"
-                      value={c.name}
-                      aria-label={`Nombre del contacto ${i + 1}`}
-                      onChange={(e) =>
-                        save(contacts.map((x, idx) => (idx === i ? { ...x, name: e.target.value } : x)))
-                      }
-                      className="w-full rounded-lg border-2 border-border bg-background px-2 py-1 text-sm font-bold"
-                    />
-                    <input
-                      type="tel"
-                      value={c.phone}
-                      aria-label={`Teléfono del contacto ${i + 1}`}
-                      onChange={(e) =>
-                        save(contacts.map((x, idx) => (idx === i ? { ...x, phone: e.target.value } : x)))
-                      }
-                      className="w-full rounded-lg border-2 border-border bg-background px-2 py-1 text-sm"
-                    />
-                  </div>
-                )}
-                {editing && (
                   <>
-                    <div className="absolute inset-x-1 top-1 flex gap-1">
-                      <button
-                        onClick={() => retakePhotoFor(i, "user")}
-                        aria-label={`Foto frontal de ${c.name}`}
-                        className="flex h-8 flex-1 items-center justify-center rounded-lg bg-background/85 text-xs font-bold active:scale-[0.95]"
-                      >
-                        <Camera className="h-4 w-4" aria-hidden />
-                      </button>
-                      <button
-                        onClick={() => retakePhotoFor(i, "environment")}
-                        aria-label={`Foto trasera de ${c.name}`}
-                        className="flex h-8 flex-1 items-center justify-center rounded-lg bg-background/85 text-xs font-bold active:scale-[0.95]"
-                      >
-                        <SwitchCamera className="h-4 w-4" aria-hidden />
-                      </button>
-                      <button
-                        onClick={() => { galleryTargetRef.current = i; galleryEditRef.current?.click(); }}
-                        aria-label={`Elegir foto de galería para ${c.name}`}
-                        className="flex h-8 flex-1 items-center justify-center rounded-lg bg-background/85 text-xs font-bold active:scale-[0.95]"
-                      >
-                        <ImageIcon className="h-4 w-4" aria-hidden />
-                      </button>
-                    </div>
                     <button
                       onClick={() => saveEmergency(emergency === c.phone ? "" : c.phone)}
                       aria-label={`Elegir a ${c.name} como contacto de emergencia`}
                       aria-pressed={emergency === c.phone}
-                      className={`absolute -left-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full shadow active:scale-[0.9] ${emergency === c.phone ? "bg-success text-success-foreground" : "bg-background text-muted-foreground"}`}
+                      className={`absolute left-2 top-2 flex h-12 w-12 items-center justify-center rounded-full shadow active:scale-[0.9] ${emergency === c.phone ? "bg-success text-success-foreground" : "bg-background text-muted-foreground"}`}
                     >
-                      <Star className="h-4 w-4" aria-hidden />
+                      <Star className="h-6 w-6" fill={emergency === c.phone ? "currentColor" : "none"} aria-hidden />
                     </button>
                     <button
-                      onClick={() => save(contacts.filter((_, idx) => idx !== i))}
+                      onClick={() => {
+                        save(contacts.filter((_, idx) => idx !== i));
+                        if (emergency === c.phone) saveEmergency("");
+                      }}
                       aria-label={`Borrar ${c.name}`}
-                      className="absolute -right-1 -bottom-1 flex h-8 w-8 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow active:scale-[0.9]"
+                      className="absolute right-2 top-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow active:scale-[0.9]"
                     >
-                      <Trash2 className="h-4 w-4" aria-hidden />
+                      <Trash2 className="h-6 w-6" aria-hidden />
                     </button>
                   </>
                 )}
@@ -336,61 +287,14 @@ function Contactos() {
         )}
 
         <input ref={galleryNewRef} type="file" accept="image/*" className="hidden" onChange={onPickNew} />
-        <input ref={galleryEditRef} type="file" accept="image/*" className="hidden" onChange={onPickExisting} />
-
-        {editing && (
-          <div className="mt-3 space-y-3 rounded-2xl bg-card p-3 shadow-sm">
-            <h2 className="text-base font-black">1 · Quién recibe la ayuda</h2>
-            {emergencyContact ? (
-              <div className="flex items-center gap-3 rounded-xl bg-destructive/10 p-2">
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary">
-                  {emergencyContact.photo ? (
-                    <img src={emergencyContact.photo} alt={emergencyContact.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xl font-black">
-                      {initials(emergencyContact.name)}
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-base font-black">{emergencyContact.name}</p>
-                  <p className="truncate text-sm text-muted-foreground">{emergencyContact.phone}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="rounded-xl bg-secondary p-2 text-sm font-semibold text-secondary-foreground">
-                Todavía no has elegido a nadie. Toca la estrella de una foto para elegirlo.
-              </p>
-            )}
-            <p className="text-sm text-muted-foreground">
-              A esta persona se le llama con el botón ALERTA y si te caes y no contestas.
-            </p>
-
-            <h2 className="pt-1 text-base font-black">2 · Aviso de caídas</h2>
-            <button
-              onClick={toggleFall}
-              aria-pressed={fallOn}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-lg font-black active:scale-95 ${fallOn ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}
-            >
-              <ShieldCheck className="h-6 w-6" aria-hidden />
-              {fallOn ? "Aviso de caídas activado" : "Activar aviso de caídas"}
-            </button>
-            {fallMsg && <p className="text-sm font-semibold text-muted-foreground">{fallMsg}</p>}
-            <button
-              onClick={simulateFall}
-              className="w-full rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
-            >
-              Probar (sin tirar el móvil)
-            </button>
-            <p className="text-xs text-muted-foreground">
-              Si te caes, el móvil suena y espera 30 segundos. Si no pulsas «Estoy bien», envía tu ubicación y llama.
-            </p>
-          </div>
-        )}
-
-        {editing && contacts.length < MAX_CONTACTS && (
+        {editing && formOpen && (
           <div className="mt-3 space-y-2 rounded-2xl border-2 border-dashed border-border p-3">
-            <h2 className="text-base font-black">3 · Añadir una persona nueva</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-black">{editingContact === null ? "Nuevo contacto" : "Modificar contacto"}</h2>
+              <button onClick={closeForm} aria-label="Cerrar formulario" className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground">
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground">Ponle una foto, su nombre y su teléfono.</p>
             <div className="flex items-center gap-3">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-secondary text-secondary-foreground">
@@ -431,9 +335,9 @@ function Contactos() {
                 Galería
               </button>
             </div>
-            <button onClick={addContact} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-base font-bold text-primary-foreground active:scale-[0.97]">
-              <Plus className="h-5 w-5" aria-hidden />
-              Añadir contacto
+            <button onClick={saveContact} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 py-3 text-base font-bold text-primary-foreground active:scale-[0.97]">
+              {editingContact === null ? <Plus className="h-5 w-5" aria-hidden /> : null}
+              {editingContact === null ? "Guardar nuevo contacto" : "Guardar cambios"}
             </button>
           </div>
         )}
