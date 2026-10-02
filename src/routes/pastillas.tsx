@@ -19,6 +19,7 @@ export const Route = createFileRoute("/pastillas")({
 // from/until en formato YYYY-MM-DD. Sin "until" = tratamiento crónico (todo el calendario).
 type Med = { name: string; times: string[]; takenAt?: string; from?: string; until?: string };
 const KEY = "grannytools.meds";
+const TAKEN_KEY = "grannytools.meds.tomadas";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -251,11 +252,18 @@ function Pastillas() {
     setQueue(list.slice(1));
   };
 
-  const markTaken = (i: number) => {
-    const next = meds.slice();
-    next[i] = { ...next[i], takenAt: new Date().toISOString() };
-    save(next);
-    setDue(null);
+  const [taken, setTaken] = useState<Record<string, string>>({});
+  useEffect(() => {
+    try { setTaken(JSON.parse(localStorage.getItem(TAKEN_KEY) || "{}")); } catch { /* ignore */ }
+  }, []);
+  const doseKey = (med: string, time: string) => `${localDayKey(new Date())}|${med}|${time}`;
+  const toggleDose = (med: string, time: string, force?: boolean) => {
+    const k = doseKey(med, time);
+    const next = { ...taken };
+    const on = force ?? !next[k];
+    if (on) next[k] = new Date().toISOString(); else delete next[k];
+    setTaken(next);
+    try { localStorage.setItem(TAKEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
   return (
@@ -285,9 +293,14 @@ function Pastillas() {
           <div className="mb-3 rounded-2xl bg-warning p-4 text-warning-foreground shadow-lg">
             <p className="text-lg font-black">¡Toca tomar {due.med}!</p>
             <p className="text-sm">Hora: {due.time}</p>
-            <button onClick={() => setDue(null)} className="mt-2 w-full rounded-xl bg-black/15 px-3 py-3 text-base font-bold active:scale-[0.97]">
-              Entendido
-            </button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button onClick={() => { toggleDose(due.med, due.time, true); setDue(null); }} className="flex items-center justify-center gap-2 rounded-xl bg-success px-3 py-4 text-lg font-black text-success-foreground active:scale-[0.97]">
+                <Check className="h-6 w-6" aria-hidden /> Tomada
+              </button>
+              <button onClick={() => setDue(null)} className="rounded-xl bg-secondary px-3 py-4 text-base font-bold text-secondary-foreground active:scale-[0.97]">
+                Luego
+              </button>
+            </div>
           </div>
         )}
 
@@ -305,20 +318,31 @@ function Pastillas() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-lg font-black">{m.name}</div>
-                <div className="text-sm text-muted-foreground">{m.times.join("  ·  ")}</div>
+                <div className="my-1 flex flex-wrap gap-1.5">
+                  {m.times.map((t) => {
+                    const on = !!taken[doseKey(m.name, t)];
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => toggleDose(m.name, t)}
+                        aria-pressed={on}
+                        aria-label={`${m.name} a las ${t}: ${on ? "tomada" : "sin tomar"}`}
+                        className={[
+                          "flex items-center gap-1 rounded-xl px-3 py-2 text-base font-black active:scale-[0.95]",
+                          on ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground",
+                        ].join(" ")}
+                      >
+                        {on && <Check className="h-4 w-4" aria-hidden />}{t}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="text-xs font-bold text-muted-foreground">
                   {m.until
                     ? `Tratamiento: ${esDate(m.from ?? todayKey())} → ${esDate(m.until)}`
                     : "Todos los días (crónico)"}
                 </div>
               </div>
-              <button
-                onClick={() => markTaken(i)}
-                aria-label={`Marcar ${m.name} como tomada`}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-success text-success-foreground active:scale-[0.95]"
-              >
-                <Check className="h-5 w-5" aria-hidden />
-              </button>
               <button
                 onClick={() => save(meds.filter((_, idx) => idx !== i))}
                 aria-label={`Borrar ${m.name}`}

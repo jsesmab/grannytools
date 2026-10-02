@@ -127,6 +127,7 @@ function check() {
       const id = `med:${m.name}:${t}`;
       const tm = toMin(t);
       if (nowMin < tm || nowMin > tm + 2 || fired.ids.includes(id)) continue;
+      if (read<Record<string, string>>("grannytools.meds.tomadas", {})[`${iso}|${m.name}|${t}`]) continue;
       announce(`Es hora de tomar ${m.name}.`);
       fired.ids.push(id);
       changed = true;
@@ -139,7 +140,8 @@ function check() {
     const today = e.date ? e.date === iso : (e.days ?? []).includes(dow);
     if (today && toMin(e.start) >= nowMin) pending++;
   }
-  for (const m of meds) for (const t of m.times) if (toMin(t) >= nowMin) pending++;
+  const taken = read<Record<string, string>>("grannytools.meds.tomadas", {});
+  for (const m of meds) for (const t of m.times) if (toMin(t) >= nowMin && !taken[`${iso}|${m.name}|${t}`]) pending++;
   try {
     const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
     if (pending > 0) void nav.setAppBadge?.(pending).catch(() => {});
