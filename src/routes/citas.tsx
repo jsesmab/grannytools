@@ -1,21 +1,26 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil, Bell, UserPlus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil, Bell, UserPlus, ClipboardCheck } from "lucide-react";
 import { DEFAULT_REMIND_MIN } from "@/lib/reminders";
+import { TasksPanel } from "@/components/TasksPanel";
+
+type View = "turnos" | "citas" | "tareas" | "personas";
+const VIEWS: View[] = ["turnos", "citas", "tareas", "personas"];
 
 export const Route = createFileRoute("/citas")({
-  validateSearch: (search: Record<string, unknown>): { edit?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { edit?: string; view?: View } => ({
     edit: typeof search.edit === "string" ? search.edit : undefined,
+    view: VIEWS.includes(search.view as View) ? (search.view as View) : undefined,
   }),
   head: () => ({
     meta: [
-      { title: "Grannytools — Citas y turnos" },
+      { title: "Grannytools — Citas, turnos y tareas" },
       {
         name: "description",
         content:
           "Organiza citas médicas puntuales con acompañante y turnos de cuidadoras o familiares en barras de tiempo por día.",
       },
-      { property: "og:title", content: "Grannytools — Citas y turnos" },
+      { property: "og:title", content: "Grannytools — Citas, turnos y tareas" },
       { property: "og:description", content: "Citas puntuales con acompañante y turnos de cuidadoras por día." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -114,11 +119,11 @@ function todayISO() {
 }
 
 function Citas() {
-  const { edit: editId } = Route.useSearch();
+  const { edit: editId, view } = Route.useSearch();
+  const tab = view ?? (editId ? "citas" : undefined);
   const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [tab, setTab] = useState<"agenda" | "personas">("agenda");
 
   // form persona
   const [pName, setPName] = useState("");
@@ -201,7 +206,7 @@ function Citas() {
   const closeForm = () => {
     setEOpen(false);
     setEEditId(null);
-    if (editId) void navigate({ to: "/citas", search: {} });
+    if (editId) void navigate({ to: "/citas", search: { view: tab } });
   };
 
   const saveEntry = () => {
@@ -290,26 +295,38 @@ function Citas() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-3 py-3">
         <header className="mb-3 flex items-center gap-2">
-          <Link to="/" aria-label="Volver" className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95">
-            <ArrowLeft className="h-6 w-6" aria-hidden />
-          </Link>
-          <h1 className="text-2xl font-black">Citas y turnos</h1>
+          {tab ? (
+            <Link to="/citas" search={{}} aria-label="Volver" className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95">
+              <ArrowLeft className="h-6 w-6" aria-hidden />
+            </Link>
+          ) : (
+            <Link to="/" aria-label="Volver al inicio" className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95">
+              <ArrowLeft className="h-6 w-6" aria-hidden />
+            </Link>
+          )}
+          <h1 className="text-2xl font-black">
+            {tab === "turnos" ? "Turnos" : tab === "citas" ? "Citas" : tab === "tareas" ? "Tareas" : tab === "personas" ? "Personas" : "Citas y turnos"}
+          </h1>
         </header>
 
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setTab("agenda")}
-            className={`flex items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${tab === "agenda" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
-          >
-            <CalendarDays className="h-5 w-5" aria-hidden /> Agenda
-          </button>
-          <button
-            onClick={() => setTab("personas")}
-            className={`flex items-center justify-center gap-2 rounded-xl py-3 text-lg font-bold active:scale-95 ${tab === "personas" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
-          >
-            <Users className="h-5 w-5" aria-hidden /> Personas
-          </button>
-        </div>
+        {!tab && (
+          <nav className="grid gap-3" aria-label="Elegir apartado">
+            <Link to="/citas" search={{ view: "citas" }} className="flex items-center justify-center gap-3 rounded-2xl bg-warning py-8 text-3xl font-black text-warning-foreground shadow-lg active:scale-[0.98]">
+              <CalendarDays className="h-10 w-10" aria-hidden /> Citas
+            </Link>
+            <Link to="/citas" search={{ view: "turnos" }} className="flex items-center justify-center gap-3 rounded-2xl bg-primary py-8 text-3xl font-black text-primary-foreground shadow-lg active:scale-[0.98]">
+              <Repeat className="h-10 w-10" aria-hidden /> Turnos
+            </Link>
+            <Link to="/citas" search={{ view: "tareas" }} className="flex items-center justify-center gap-3 rounded-2xl bg-success py-8 text-3xl font-black text-success-foreground shadow-lg active:scale-[0.98]">
+              <ClipboardCheck className="h-10 w-10" aria-hidden /> Tareas
+            </Link>
+            <Link to="/citas" search={{ view: "personas" }} className="flex items-center justify-center gap-2 rounded-2xl bg-secondary py-4 text-xl font-bold text-secondary-foreground active:scale-[0.98]">
+              <Users className="h-6 w-6" aria-hidden /> Personas
+            </Link>
+          </nav>
+        )}
+
+        {tab === "tareas" && <TasksPanel />}
 
         {tab === "personas" && (
           <section className="space-y-3">
@@ -364,9 +381,10 @@ function Citas() {
           </section>
         )}
 
-        {tab === "agenda" && (
+        {(tab === "citas" || tab === "turnos") && (
           <section className="space-y-4">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2">
+              {tab === "citas" ? (
               <button
                 onClick={() => openNew("fija")}
                 disabled={people.length === 0}
@@ -374,6 +392,7 @@ function Citas() {
               >
                 <CalendarDays className="h-6 w-6" aria-hidden /> Nueva cita
               </button>
+              ) : (
               <button
                 onClick={() => openNew("periodica")}
                 disabled={people.length === 0}
@@ -381,17 +400,18 @@ function Citas() {
               >
                 <Repeat className="h-6 w-6" aria-hidden /> Nuevo turno
               </button>
+              )}
             </div>
             {people.length === 0 && (
-              <p className="text-center text-muted-foreground">Primero añade personas en la pestaña «Personas».</p>
+              <p className="text-center text-muted-foreground">Primero añade personas en el apartado «Personas».</p>
             )}
             <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>
 
             <div>
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> Cada semana (turnos y citas repetidas)</h2>
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> {tab === "turnos" ? "Turnos de cada semana" : "Citas que se repiten"}</h2>
               <div className="space-y-2">
                 {DAY_INDEX.map((d, i) => {
-                  const list = entries.filter((e) => e.days?.includes(d));
+                  const list = entries.filter((e) => e.days?.includes(d) && (tab === "turnos" ? e.kind === "periodica" : e.kind === "fija"));
                   return (
                     <div key={d} className="rounded-2xl bg-card p-2 shadow">
                       <p className="mb-1 font-bold">{DAY_NAMES[i]}</p>
@@ -402,7 +422,7 @@ function Citas() {
               </div>
             </div>
 
-            <div>
+            {tab === "citas" && (<div>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><CalendarDays className="h-5 w-5" aria-hidden /> Citas con fecha</h2>
               {fixedByDate.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sin citas con fecha.</p>
@@ -432,7 +452,7 @@ function Citas() {
                   ))}
                 </div>
               )}
-            </div>
+            </div>)}
           </section>
         )}
 
