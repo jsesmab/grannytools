@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle, CalendarPlus } from "lucide-react";
+import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/pastillas")({
   head: () => ({
@@ -65,109 +65,6 @@ function pad(n: number) {
   return String(n).padStart(2, "0");
 }
 
-// Primera ocurrencia teniendo en cuenta la fecha de inicio del tratamiento.
-function firstOccurrence(time: string, from?: string) {
-  const [hh, mm] = time.split(":");
-  const now = new Date();
-  let start: Date;
-  if (from) {
-    const [y, mo, d] = from.split("-").map(Number);
-    start = new Date(y, mo - 1, d, Number(hh), Number(mm), 0, 0);
-  } else {
-    start = new Date();
-    start.setHours(Number(hh), Number(mm), 0, 0);
-  }
-  if (start.getTime() < now.getTime()) {
-    // si la fecha de inicio ya pasó, empezamos hoy/mañana
-    const t = new Date();
-    t.setHours(Number(hh), Number(mm), 0, 0);
-    if (t.getTime() < now.getTime()) t.setDate(t.getDate() + 1);
-    start = t;
-  }
-  return start;
-}
-
-function untilStamp(until: string) {
-  const [y, mo, d] = until.split("-").map(Number);
-  const end = new Date(y, mo - 1, d, 23, 59, 59);
-  return `${end.getUTCFullYear()}${pad(end.getUTCMonth() + 1)}${pad(end.getUTCDate())}T${pad(end.getUTCHours())}${pad(end.getUTCMinutes())}${pad(end.getUTCSeconds())}Z`;
-}
-
-function rrule(until?: string) {
-  return until ? `FREQ=DAILY;UNTIL=${untilStamp(until)}` : "FREQ=DAILY";
-}
-
-function icsForMeds(meds: Med[]) {
-  const now = new Date();
-  const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
-  const lines: string[] = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Grannytools//Pastillas//ES",
-    "CALSCALE:GREGORIAN",
-  ];
-  meds.forEach((m, mi) => {
-    m.times.forEach((t, ti) => {
-      const start = firstOccurrence(t, m.from);
-      const dt = `${start.getFullYear()}${pad(start.getMonth() + 1)}${pad(start.getDate())}T${pad(start.getHours())}${pad(start.getMinutes())}00`;
-      lines.push(
-        "BEGIN:VEVENT",
-        `UID:grannytools-${mi}-${ti}-${start.getTime()}@grannytools`,
-        `DTSTAMP:${stamp}`,
-        `DTSTART:${dt}`,
-        "DURATION:PT10M",
-        `RRULE:${rrule(m.until)}`,
-        `SUMMARY:Tomar ${m.name}`,
-        `DESCRIPTION:Recordatorio de Grannytools para tomar ${m.name} a las ${t}`,
-        "BEGIN:VALARM",
-        "ACTION:DISPLAY",
-        `DESCRIPTION:Tomar ${m.name}`,
-        "TRIGGER:PT0M",
-        "END:VALARM",
-        "END:VEVENT",
-      );
-    });
-  });
-  lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
-}
-
-function downloadIcs(meds: Med[], filename: string) {
-  const blob = new Blob([icsForMeds(meds)], { type: "text/calendar;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-
-function utcStamp(d: Date) {
-  return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
-}
-
-// Enlace de Google Calendar: se abre ya relleno y solo hay que pulsar "Guardar".
-function googleCalUrl(medName: string, time: string, from?: string, until?: string) {
-  const start = firstOccurrence(time, from);
-  const end = new Date(start.getTime() + 10 * 60 * 1000);
-  const p = new URLSearchParams({
-    action: "TEMPLATE",
-    text: `Tomar ${medName}`,
-    details: `Recordatorio de Grannytools para tomar ${medName} a las ${time}`,
-    dates: `${utcStamp(start)}/${utcStamp(end)}`,
-    recur: `RRULE:${rrule(until)}`,
-  });
-  return `https://calendar.google.com/calendar/render?${p.toString()}`;
-}
-
-type Pending = { med: string; time: string; from?: string; until?: string };
-
-function pendingFor(meds: Med[]): Pending[] {
-  return meds.flatMap((m) => m.times.map((t) => ({ med: m.name, time: t, from: m.from, until: m.until })));
-}
-
 function Pastillas() {
   const [meds, setMeds] = useState<Med[]>([]);
   const [name, setName] = useState("");
@@ -179,7 +76,6 @@ function Pastillas() {
   const [notifOn, setNotifOn] = useState(false);
   const [due, setDue] = useState<{ med: string; time: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [queue, setQueue] = useState<Pending[]>([]);
   const firedRef = useRef<Set<string>>(new Set());
   const [showHistory, setShowHistory] = useState(false);
   const activeMeds = meds.filter((m) => !isFinished(m));
@@ -232,10 +128,6 @@ function Pastillas() {
     if (p !== "granted") setError("No se han permitido los avisos.");
   };
 
-  const openGoogle = (p: Pending) => {
-    window.open(googleCalUrl(p.med, p.time, p.from, p.until), "_blank", "noopener");
-  };
-
   const addMed = () => {
     const n = name.trim();
     const ts = times.filter(Boolean);
@@ -246,10 +138,6 @@ function Pastillas() {
     save([...meds, med]);
     setName(""); setTimes(["09:00"]); setAdding(false); setError(null);
     setChronic(true); setFrom(localDayKey(new Date())); setUntil("");
-    // Abre Google Calendar ya relleno con el primer aviso (gesto del usuario).
-    const list: Pending[] = ts.map((t) => ({ med: n, time: t, from: med.from, until: med.until }));
-    openGoogle(list[0]);
-    setQueue(list.slice(1));
   };
 
   const [taken, setTaken] = useState<Record<string, string>>({});
@@ -498,47 +386,8 @@ function Pastillas() {
           </div>
         )}
 
-        {queue.length > 0 && (
-          <div className="mt-3 rounded-2xl bg-card p-3 shadow-sm">
-            <p className="mb-2 text-sm">
-              Falta{queue.length > 1 ? "n" : ""} <b>{queue.length}</b> aviso{queue.length > 1 ? "s" : ""} por añadir al calendario.
-            </p>
-            <button
-              onClick={() => { openGoogle(queue[0]); setQueue(queue.slice(1)); }}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-4 text-base font-black text-primary-foreground active:scale-[0.98]"
-            >
-              <CalendarPlus className="h-6 w-6" aria-hidden />
-              Añadir el de las {queue[0].time}
-            </button>
-          </div>
-        )}
-
-        {activeMeds.length > 0 && (
-          <div className="mt-3 space-y-2">
-            <button
-              onClick={() => {
-                const list = pendingFor(activeMeds);
-                if (list.length === 0) return;
-                openGoogle(list[0]);
-                setQueue(list.slice(1));
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-4 text-base font-black text-primary-foreground shadow-sm active:scale-[0.98]"
-            >
-              <CalendarPlus className="h-6 w-6" aria-hidden />
-              Poner avisos en Google Calendar
-            </button>
-            <button
-              onClick={() => downloadIcs(activeMeds, "pastillas-grannytools.ics")}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-3 py-3 text-sm font-bold text-secondary-foreground shadow-sm active:scale-[0.98]"
-            >
-              <CalendarPlus className="h-5 w-5" aria-hidden />
-              Si no usas Google: archivo para el calendario
-            </button>
-          </div>
-        )}
-
         <p className="mt-3 rounded-xl bg-card p-3 text-xs text-muted-foreground shadow-sm">
-          «Siempre» pone el aviso todos los días sin fin. «Unos días» solo avisa entre las fechas de inicio y fin del tratamiento. Al guardar se abre el calendario de Google con el aviso ya escrito: solo hay que pulsar «Guardar».
+          «Siempre» pone el aviso todos los días sin fin. «Unos días» solo avisa entre las fechas de inicio y fin del tratamiento. La aplicación avisa sola a la hora de cada toma: no hace falta usar ningún calendario.
         </p>
       </div>
     </main>

@@ -17,7 +17,7 @@ Guía de construcción para programadores. Se actualiza con cada cambio.
 | `src/routes/lupa.tsx` | Lupa |
 | `src/routes/panico.tsx` + `src/lib/contacts.ts` | Contactos, alerta, contacto de emergencia |
 | `src/routes/ubicacion.tsx` | Ubicación |
-| `src/routes/pastillas.tsx` | Medicación, .ics y Google Calendar |
+| `src/routes/pastillas.tsx` | Medicación y avisos con el reloj propio de la app |
 | `src/routes/citas.tsx` | Citas, turnos y tareas; `?view=citas|turnos|tareas|personas` (sin view = menú de 3 botones) |
 | `src/lib/tasks.tsx`, `src/components/TasksPanel.tsx` | Modelo de tareas, `<TaskAlert/>` (montado en root) y panel de gestión |
 | `src/lib/prefs.ts`, `src/hooks/use-prefs.ts` | Accesibilidad (fontScale, highContrast, brightness) |
@@ -77,7 +77,7 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 - Plugin Java y permisos: ver `docs/CAPACITOR.md`. iOS no permite envío/llamada sin confirmación.
 
 ## 9. Pastillas y citas
-- Pastillas: `.ics` con `RRULE` (UNTIL si tiene fin); enlaces de Google Calendar; vencidas a histórico.
+- Pastillas: avisos con el reloj propio de la app (sin calendarios externos); tomas marcadas en `grannytools.meds.tomadas`; vencidas a histórico. En la app de tiendas los avisos con la app cerrada usarán notificaciones locales nativas.
 - Citas: turnos por días/horario, citas fijas o recurrentes con acompañante y recordatorio; barras diarias con asignación de carriles para solapes; edición vía `?edit=<id>`.
 
 ## 9b. Tareas
