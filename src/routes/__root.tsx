@@ -1,3 +1,4 @@
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -13,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppReminders } from "../lib/reminders";
 import { FallGuard } from "../lib/fall-guard";
+import { TaskAlert } from "../lib/tasks";
 import { usePrefs } from "../hooks/use-prefs";
 
 function NotFoundComponent() {
@@ -37,7 +39,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -133,6 +135,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AppReminders />
       <FallGuard />
+      <TaskAlert />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
