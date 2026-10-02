@@ -57,7 +57,7 @@ Muestra dónde estás y permite enviarlo a un familiar.
 - Las terminadas pasan a «Ver histórico».
 - Aviso con sonido, voz y vibración a la hora de cada toma.
 - Cada hora de toma es un botón: al tocarlo se marca «tomada» (verde). El aviso tiene botones «Tomada» y «Luego». Las tomas ya hechas no cuentan en el número del icono.
-- Se pueden añadir al calendario del móvil o a Google Calendar.
+- La propia aplicación avisa a la hora de cada toma; no hace falta usar ningún calendario del móvil.
 
 ## 10. Citas, turnos y tareas
 - Al entrar aparecen tres botones grandes: **Citas**, **Turnos** y **Tareas** (y «Personas» para gestionar cuidadoras, familiares y médicos). Cada uno muestra solo lo suyo.
