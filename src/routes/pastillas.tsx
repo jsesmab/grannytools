@@ -251,11 +251,18 @@ function Pastillas() {
     setQueue(list.slice(1));
   };
 
-  const markTaken = (i: number) => {
-    const next = meds.slice();
-    next[i] = { ...next[i], takenAt: new Date().toISOString() };
-    save(next);
-    setDue(null);
+  const [taken, setTaken] = useState<Record<string, string>>({});
+  useEffect(() => {
+    try { setTaken(JSON.parse(localStorage.getItem(TAKEN_KEY) || "{}")); } catch { /* ignore */ }
+  }, []);
+  const doseKey = (med: string, time: string) => `${todayKey()}|${med}|${time}`;
+  const toggleDose = (med: string, time: string, force?: boolean) => {
+    const k = doseKey(med, time);
+    const next = { ...taken };
+    const on = force ?? !next[k];
+    if (on) next[k] = new Date().toISOString(); else delete next[k];
+    setTaken(next);
+    try { localStorage.setItem(TAKEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
   return (
@@ -285,9 +292,14 @@ function Pastillas() {
           <div className="mb-3 rounded-2xl bg-warning p-4 text-warning-foreground shadow-lg">
             <p className="text-lg font-black">¡Toca tomar {due.med}!</p>
             <p className="text-sm">Hora: {due.time}</p>
-            <button onClick={() => setDue(null)} className="mt-2 w-full rounded-xl bg-black/15 px-3 py-3 text-base font-bold active:scale-[0.97]">
-              Entendido
-            </button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button onClick={() => { toggleDose(due.med, due.time, true); setDue(null); }} className="flex items-center justify-center gap-2 rounded-xl bg-success px-3 py-4 text-lg font-black text-success-foreground active:scale-[0.97]">
+                <Check className="h-6 w-6" aria-hidden /> Tomada
+              </button>
+              <button onClick={() => setDue(null)} className="rounded-xl bg-secondary px-3 py-4 text-base font-bold text-secondary-foreground active:scale-[0.97]">
+                Luego
+              </button>
+            </div>
           </div>
         )}
 
