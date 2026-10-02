@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
-  Pause, Play, Square, Settings, ChevronRight, Bell, BellOff, X,
+  Square, Settings, ChevronRight, Bell, BellOff, X,
 } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";
 import { askReminderPermission, DEFAULT_REMIND_MIN } from "@/lib/reminders";
@@ -647,36 +647,6 @@ function Home() {
         )}
 
         <section className="mb-3 rounded-2xl bg-card p-3 text-left shadow-sm">
-          {showCitas && (
-            <>
-              <h2 className="mb-2 text-base font-bold">
-                {todayItems.length ? `Hoy tienes ${todayItems.length} ${todayItems.length === 1 ? "cita" : "citas"}` : "Hoy no tienes citas"}
-              </h2>
-
-              {todayItems.length > 0 && (
-                <ul className="mb-3 space-y-1">
-                  {todayItems.map((it) => (
-                    <li key={it.id}>
-                      <Link
-                        to="/citas"
-                        search={{ edit: it.id }}
-                        className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-sm font-semibold text-secondary-foreground active:scale-[0.98]"
-                      >
-                        <span className={`h-3 w-3 shrink-0 rounded-full ${it.color}`} aria-hidden />
-                        <span className="flex-1 text-left">
-                          {it.text}
-                          <span className="block text-xs font-normal text-muted-foreground">
-                            Aviso {it.remindMin} min antes
-                          </span>
-                        </span>
-                        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
-          )}
 
           {preparing && !needsTap && (
             <div className="mb-3 rounded-2xl bg-secondary p-5 text-center text-2xl font-black text-secondary-foreground animate-pulse">
@@ -693,31 +663,23 @@ function Home() {
           )}
 
           <button
-            onClick={showPrefs ? () => setSheet("voz") : speak}
-            aria-label={showPrefs ? "Ajustes del saludo" : "Escuchar el saludo inicial y las citas de hoy"}
+            onClick={showPrefs ? () => setSheet("voz") : speaking ? stopSpeech : speak}
+            aria-label={showPrefs ? "Ajustes del saludo" : speaking ? "Parar el saludo" : "Escuchar el saludo inicial"}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-xl font-black text-primary-foreground shadow-md active:scale-[0.98]"
           >
-            {showPrefs ? <Settings className="h-8 w-8" aria-hidden /> : <Volume2 className="h-8 w-8" aria-hidden />}
-            {showPrefs ? "Ajustes del saludo" : "Saludo inicial"}
+            {showPrefs ? <Settings className="h-8 w-8" aria-hidden /> : speaking ? <Square className="h-8 w-8" aria-hidden /> : <Volume2 className="h-8 w-8" aria-hidden />}
+            {showPrefs ? "Ajustes del saludo" : speaking ? "Saludo (toca para parar)" : "Saludo inicial"}
           </button>
-          {speaking && (
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
-                onClick={togglePause}
-                aria-label={paused ? "Reanudar lectura" : "Pausar lectura"}
-                className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
-              >
-                {paused ? <Play className="h-6 w-6" aria-hidden /> : <Pause className="h-6 w-6" aria-hidden />}
-                {paused ? "Seguir" : "Pausa"}
-              </button>
-              <button
-                onClick={stopSpeech}
-                aria-label="Parar lectura"
-                className="flex items-center justify-center gap-2 rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground active:scale-95"
-              >
-                <Square className="h-6 w-6" aria-hidden /> Parar
-              </button>
-            </div>
+          {!showCitas && !showPrefs && (
+            <Link
+              to="/citas"
+              search={{ view: "citas" }}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-warning px-4 py-3 text-lg font-black text-warning-foreground shadow active:scale-[0.98]"
+            >
+              <CalendarDays className="h-6 w-6" aria-hidden />
+              {todayItems.length ? `Ver citas de hoy (${todayItems.length})` : "Hoy no tienes citas"}
+              <ChevronRight className="h-5 w-5" aria-hidden />
+            </Link>
           )}
         </section>
 
