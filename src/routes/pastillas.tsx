@@ -150,10 +150,6 @@ function Pastillas() {
     if (p !== "granted") setError("No se han permitido los avisos.");
   };
 
-  const openGoogle = (p: Pending) => {
-    window.open(googleCalUrl(p.med, p.time, p.from, p.until), "_blank", "noopener");
-  };
-
   const addMed = () => {
     const n = name.trim();
     const ts = times.filter(Boolean);
