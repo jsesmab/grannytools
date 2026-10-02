@@ -6,7 +6,7 @@ Guía para personas mayores, familias y cuidadores. Se actualiza con cada cambio
 Grannytools reúne en un solo móvil ayudas prácticas: oír mejor, ver mejor, pedir ayuda, recordar pastillas y citas, y avisar si hay una caída. Letra grande, alto contraste y voz amable.
 
 ## 2. Pantalla de inicio
-- **Saludo inicial**: al abrir la app, una voz en español dice la hora, el tiempo (temperatura máxima y mínima) y las citas del día con acompañante. Solo suena al abrir la app, no al volver de otra pantalla. Botones Pausa/Seguir y Parar. Botón «Saludo inicial» para volver a oírlo. Si no hay internet, usa la previsión guardada del mismo día.
+- **Saludo inicial**: al abrir la app, una voz en español dice la hora, el tiempo (temperatura máxima y mínima) y las citas del día con acompañante. Solo suena al abrir la app, no al volver de otra pantalla. Tocar el botón «Saludo» mientras habla lo para; un segundo toque lo vuelve a empezar. Tras el saludo aparece el botón «Ver citas de hoy», que abre directamente las citas (ya no se listan en la pantalla principal). Si no hay internet, usa la previsión guardada del mismo día.
 - **Botones** (en este orden): Contactos y Ubicación · Citas y Pastillas · Oír y Lupa · Cámara.
 - **Contador en el icono**: número de citas y tomas de pastillas que quedan hoy (solo con la app instalada en la pantalla de inicio).
 
@@ -54,7 +54,9 @@ Muestra dónde estás y permite enviarlo a un familiar.
 - Aviso con sonido, voz y vibración a la hora de cada toma.
 - Se pueden añadir al calendario del móvil o a Google Calendar.
 
-## 10. Citas y turnos
+## 10. Citas, turnos y tareas
+- Al entrar aparecen tres botones grandes: **Citas**, **Turnos** y **Tareas** (y «Personas» para gestionar cuidadoras, familiares y médicos). Cada uno muestra solo lo suyo.
+- **Tareas**: puntuales (un día) o periódicas (días de la semana), con hora. A esa hora aparece un aviso a pantalla completa con voz y vibración y dos botones: **Hecha** / **No hecha**. En la lista de hoy se puede marcar o cambiar en cualquier momento.
 - Personas: cuidadoras, familiares y médicos, cada una con su color.
 - **Turnos** periódicos (días de la semana y horario) y **citas** fijas o recurrentes (p. ej. «Martes y viernes»), con acompañante.
 - Cada día se ve como una barra horaria con colores; los solapes se muestran en carriles.

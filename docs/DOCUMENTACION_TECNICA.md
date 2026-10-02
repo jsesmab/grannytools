@@ -18,7 +18,8 @@ Guía de construcción para programadores. Se actualiza con cada cambio.
 | `src/routes/panico.tsx` + `src/lib/contacts.ts` | Contactos, alerta, contacto de emergencia |
 | `src/routes/ubicacion.tsx` | Ubicación |
 | `src/routes/pastillas.tsx` | Medicación, .ics y Google Calendar |
-| `src/routes/citas.tsx` | Citas y turnos |
+| `src/routes/citas.tsx` | Citas, turnos y tareas; `?view=citas|turnos|tareas|personas` (sin view = menú de 3 botones) |
+| `src/lib/tasks.tsx`, `src/components/TasksPanel.tsx` | Modelo de tareas, `<TaskAlert/>` (montado en root) y panel de gestión |
 | `src/routes/camara.tsx` | Cámara |
 | `src/lib/prefs.ts`, `src/hooks/use-prefs.ts` | Accesibilidad (fontScale, highContrast, brightness) |
 | `src/lib/reminders.tsx` | Avisos y badge |
@@ -39,11 +40,15 @@ Navegación interna siempre con `<Link to="/">` (nunca `<a href>`, que recarga y
 | `grannytools.voz` | local | `{rate, volume}` del saludo |
 | `grannytools.username` | local | Nombre del usuario |
 | `grannytools.weather.today` | local | Previsión con fecha (cache offline del día) |
+| `grannytools.tareas` | local | `Task[] {id,title,time,date?|days?}` |
+| `grannytools.tareas.estado` | local | `{"<id>:<fecha>": "hecha"|"no"}` |
+| `grannytools.tareas.avisadas` | local | Avisos de tarea ya mostrados hoy |
 | `grannytools.greeted` | session | Saludo ya reproducido en esta apertura |
 
 ## 4. Inicio (`index.tsx`)
 - `TILES` en orden fijo; `TILE_SHEET = {"/lupa":"lupa","/citas":"avisos","/pastillas":"avisos"}`; `SheetKey = "vista"|"voz"|"lupa"|"avisos"`.
 - Modo ajustes: estado `showPrefs`; los tiles pasan a ser botones que abren su sheet.
+- Botón Saludo alterna: si `speaking` → `cancel()`, si no → `speak()`. Sin Pausa/Parar. Tras saludar (`showCitas=false`) se muestra `<Link to="/citas" search={{view:"citas"}}>` con el nº de citas de hoy.
 - Saludo: `speechSynthesis` con voz `es-*`; se dispara solo si `sessionStorage[greeted]` no existe. Clima vía Open-Meteo con cache diaria.
 - Avisos: `Notification.requestPermission()` desde botón explícito (requisito iOS); prueba con oscilador 880 Hz + Notification + vibrate a los 5 s.
 
@@ -71,6 +76,9 @@ Cadena Web Audio: micrófono → RNNoise (WASM) → puerta de ruido → EQ (grav
 ## 9. Pastillas y citas
 - Pastillas: `.ics` con `RRULE` (UNTIL si tiene fin); enlaces de Google Calendar; vencidas a histórico.
 - Citas: turnos por días/horario, citas fijas o recurrentes con acompañante y recordatorio; barras diarias con asignación de carriles para solapes; edición vía `?edit=<id>`.
+
+## 9b. Tareas
+- `TaskAlert` comprueba cada 30 s; ventana de 2 min desde la hora; dedupe diario en `tareas.avisadas`; no salta si ya tiene estado. Evento `grannytools-tasks` refresca el panel.
 
 ## 10. Empaquetado
 `npm run build` → `dist/client` → `npx cap add android && npx cap sync`. Detalles en `docs/CAPACITOR.md`.
