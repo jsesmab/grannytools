@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CamaraRouteImport } from './routes/camara'
 import { Route as CitasRouteImport } from './routes/citas'
 import { Route as LupaRouteImport } from './routes/lupa'
 import { Route as OirRouteImport } from './routes/oir'
@@ -21,11 +20,6 @@ import { Route as UbicacionRouteImport } from './routes/ubicacion'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CamaraRoute = CamaraRouteImport.update({
-  id: '/camara',
-  path: '/camara',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CitasRoute = CitasRouteImport.update({
@@ -61,7 +55,6 @@ const UbicacionRoute = UbicacionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/camara': typeof CamaraRoute
   '/citas': typeof CitasRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
@@ -71,7 +64,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/camara': typeof CamaraRoute
   '/citas': typeof CitasRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
@@ -82,7 +74,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/camara': typeof CamaraRoute
   '/citas': typeof CitasRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
@@ -93,28 +84,13 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/camara'
-    | '/citas'
-    | '/lupa'
-    | '/oir'
-    | '/panico'
-    | '/pastillas'
-    | '/ubicacion'
+    '/' | '/citas' | '/lupa' | '/oir' | '/panico' | '/pastillas' | '/ubicacion'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/camara'
-    | '/citas'
-    | '/lupa'
-    | '/oir'
-    | '/panico'
-    | '/pastillas'
-    | '/ubicacion'
+    '/' | '/citas' | '/lupa' | '/oir' | '/panico' | '/pastillas' | '/ubicacion'
   id:
     | '__root__'
     | '/'
-    | '/camara'
     | '/citas'
     | '/lupa'
     | '/oir'
@@ -125,7 +101,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CamaraRoute: typeof CamaraRoute
   CitasRoute: typeof CitasRoute
   LupaRoute: typeof LupaRoute
   OirRoute: typeof OirRoute
@@ -141,13 +116,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/camara': {
-      id: '/camara'
-      path: '/camara'
-      fullPath: '/camara'
-      preLoaderRoute: typeof CamaraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/citas': {
@@ -197,7 +165,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CamaraRoute: CamaraRoute,
   CitasRoute: CitasRoute,
   LupaRoute: LupaRoute,
   OirRoute: OirRoute,

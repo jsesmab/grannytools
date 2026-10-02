@@ -20,7 +20,6 @@ Guía de construcción para programadores. Se actualiza con cada cambio.
 | `src/routes/pastillas.tsx` | Medicación, .ics y Google Calendar |
 | `src/routes/citas.tsx` | Citas, turnos y tareas; `?view=citas|turnos|tareas|personas` (sin view = menú de 3 botones) |
 | `src/lib/tasks.tsx`, `src/components/TasksPanel.tsx` | Modelo de tareas, `<TaskAlert/>` (montado en root) y panel de gestión |
-| `src/routes/camara.tsx` | Cámara |
 | `src/lib/prefs.ts`, `src/hooks/use-prefs.ts` | Accesibilidad (fontScale, highContrast, brightness) |
 | `src/lib/reminders.tsx` | Avisos y badge |
 | `src/lib/fall-detection.ts`, `src/lib/fall-guard.tsx` | Detector de caídas y overlay |
@@ -35,6 +34,7 @@ Navegación interna siempre con `<Link to="/">` (nunca `<a href>`, que recarga y
 | `grannytools.emergency` | local | Teléfono del contacto de emergencia |
 | `grannytools.fall.enabled` | local | `"1"`/`"0"` |
 | `grannytools.meds` | local | Medicinas (horas, from/until, crónico) |
+| `grannytools.meds.tomadas` | local | `{"<YYYY-MM-DD local>|<med>|<HH:MM>": iso}` tomas marcadas; reminders las excluye del aviso y del badge |
 | `grannytools.citas.people` / `.entries` / `.avisados` | local | Personas, citas/turnos, avisos ya disparados |
 | `grannytools.prefs` | local | Accesibilidad |
 | `grannytools.voz` | local | `{rate, volume}` del saludo |

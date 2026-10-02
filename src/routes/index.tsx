@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
+  Ear, Search, Users, MapPin, Pill, CalendarDays, Pencil, Check, Volume2,
   Square, Settings, ChevronRight, Bell, BellOff, X, ShieldCheck,
 } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";

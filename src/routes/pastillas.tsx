@@ -255,7 +255,7 @@ function Pastillas() {
   useEffect(() => {
     try { setTaken(JSON.parse(localStorage.getItem(TAKEN_KEY) || "{}")); } catch { /* ignore */ }
   }, []);
-  const doseKey = (med: string, time: string) => `${todayKey()}|${med}|${time}`;
+  const doseKey = (med: string, time: string) => `${localDayKey(new Date())}|${med}|${time}`;
   const toggleDose = (med: string, time: string, force?: boolean) => {
     const k = doseKey(med, time);
     const next = { ...taken };
