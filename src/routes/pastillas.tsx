@@ -19,6 +19,7 @@ export const Route = createFileRoute("/pastillas")({
 // from/until en formato YYYY-MM-DD. Sin "until" = tratamiento crónico (todo el calendario).
 type Med = { name: string; times: string[]; takenAt?: string; from?: string; until?: string };
 const KEY = "grannytools.meds";
+const TAKEN_KEY = "grannytools.meds.tomadas";
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);

@@ -30,7 +30,7 @@ Amplifica las conversaciones con auriculares.
 - La pantalla no se apaga mientras está en uso.
 
 ## 5. Lupa
-Cámara a pantalla completa con zoom y linterna. Tocar la imagen la congela para leer con calma; la imagen congelada se puede desplazar con el dedo.
+Imagen a pantalla completa con zoom y linterna. Tocar la imagen la congela para leer con calma; la imagen congelada se puede desplazar con el dedo.
 
 ## 6. Contactos y botón de pánico
 - La pantalla muestra únicamente las fotos grandes de los contactos, sin nombres ni teléfonos; un toque llama directamente.
