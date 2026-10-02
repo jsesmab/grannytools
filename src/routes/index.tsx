@@ -33,7 +33,7 @@ export const Route = createFileRoute("/")({
 });
 
 type Tile = {
-  to: "/oir" | "/lupa" | "/panico" | "/ubicacion" | "/pastillas" | "/citas" | "/camara";
+  to: "/oir" | "/lupa" | "/panico" | "/ubicacion" | "/pastillas" | "/citas";
   label: string;
   Icon: typeof Ear;
   bg: string;
@@ -47,7 +47,6 @@ const TILES: Tile[] = [
   { to: "/pastillas", label: "Pastillas", Icon: Pill, bg: "bg-warning", fg: "text-warning-foreground" },
   { to: "/oir", label: "Oír", Icon: Ear, bg: "bg-primary", fg: "text-primary-foreground" },
   { to: "/lupa", label: "Lupa", Icon: Search, bg: "bg-success", fg: "text-success-foreground" },
-  { to: "/camara", label: "Cámara", Icon: Camera, bg: "bg-secondary", fg: "text-secondary-foreground" },
 ];
 
 // Qué ajustes abre cada botón cuando el modo ajustes está activo.

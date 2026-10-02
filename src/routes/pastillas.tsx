@@ -317,20 +317,31 @@ function Pastillas() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-lg font-black">{m.name}</div>
-                <div className="text-sm text-muted-foreground">{m.times.join("  ·  ")}</div>
+                <div className="my-1 flex flex-wrap gap-1.5">
+                  {m.times.map((t) => {
+                    const on = !!taken[doseKey(m.name, t)];
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => toggleDose(m.name, t)}
+                        aria-pressed={on}
+                        aria-label={`${m.name} a las ${t}: ${on ? "tomada" : "sin tomar"}`}
+                        className={[
+                          "flex items-center gap-1 rounded-xl px-3 py-2 text-base font-black active:scale-[0.95]",
+                          on ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground",
+                        ].join(" ")}
+                      >
+                        {on && <Check className="h-4 w-4" aria-hidden />}{t}
+                      </button>
+                    );
+                  })}
+                </div>
                 <div className="text-xs font-bold text-muted-foreground">
                   {m.until
                     ? `Tratamiento: ${esDate(m.from ?? todayKey())} → ${esDate(m.until)}`
                     : "Todos los días (crónico)"}
                 </div>
               </div>
-              <button
-                onClick={() => markTaken(i)}
-                aria-label={`Marcar ${m.name} como tomada`}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-success text-success-foreground active:scale-[0.95]"
-              >
-                <Check className="h-5 w-5" aria-hidden />
-              </button>
               <button
                 onClick={() => save(meds.filter((_, idx) => idx !== i))}
                 aria-label={`Borrar ${m.name}`}
