@@ -46,11 +46,12 @@ Navegación interna siempre con `<Link to="/">` (nunca `<a href>`, que recarga y
 | `grannytools.greeted` | session | Saludo ya reproducido en esta apertura |
 
 ## 4. Inicio (`index.tsx`)
-- `TILES` en orden fijo; `TILE_SHEET = {"/lupa":"lupa","/citas":"avisos","/pastillas":"avisos"}`; `SheetKey = "vista"|"voz"|"lupa"|"avisos"`.
+- `TILES` en orden fijo; `TILE_SHEET` enlaza Contactos con `caidas`, Lupa con `lupa`, y Citas/Pastillas con `avisos`; `SheetKey` incluye `vista|voz|lupa|avisos|caidas`.
 - Modo ajustes: estado `showPrefs`; los tiles pasan a ser botones que abren su sheet.
 - Botón Saludo alterna: si `speaking` → `cancel()`, si no → `speak()`. Sin Pausa/Parar. Tras saludar (`showCitas=false`) se muestra `<Link to="/citas" search={{view:"citas"}}>` con el nº de citas de hoy.
 - Saludo: `speechSynthesis` con voz `es-*`; se dispara solo si `sessionStorage[greeted]` no existe. Clima vía Open-Meteo con cache diaria.
 - Avisos: `Notification.requestPermission()` desde botón explícito (requisito iOS); prueba con oscilador 880 Hz + Notification + vibrate a los 5 s.
+- Caídas: el panel de Contactos del modo ajustes lee y escribe `FALL_ENABLED_KEY`, solicita el permiso de movimiento al activar y ejecuta `simulateFall()` para la prueba.
 
 ## 5. Recordatorios (`reminders.tsx`)
 - Polling cada 30 s. Dedupe por id (`med:<nombre>:<hora>`, citas en `citas.avisados`).

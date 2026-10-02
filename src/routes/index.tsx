@@ -2,10 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Ear, Search, Users, MapPin, Pill, Camera, CalendarDays, Pencil, Check, Volume2,
-  Square, Settings, ChevronRight, Bell, BellOff, X,
+  Square, Settings, ChevronRight, Bell, BellOff, X, ShieldCheck,
 } from "lucide-react";
 import { usePrefs } from "@/hooks/use-prefs";
 import { askReminderPermission, DEFAULT_REMIND_MIN } from "@/lib/reminders";
+import {
+  isFallEnabled,
+  motionAvailable,
+  requestMotionPermission,
+  setFallEnabled,
+} from "@/lib/fall-detection";
+import { simulateFall } from "@/lib/fall-guard";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,8 +51,9 @@ const TILES: Tile[] = [
 ];
 
 // Qué ajustes abre cada botón cuando el modo ajustes está activo.
-type SheetKey = "vista" | "voz" | "lupa" | "avisos";
+type SheetKey = "vista" | "voz" | "lupa" | "avisos" | "caidas";
 const TILE_SHEET: Partial<Record<Tile["to"], SheetKey>> = {
+  "/panico": "caidas",
   "/lupa": "lupa",
   "/citas": "avisos",
   "/pastillas": "avisos",
@@ -143,12 +151,36 @@ function Home() {
   const [sheet, setSheet] = useState<SheetKey | null>(null);
   const [notifOn, setNotifOn] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
+  const [fallOn, setFallOn] = useState(false);
+  const [fallMsg, setFallMsg] = useState<string | null>(null);
 
   useEffect(() => {
     try {
       if ("Notification" in window && Notification.permission === "granted") setNotifOn(true);
     } catch { /* ignore */ }
+    setFallOn(isFallEnabled());
   }, []);
+
+  const toggleFall = async () => {
+    if (fallOn) {
+      setFallEnabled(false);
+      setFallOn(false);
+      setFallMsg("Aviso de caídas desactivado.");
+      return;
+    }
+    if (!motionAvailable()) {
+      setFallMsg("Este móvil no permite usar el sensor de movimiento desde la web.");
+      return;
+    }
+    const allowed = await requestMotionPermission();
+    if (!allowed) {
+      setFallMsg("Hay que dar permiso al movimiento para detectar caídas.");
+      return;
+    }
+    setFallEnabled(true);
+    setFallOn(true);
+    setFallMsg("Aviso de caídas activado.");
+  };
 
   const askNotif = async () => {
     try {
@@ -526,6 +558,7 @@ function Home() {
                   {sheet === "voz" && "El saludo"}
                   {sheet === "lupa" && "La lupa"}
                   {sheet === "avisos" && "Avisos en el móvil"}
+                  {sheet === "caidas" && "Aviso de caídas"}
                 </h2>
                 <button
                   onClick={() => setSheet(null)}
@@ -632,6 +665,29 @@ function Home() {
                   >
                     Probar aviso (suena en 5 segundos)
                   </button>
+                </>
+              )}
+
+              {sheet === "caidas" && (
+                <>
+                  <button
+                    onClick={toggleFall}
+                    aria-pressed={fallOn}
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl py-4 text-lg font-black active:scale-95 ${fallOn ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground"}`}
+                  >
+                    <ShieldCheck className="h-7 w-7" aria-hidden />
+                    {fallOn ? "Aviso de caídas activado" : "Activar aviso de caídas"}
+                  </button>
+                  {fallMsg && <p className="text-sm font-semibold text-muted-foreground">{fallMsg}</p>}
+                  <button
+                    onClick={simulateFall}
+                    className="w-full rounded-xl bg-secondary py-4 text-lg font-bold text-secondary-foreground active:scale-95"
+                  >
+                    Probar sin tirar el móvil
+                  </button>
+                  <p className="text-sm text-muted-foreground">
+                    Si detecta una caída, espera 30 segundos. Si no pulsas «Estoy bien», envía tu ubicación y llama al contacto marcado con la estrella.
+                  </p>
                 </>
               )}
             </section>

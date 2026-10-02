@@ -16,6 +16,7 @@ Al pulsar la rueda, la pantalla se queda igual pero cada botón abre solo sus op
 - Saludo: velocidad y volumen de la voz.
 - Lupa: brillo.
 - Citas y Pastillas: avisos en el móvil («Activar avisos» y «Probar aviso», que suena a los 5 segundos).
+- Contactos: activar o desactivar el aviso de caídas y «Probar sin tirar el móvil».
 - El resto se ajusta dentro de su propia pantalla.
 Se sale pulsando otra vez la rueda o «Cerrar».
 
@@ -41,10 +42,11 @@ Cámara a pantalla completa con zoom y linterna. Tocar la imagen la congela para
 - **Botón ALERTA**: sirena, vibración SOS y llamada al contacto de ayuda.
 
 ## 7. Aviso de caídas
-- Se activa en Contactos con «Activar aviso de caídas» (el móvil pide permiso de movimiento la primera vez).
+- Se configura desde la rueda dentada de la pantalla principal y después pulsando Contactos. Incluye «Activar aviso de caídas» y «Probar sin tirar el móvil».
+- El móvil pide permiso de movimiento la primera vez que se activa.
 - Si detecta una caída: suena, vibra y pregunta «¿Estás bien?» con cuenta atrás de 30 segundos y botón verde enorme **ESTOY BIEN**.
 - Si nadie lo pulsa: envía un mensaje con la ubicación (enlace de mapa) y llama al contacto de ayuda.
-- «Probar (sin tirar el móvil)» simula una caída.
+- «Probar sin tirar el móvil» simula una caída.
 - **Limitaciones**: en la web solo vigila con la app abierta y el móvil pide pulsar «Enviar» y «Llamar». En la app de Google Play el mensaje y la llamada saldrán solos. En iPhone siempre hará falta un toque (norma de Apple).
 
 ## 8. Ubicación
