@@ -16,6 +16,7 @@ import { Route as OirRouteImport } from './routes/oir'
 import { Route as PanicoRouteImport } from './routes/panico'
 import { Route as PastillasRouteImport } from './routes/pastillas'
 import { Route as UbicacionRouteImport } from './routes/ubicacion'
+import { Route as VincularRouteImport } from './routes/vincular'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const UbicacionRoute = UbicacionRouteImport.update({
   path: '/ubicacion',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VincularRoute = VincularRouteImport.update({
+  id: '/vincular',
+  path: '/vincular',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/panico': typeof PanicoRoute
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
+  '/vincular': typeof VincularRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/panico': typeof PanicoRoute
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
+  '/vincular': typeof VincularRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,14 +88,29 @@ export interface FileRoutesById {
   '/panico': typeof PanicoRoute
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
+  '/vincular': typeof VincularRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/citas' | '/lupa' | '/oir' | '/panico' | '/pastillas' | '/ubicacion'
+    | '/'
+    | '/citas'
+    | '/lupa'
+    | '/oir'
+    | '/panico'
+    | '/pastillas'
+    | '/ubicacion'
+    | '/vincular'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/citas' | '/lupa' | '/oir' | '/panico' | '/pastillas' | '/ubicacion'
+    | '/'
+    | '/citas'
+    | '/lupa'
+    | '/oir'
+    | '/panico'
+    | '/pastillas'
+    | '/ubicacion'
+    | '/vincular'
   id:
     | '__root__'
     | '/'
@@ -97,6 +120,7 @@ export interface FileRouteTypes {
     | '/panico'
     | '/pastillas'
     | '/ubicacion'
+    | '/vincular'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -107,6 +131,7 @@ export interface RootRouteChildren {
   PanicoRoute: typeof PanicoRoute
   PastillasRoute: typeof PastillasRoute
   UbicacionRoute: typeof UbicacionRoute
+  VincularRoute: typeof VincularRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -160,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UbicacionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vincular': {
+      id: '/vincular'
+      path: '/vincular'
+      fullPath: '/vincular'
+      preLoaderRoute: typeof VincularRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -171,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   PanicoRoute: PanicoRoute,
   PastillasRoute: PastillasRoute,
   UbicacionRoute: UbicacionRoute,
+  VincularRoute: VincularRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
