@@ -335,9 +335,18 @@ function Citas() {
           </nav>
         )}
 
-        {tab === "tareas" && <TasksPanel />}
+        {locked && (
+          <p className="mb-3 rounded-2xl border-2 border-warning bg-warning/15 p-3 text-center text-base font-bold">
+            🔒 Agenda protegida: solo consulta. La familia gestiona los cambios.
+          </p>
+        )}
+        {tab === "tareas" && (
+          <fieldset disabled={locked} className={locked ? "pointer-events-none opacity-90" : ""}>
+            <TasksPanel />
+          </fieldset>
+        )}
 
-        {tab === "personas" && (
+        {tab === "personas" && !locked && (
           <section className="space-y-3">
             <div className="rounded-2xl bg-card p-3 shadow">
               <h2 className="mb-2 text-lg font-bold">Añadir cuidadora o familiar</h2>
