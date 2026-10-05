@@ -32,7 +32,8 @@ export const Route = createFileRoute("/citas")({
 type Person = { id: string; name: string; role: "cuidadora" | "familiar" | "medico"; color: string };
 type Entry = {
   id: string;
-  personId: string;
+  personId?: string; // persona del turno (solo turnos)
+  who?: string; // con quién es la cita (texto libre, solo citas)
   title: string;
   kind: "fija" | "periodica"; // fija = cita puntual · periodica = turno
   date?: string; // cita
@@ -134,6 +135,7 @@ function Citas() {
   const [eOpen, setEOpen] = useState(false);
   const [eEditId, setEEditId] = useState<string | null>(null);
   const [ePerson, setEPerson] = useState("");
+  const [eWho, setEWho] = useState("");
   const [eTitle, setETitle] = useState("");
   const [eKind, setEKind] = useState<Entry["kind"]>("periodica");
   const [eDate, setEDate] = useState("");
