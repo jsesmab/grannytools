@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Pill, Plus, Trash2, Check, AlertTriangle } from "lucide-react";
+import { useCareLocked } from "@/lib/care-lock";
 
 export const Route = createFileRoute("/pastillas")({
   head: () => ({
@@ -70,6 +71,7 @@ function Pastillas() {
   const [name, setName] = useState("");
   const [times, setTimes] = useState<string[]>(["09:00"]);
   const [adding, setAdding] = useState(false);
+  const { locked } = useCareLocked();
   const [chronic, setChronic] = useState(true);
   const [from, setFrom] = useState(localDayKey(new Date()));
   const [until, setUntil] = useState("");
@@ -348,6 +350,10 @@ function Pastillas() {
               </button>
             </div>
           </div>
+        ) : locked ? (
+          <p className="rounded-2xl border-2 border-warning bg-warning/15 p-3 text-center text-base font-bold">
+            🔒 Medicinas protegidas: la familia gestiona los cambios.
+          </p>
         ) : (
           <button
             onClick={() => setAdding(true)}

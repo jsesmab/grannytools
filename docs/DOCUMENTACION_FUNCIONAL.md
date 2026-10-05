@@ -77,3 +77,6 @@ Todos los datos se guardan solo en el móvil. No hay cuentas ni servidores. El t
 ## 13. Pendiente
 - Publicar y probar en un móvil real.
 - Decidir un widget grande para la versión de tiendas.
+
+## Modo Autónomo / Protegido (agenda)
+En la rueda dentada de inicio → «Cómo se ve la aplicación» hay dos botones: **Autónomo** (por defecto: la persona crea, modifica y borra citas, turnos, tareas y medicinas) y **🔒 Protegido** (solo consulta y marcar tomas/tareas; se ocultan «Nueva cita», «Nuevo turno», «Añadir medicina», Personas y la edición). Sin PIN. En la futura versión Family el familiar podrá cambiarlo a distancia.
