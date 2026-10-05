@@ -195,7 +195,6 @@ function Citas() {
   };
 
   const openEdit = (e: Entry) => {
-    if (locked) return;
     setEEditId(e.id);
     setEPerson(e.personId ?? "");
     // Citas antiguas guardaban la persona: la mostramos como texto editable.
@@ -344,11 +343,7 @@ function Citas() {
             🔒 Agenda protegida: solo consulta. La familia gestiona los cambios.
           </p>
         )}
-        {tab === "tareas" && (
-          <fieldset disabled={locked} className={locked ? "pointer-events-none opacity-90" : ""}>
-            <TasksPanel />
-          </fieldset>
-        )}
+        {tab === "tareas" && <TasksPanel locked={locked} />}
 
         {tab === "personas" && !locked && (
           <section className="space-y-3">
@@ -481,8 +476,10 @@ function Citas() {
           <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-2" role="dialog" aria-label="Cita">
             <div className="max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-card p-3 shadow-xl">
               <h2 className="mb-2 text-xl font-black">
-                {eEditId ? (eKind === "fija" ? "Modificar cita" : "Modificar turno") : eKind === "fija" ? "Nueva cita" : "Nuevo turno"}
+                {locked ? (eKind === "fija" ? "Datos de la cita" : "Datos del turno") : eEditId ? (eKind === "fija" ? "Modificar cita" : "Modificar turno") : eKind === "fija" ? "Nueva cita" : "Nuevo turno"}
               </h2>
+              <fieldset disabled={locked} className="m-0 min-w-0 border-0 p-0">
+
 
               <div className="mb-2 grid grid-cols-2 gap-2">
                 <button onClick={() => setEKind("fija")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "fija" ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}>Cita puntual</button>
@@ -604,11 +601,16 @@ function Citas() {
                 {eKind === "periodica" ? ` · ${Math.round(hoursBetween(eStart, eEnd) * eDays.length * 10) / 10} h a la semana` : ""}
               </p>
 
+              </fieldset>
+              {locked ? (
+                <button onClick={closeForm} className="w-full rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Cerrar</button>
+              ) : (
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={closeForm} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
                 <button onClick={saveEntry} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
               </div>
-              {eEditId && (
+              )}
+              {eEditId && !locked && (
                 <button
                   onClick={() => removeEntry(eEditId)}
                   className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-destructive py-3 text-lg font-bold text-destructive-foreground active:scale-95"
