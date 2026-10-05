@@ -149,6 +149,7 @@ function Home() {
   const [volume, setVolume] = useState(1);
   const [showPrefs, setShowPrefs] = useState(false);
   const [sheet, setSheet] = useState<SheetKey | null>(null);
+  const { locked: careLocked } = useCareLocked();
   const [notifOn, setNotifOn] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
   const [fallOn, setFallOn] = useState(false);

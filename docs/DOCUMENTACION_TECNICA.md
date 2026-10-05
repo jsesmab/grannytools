@@ -92,3 +92,6 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 - Nada de colores fijos; tokens semánticos.
 - Los botones y enlaces con fondo reciben globalmente volumen 3D y desplazamiento de pulsación desde `src/styles.css`; `data-flat-button` queda reservado para superficies interactivas que no deban parecer una tecla.
 - Lectura de `localStorage` siempre con try/catch y fuera del render SSR.
+
+## Bloqueo de agenda (`src/lib/care-lock.ts`)
+`localStorage grannytools.careMode` = `autonomo` (defecto) | `protegido`; `.source` = `local` | `family`. `setCareMode(mode, source)` emite el evento `grannytools:caremode`; `useCareLocked()` lo escucha (también `storage`). Consumidores: `citas.tsx` (guardas en `openNew`/`openEdit`, oculta botones y Personas, `fieldset disabled` en TasksPanel), `pastillas.tsx` (oculta «Añadir medicina»), selector en ajustes de `index.tsx`. La app Family deberá llamar a `setCareMode(..., "family")` al sincronizar.
