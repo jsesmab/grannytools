@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Plus, Trash2, CalendarDays, Repeat, Users, Pencil, Bell, UserPlus, ClipboardCheck } from "lucide-react";
 import { DEFAULT_REMIND_MIN } from "@/lib/reminders";
 import { TasksPanel } from "@/components/TasksPanel";
+import { useCareLocked } from "@/lib/care-lock";
 
 type View = "turnos" | "citas" | "tareas" | "personas";
 const VIEWS: View[] = ["turnos", "citas", "tareas", "personas"];
@@ -121,6 +122,7 @@ function todayISO() {
 
 function Citas() {
   const { edit: editId, view } = Route.useSearch();
+  const { locked } = useCareLocked();
   const tab = view ?? (editId ? "citas" : undefined);
   const navigate = useNavigate();
   const [people, setPeople] = useState<Person[]>([]);
@@ -176,6 +178,7 @@ function Citas() {
   };
 
   const openNew = (kind: Entry["kind"]) => {
+    if (locked) return;
     setEEditId(null);
     setEPerson(people[0]?.id ?? "");
     setEWho("");
@@ -192,6 +195,7 @@ function Citas() {
   };
 
   const openEdit = (e: Entry) => {
+    if (locked) return;
     setEEditId(e.id);
     setEPerson(e.personId ?? "");
     // Citas antiguas guardaban la persona: la mostramos como texto editable.
@@ -401,7 +405,7 @@ function Citas() {
 
         {(tab === "citas" || tab === "turnos") && (
           <section className="space-y-4">
-            <div className="grid gap-2">
+            {!locked && <div className="grid gap-2">
               {tab === "citas" ? (
               <button
                 onClick={() => openNew("fija")}
@@ -418,11 +422,11 @@ function Citas() {
                 <Repeat className="h-6 w-6" aria-hidden /> Nuevo turno
               </button>
               )}
-            </div>
+            </div>}
             {tab === "turnos" && people.length === 0 && (
               <p className="text-center text-muted-foreground">Primero añade personas en el apartado «Personas».</p>
             )}
-            <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>
+            {!locked && <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>}
 
             <div>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> {tab === "turnos" ? "Turnos de cada semana" : "Citas que se repiten"}</h2>
