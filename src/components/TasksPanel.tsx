@@ -7,7 +7,7 @@ const DAY_INDEX = [1, 2, 3, 4, 5, 6, 0];
 const uid = () => Math.random().toString(36).slice(2, 10);
 const input = "w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base";
 
-export function TasksPanel() {
+export function TasksPanel({ locked = false }: { locked?: boolean }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [status, setStatus] = useState<Record<string, TaskStatus>>({});
   const [open, setOpen] = useState(false);
@@ -52,9 +52,9 @@ export function TasksPanel() {
 
   return (
     <section className="space-y-4">
-      <button onClick={() => openForm()} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-success py-4 text-lg font-black text-success-foreground shadow active:scale-95">
+      {!locked && <button onClick={() => openForm()} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-success py-4 text-lg font-black text-success-foreground shadow active:scale-95">
         <Plus className="h-6 w-6" aria-hidden /> Nueva tarea
-      </button>
+      </button>}
 
       <div>
         <h2 className="mb-2 text-lg font-bold">Hoy</h2>
@@ -101,7 +101,8 @@ export function TasksPanel() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-end bg-foreground/50 p-2" role="dialog" aria-label="Tarea">
           <div className="max-h-[90dvh] w-full overflow-y-auto rounded-2xl bg-card p-3 shadow-xl">
-            <h2 className="mb-2 text-xl font-black">{editId ? "Modificar tarea" : "Nueva tarea"}</h2>
+            <h2 className="mb-2 text-xl font-black">{locked ? "Datos de la tarea" : editId ? "Modificar tarea" : "Nueva tarea"}</h2>
+            <fieldset disabled={locked} className="m-0 min-w-0 border-0 p-0">
             <label className="text-sm font-bold">¿Qué hay que hacer?</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Regar las plantas, caminar…" className={`mb-2 ${input}`} />
             <div className="mb-2 grid grid-cols-2 gap-2">
@@ -122,11 +123,16 @@ export function TasksPanel() {
             )}
             <label className="text-sm font-bold">Hora del aviso</label>
             <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={`mb-3 ${input}`} />
+            </fieldset>
+            {locked ? (
+              <button onClick={() => setOpen(false)} className="w-full rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Cerrar</button>
+            ) : (
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => setOpen(false)} className="rounded-xl bg-secondary py-3 text-lg font-bold text-secondary-foreground active:scale-95">Cancelar</button>
               <button onClick={save} className="rounded-xl bg-primary py-3 text-lg font-black text-primary-foreground active:scale-95">Guardar</button>
             </div>
-            {editId && (
+            )}
+            {editId && !locked && (
               <button onClick={() => remove(editId)} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-destructive py-3 text-lg font-bold text-destructive-foreground active:scale-95">
                 <Trash2 className="h-5 w-5" aria-hidden /> Borrar
               </button>

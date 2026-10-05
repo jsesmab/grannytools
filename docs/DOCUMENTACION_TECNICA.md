@@ -95,3 +95,4 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 
 ## Bloqueo de agenda (`src/lib/care-lock.ts`)
 `localStorage grannytools.careMode` = `autonomo` (defecto) | `protegido`; `.source` = `local` | `family`. `setCareMode(mode, source)` emite el evento `grannytools:caremode`; `useCareLocked()` lo escucha (también `storage`). Consumidores: `citas.tsx` (guardas en `openNew`/`openEdit`, oculta botones y Personas, `fieldset disabled` en TasksPanel), `pastillas.tsx` (oculta «Añadir medicina»), selector en ajustes de `index.tsx`. La app Family deberá llamar a `setCareMode(..., "family")` al sincronizar.
+En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario dentro de `<fieldset disabled>`, título «Datos de…», solo botón «Cerrar» (sin Guardar/Borrar). `TasksPanel` recibe `locked`.
