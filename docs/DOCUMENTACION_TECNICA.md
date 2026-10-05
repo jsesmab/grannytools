@@ -106,3 +106,11 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 - `getInvite(renew)`: invitación `{code, secret, expires}` (TTL 10 min) en `grannytools.link.invite`; payload QR v2 `{app, v:2, device, code, secret, exp}`. El servidor Family deberá validar secreto, caducidad y uso único.
 - Miembros en `grannytools.link.members`: `{id, name, role: "admin"|"consulta", at}`. API: `addFamilyMember` (consume la invitación), `setMemberRole`, `removeFamilyMember`; evento `grannytools:link`.
 - `/vincular` muestra QR, cuenta atrás, lista de miembros; botón de simulación solo en desarrollo.
+
+## 12. Grannytools Family (fase 1)
+- Backend en Lovable Cloud. Tablas: `profiles` (familiar: nombre, teléfono, foto), `elders` (persona mayor: nombre, `care_mode` + `care_mode_at`, `snapshot` jsonb, `last_sync`), `elder_members` (N:M familiar↔persona, `role` admin|consulta), `elder_devices` (secreto del teléfono, hash SHA-256, solo servidor), `elder_invites` (código GT-XXXXXX, caduca, uso único, solo servidor).
+- RLS: un familiar solo lee `elders`/`elder_members` de personas a las que está vinculado (`is_elder_member`). Las escrituras pasan por funciones de servidor en `src/lib/family.functions.ts`.
+- Teléfono del mayor (sin cuenta): `src/lib/family-sync.ts` → `deviceSync` cada 60 s, al abrir y al recuperar red; envía snapshot (medicinas, tomas, citas, turnos, tareas, contactos sin foto) y la invitación vigente; recibe modo de uso (gana el `care_mode_at` más reciente) y familiares. `deviceMemberAction` cambia rol/desvincula desde `/vincular`.
+- Family: `/auth` (email + Google), `_authenticated/` con `/family` (Mis personas), `/family/hoy` (panel de ordenador con todas las personas por hora y «Sin marcar»), `/family/persona/$id` (ficha, modo de uso, familia vinculada), `/family/vincular` (canjea código; el primero es Administrador), `/family/perfil`.
+- En `/family` y `/auth` el root no monta avisos, caídas, bienvenida ni sincronización del mayor.
+- Fase 2 pendiente: edición remota de citas/medicinas/tareas (cola de cambios hacia el teléfono), escáner QR con cámara.

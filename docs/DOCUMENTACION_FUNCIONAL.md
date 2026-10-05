@@ -93,3 +93,12 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 - El QR y el código corto son únicos para este teléfono y caducan a los 10 minutos; al usarse dejan de valer.
 - Pueden vincularse varios familiares. Cada uno tiene un perfil: **Administrador** (gestiona todo) o **Consultas** (solo ve, no modifica ni recibe avisos).
 - En «Familia vinculada» se cambia el perfil o se desvincula a cada persona.
+
+## Grannytools Family (fase 1)
+- El familiar o cuidador entra en la web Family con email o Google y completa su perfil (nombre, foto, teléfono).
+- Para vincular: en el teléfono del mayor, Ajustes → «Vincular con un familiar»; el familiar escribe el código en «Vincular». El primero es Administrador; los siguientes entran como Consultas.
+- Varios familiares pueden cuidar a una persona y un cuidador puede atender a muchas personas (pensado para residencias).
+- «Mis personas»: tarjetas con lo próximo de cada uno. «Panel del día» (ideal en ordenador): todas las citas, turnos, medicinas y tareas de todas las personas, hora a hora, con lo que está sin marcar.
+- Ficha de la persona: agenda por día, medicinas, tareas, contactos, modo Autónomo/Protegido (solo Administrador) y familia vinculada.
+- El teléfono del mayor sigue funcionando sin internet; se pone al día cuando tiene conexión.
+- Próxima fase: crear y modificar citas, medicinas y tareas desde Family.

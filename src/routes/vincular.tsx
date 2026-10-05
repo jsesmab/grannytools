@@ -2,10 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ArrowLeft } from "lucide-react";
-import {
-  addFamilyMember, getFamilyMembers, getInvite, linkPayload, LINK_EVT, removeFamilyMember,
-  setMemberRole, type FamilyMember, type Invite,
-} from "@/lib/family-link";
+import { getFamilyMembers, getInvite, linkPayload, LINK_EVT, type FamilyMember, type Invite } from "@/lib/family-link";
+import { memberAction, syncNow } from "@/lib/family-sync";
 
 export const Route = createFileRoute("/vincular")({
   head: () => ({
@@ -27,14 +25,18 @@ function Vincular() {
   const [inv, setInv] = useState<Invite | null>(null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [now, setNow] = useState(Date.now());
-  const refresh = (renew = false) => { setInv(getInvite(renew)); setMembers(getFamilyMembers()); };
+  const refresh = (renew = false) => { setInv(getInvite(renew)); setMembers(getFamilyMembers()); if (renew) void syncNow(); };
+  const act = (id: string, a: "admin" | "consulta" | "remove") =>
+    memberAction(id, a).catch(() => alert("Necesitas conexión a internet para cambiar esto."));
 
   useEffect(() => {
     refresh();
     const r = () => refresh();
     window.addEventListener(LINK_EVT, r);
     const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => { window.removeEventListener(LINK_EVT, r); clearInterval(t); };
+    void syncNow();
+    const s = setInterval(() => void syncNow(), 5000); // aparece enseguida quien se vincula
+    return () => { window.removeEventListener(LINK_EVT, r); clearInterval(t); clearInterval(s); };
   }, []);
 
   useEffect(() => { if (inv && inv.expires < now) refresh(true); }, [now, inv]);
@@ -72,27 +74,21 @@ function Vincular() {
                 <p className="text-xl font-bold">{m.name}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {(["admin", "consulta"] as const).map((r) => (
-                    <button key={r} onClick={() => setMemberRole(m.id, r)}
+                    <button key={r} onClick={() => act(m.id, r)}
                       className={`rounded-xl py-3 text-base font-bold ${m.role === r ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
                       {ROLE_LABEL[r]}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => { if (confirm(`¿Desvincular a ${m.name}?`)) removeFamilyMember(m.id); }}
+                <button onClick={() => { if (confirm(`¿Desvincular a ${m.name}?`)) act(m.id, "remove"); }}
                   className="w-full rounded-xl bg-destructive py-3 text-lg font-bold text-destructive-foreground">
                   Desvincular
                 </button>
               </div>
             ))}
             <p className="text-sm text-muted-foreground">Administrador gestiona todo. Consultas solo ve la información y no recibe avisos.</p>
-            {import.meta.env.DEV && (
-              <button onClick={() => { const n = prompt("Nombre del familiar (prueba)"); if (n) addFamilyMember(n, "consulta"); }}
-                className="w-full rounded-xl bg-secondary py-3 text-base font-bold text-secondary-foreground">
-                Simular familiar vinculado (prueba)
-              </button>
-            )}
-          </section>
-          <p className="text-xs text-muted-foreground">Funciona sin internet; los cambios del familiar llegarán cuando haya conexión.</p>
+                      </section>
+          <p className="text-xs text-muted-foreground">Para vincular hace falta internet. Después, Grannytools funciona sin conexión y se pone al día cuando la recupera.</p>
         </div>
       )}
     </main>

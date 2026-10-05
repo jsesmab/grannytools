@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CitasRouteImport } from './routes/citas'
 import { Route as LupaRouteImport } from './routes/lupa'
 import { Route as OirRouteImport } from './routes/oir'
@@ -17,10 +19,24 @@ import { Route as PanicoRouteImport } from './routes/panico'
 import { Route as PastillasRouteImport } from './routes/pastillas'
 import { Route as UbicacionRouteImport } from './routes/ubicacion'
 import { Route as VincularRouteImport } from './routes/vincular'
+import { Route as AuthenticatedFamilyIndexRouteImport } from './routes/_authenticated/family.index'
+import { Route as AuthenticatedFamilyHoyRouteImport } from './routes/_authenticated/family.hoy'
+import { Route as AuthenticatedFamilyPerfilRouteImport } from './routes/_authenticated/family.perfil'
+import { Route as AuthenticatedFamilyVincularRouteImport } from './routes/_authenticated/family.vincular'
+import { Route as AuthenticatedFamilyPersonaIdRouteImport } from './routes/_authenticated/family.persona.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CitasRoute = CitasRouteImport.update({
@@ -58,9 +74,39 @@ const VincularRoute = VincularRouteImport.update({
   path: '/vincular',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedFamilyIndexRoute =
+  AuthenticatedFamilyIndexRouteImport.update({
+    id: '/family/',
+    path: '/family/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFamilyHoyRoute = AuthenticatedFamilyHoyRouteImport.update({
+  id: '/family/hoy',
+  path: '/family/hoy',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFamilyPerfilRoute =
+  AuthenticatedFamilyPerfilRouteImport.update({
+    id: '/family/perfil',
+    path: '/family/perfil',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFamilyVincularRoute =
+  AuthenticatedFamilyVincularRouteImport.update({
+    id: '/family/vincular',
+    path: '/family/vincular',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFamilyPersonaIdRoute =
+  AuthenticatedFamilyPersonaIdRouteImport.update({
+    id: '/family/persona/$id',
+    path: '/family/persona/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
@@ -68,9 +114,15 @@ export interface FileRoutesByFullPath {
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
+  '/family/hoy': typeof AuthenticatedFamilyHoyRoute
+  '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/family/vincular': typeof AuthenticatedFamilyVincularRoute
+  '/family/': typeof AuthenticatedFamilyIndexRoute
+  '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
@@ -78,10 +130,17 @@ export interface FileRoutesByTo {
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
+  '/family/hoy': typeof AuthenticatedFamilyHoyRoute
+  '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/family/vincular': typeof AuthenticatedFamilyVincularRoute
+  '/family': typeof AuthenticatedFamilyIndexRoute
+  '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
@@ -89,11 +148,17 @@ export interface FileRoutesById {
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
+  '/_authenticated/family/hoy': typeof AuthenticatedFamilyHoyRoute
+  '/_authenticated/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/_authenticated/family/vincular': typeof AuthenticatedFamilyVincularRoute
+  '/_authenticated/family/': typeof AuthenticatedFamilyIndexRoute
+  '/_authenticated/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/citas'
     | '/lupa'
     | '/oir'
@@ -101,9 +166,15 @@ export interface FileRouteTypes {
     | '/pastillas'
     | '/ubicacion'
     | '/vincular'
+    | '/family/hoy'
+    | '/family/perfil'
+    | '/family/vincular'
+    | '/family/'
+    | '/family/persona/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/auth'
     | '/citas'
     | '/lupa'
     | '/oir'
@@ -111,9 +182,16 @@ export interface FileRouteTypes {
     | '/pastillas'
     | '/ubicacion'
     | '/vincular'
+    | '/family/hoy'
+    | '/family/perfil'
+    | '/family/vincular'
+    | '/family'
+    | '/family/persona/$id'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
+    | '/auth'
     | '/citas'
     | '/lupa'
     | '/oir'
@@ -121,10 +199,17 @@ export interface FileRouteTypes {
     | '/pastillas'
     | '/ubicacion'
     | '/vincular'
+    | '/_authenticated/family/hoy'
+    | '/_authenticated/family/perfil'
+    | '/_authenticated/family/vincular'
+    | '/_authenticated/family/'
+    | '/_authenticated/family/persona/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   CitasRoute: typeof CitasRoute
   LupaRoute: typeof LupaRoute
   OirRoute: typeof OirRoute
@@ -141,6 +226,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/citas': {
@@ -192,11 +291,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VincularRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/family/': {
+      id: '/_authenticated/family/'
+      path: '/family'
+      fullPath: '/family/'
+      preLoaderRoute: typeof AuthenticatedFamilyIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/family/hoy': {
+      id: '/_authenticated/family/hoy'
+      path: '/family/hoy'
+      fullPath: '/family/hoy'
+      preLoaderRoute: typeof AuthenticatedFamilyHoyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/family/perfil': {
+      id: '/_authenticated/family/perfil'
+      path: '/family/perfil'
+      fullPath: '/family/perfil'
+      preLoaderRoute: typeof AuthenticatedFamilyPerfilRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/family/vincular': {
+      id: '/_authenticated/family/vincular'
+      path: '/family/vincular'
+      fullPath: '/family/vincular'
+      preLoaderRoute: typeof AuthenticatedFamilyVincularRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/family/persona/$id': {
+      id: '/_authenticated/family/persona/$id'
+      path: '/family/persona/$id'
+      fullPath: '/family/persona/$id'
+      preLoaderRoute: typeof AuthenticatedFamilyPersonaIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedFamilyHoyRoute: typeof AuthenticatedFamilyHoyRoute
+  AuthenticatedFamilyPerfilRoute: typeof AuthenticatedFamilyPerfilRoute
+  AuthenticatedFamilyVincularRoute: typeof AuthenticatedFamilyVincularRoute
+  AuthenticatedFamilyIndexRoute: typeof AuthenticatedFamilyIndexRoute
+  AuthenticatedFamilyPersonaIdRoute: typeof AuthenticatedFamilyPersonaIdRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedFamilyHoyRoute: AuthenticatedFamilyHoyRoute,
+  AuthenticatedFamilyPerfilRoute: AuthenticatedFamilyPerfilRoute,
+  AuthenticatedFamilyVincularRoute: AuthenticatedFamilyVincularRoute,
+  AuthenticatedFamilyIndexRoute: AuthenticatedFamilyIndexRoute,
+  AuthenticatedFamilyPersonaIdRoute: AuthenticatedFamilyPersonaIdRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   CitasRoute: CitasRoute,
   LupaRoute: LupaRoute,
   OirRoute: OirRoute,
