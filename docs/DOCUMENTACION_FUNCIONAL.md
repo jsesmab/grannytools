@@ -57,7 +57,9 @@ Muestra dónde estás y permite enviarlo a un familiar.
 - Cada medicina con sus horas de toma, fecha de inicio y fin, o «Siempre» para crónicos.
 - Las terminadas pasan a «Ver histórico».
 - Aviso con sonido, voz y vibración a la hora de cada toma.
-- Cada hora de toma es un botón: al tocarlo se marca «tomada» (verde). El aviso tiene botones «Tomada» y «Luego». Las tomas ya hechas no cuentan en el número del icono.
+- Pantalla en forma de pastillero del día: una línea por hora (de mañana a noche) con las medicinas de esa hora; si dos coinciden salen juntas.
+- Cada medicina de una hora es un botón grande: «Tomar» → al tocarlo pasa a verde «Tomada»; otro toque la desmarca. El aviso tiene «Tomada» y «Luego». Las tomas hechas no cuentan en el número del icono.
+- Sin botón de borrar ni campanita: borrar medicinas quedará para la versión familiar; los avisos se activan en la rueda dentada de inicio.
 - La propia aplicación avisa a la hora de cada toma; no hace falta usar ningún calendario del móvil.
 
 ## 10. Citas, turnos y tareas
