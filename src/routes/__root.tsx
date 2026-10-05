@@ -5,6 +5,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -17,6 +18,8 @@ import { FallGuard } from "../lib/fall-guard";
 import { TaskAlert } from "../lib/tasks";
 import { usePrefs } from "../hooks/use-prefs";
 import { Onboarding } from "../components/Onboarding";
+import { FamilySync } from "../lib/family-sync";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -130,14 +133,30 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  // Family (panel del familiar/cuidador) no lleva avisos, caídas ni bienvenida del mayor.
+  const isFamily = path.startsWith("/family") || path.startsWith("/auth");
   usePrefs();
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      router.invalidate();
+      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppReminders />
-      <FallGuard />
-      <TaskAlert />
-      <Onboarding />
+      {!isFamily && (<>
+        <AppReminders />
+        <FallGuard />
+        <TaskAlert />
+        <Onboarding />
+        <FamilySync />
+      </>)}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
