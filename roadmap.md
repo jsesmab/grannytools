@@ -9,3 +9,5 @@
 - [x] Dejar preparado Capacitor (llamada y SMS directos en Android)
 - [ ] Publicar y probar en un móvil real
 - [ ] Decidir: widget grande para la versión de tiendas
+- [x] Family fase 1: cuentas, vinculación por código, sincronización, Mis personas, ficha, panel del día en ordenador
+- [ ] Family fase 2: crear/modificar citas, medicinas y tareas desde Family; escáner QR con cámara
