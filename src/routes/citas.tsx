@@ -178,6 +178,7 @@ function Citas() {
   const openNew = (kind: Entry["kind"]) => {
     setEEditId(null);
     setEPerson(people[0]?.id ?? "");
+    setEWho("");
     setETitle("");
     setEKind(kind);
     setERepeat(kind === "fija" ? "once" : "weekly");
@@ -192,7 +193,9 @@ function Citas() {
 
   const openEdit = (e: Entry) => {
     setEEditId(e.id);
-    setEPerson(e.personId);
+    setEPerson(e.personId ?? "");
+    // Citas antiguas guardaban la persona: la mostramos como texto editable.
+    setEWho(e.who ?? (e.personId ? personById[e.personId]?.name ?? "" : ""));
     setETitle(e.title);
     setEKind(e.kind);
     setERepeat(e.kind === "periodica" || !e.date ? "weekly" : "once");
@@ -212,13 +215,14 @@ function Citas() {
   };
 
   const saveEntry = () => {
-    if (!ePerson) return;
+    if (eKind === "periodica" && !ePerson) return;
     const repeats = eKind === "periodica" || eRepeat === "weekly";
     if (!repeats && !eDate) return;
     if (repeats && eDays.length === 0) return;
     const base: Entry = {
       id: eEditId ?? uid(),
-      personId: ePerson,
+      ...(eKind === "periodica" ? { personId: ePerson } : {}),
+      ...(eKind === "fija" ? { who: eWho.trim() || undefined } : {}),
       title: eTitle.trim() || (eKind === "fija" ? "Cita" : "Turno"),
       kind: eKind,
       start: eStart,
@@ -231,6 +235,9 @@ function Citas() {
     setEntries(next); save(ENTRIES_KEY, next);
     closeForm();
   };
+
+  // Quien aparece en pantalla: texto libre de la cita o, en turnos, la persona elegida.
+  const entryWho = (e: Entry) => e.who ?? (e.personId ? personById[e.personId]?.name : undefined) ?? "";
 
   const removeEntry = (id: string) => {
     const next = entries.filter((e) => e.id !== id);
