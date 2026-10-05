@@ -101,3 +101,8 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 - `src/components/Onboarding.tsx` (montado en root): overlay si falta `localStorage grannytools.onboarded`. Pide permisos con gesto del usuario (geolocation, Notification, getUserMedia, `requestMotionPermission` + `setFallEnabled`). Guarda `grannytools.username`, contacto en `grannytools.contacts` y `setEmergencyPhone`.
 - `src/lib/family-link.ts`: `grannytools.deviceId` (UUID), `grannytools.link.code` (`GT-` + 6 chars), `grannytools.link.family` `{name, at}`. Payload QR: `{app:"grannytools",v:1,device,code}`. La app Family/sincronización deberá llamar a `markLinked(nombre)`; `unlink()` regenera código. Evento `grannytools:link`.
 - `src/routes/vincular.tsx`: QR con `qrcode.react`. Aún sin backend de emparejamiento.
+
+## Vinculación Family (src/lib/family-link.ts)
+- `getInvite(renew)`: invitación `{code, secret, expires}` (TTL 10 min) en `grannytools.link.invite`; payload QR v2 `{app, v:2, device, code, secret, exp}`. El servidor Family deberá validar secreto, caducidad y uso único.
+- Miembros en `grannytools.link.members`: `{id, name, role: "admin"|"consulta", at}`. API: `addFamilyMember` (consume la invitación), `setMemberRole`, `removeFamilyMember`; evento `grannytools:link`.
+- `/vincular` muestra QR, cuenta atrás, lista de miembros; botón de simulación solo en desarrollo.
