@@ -8,6 +8,7 @@ Grannytools reúne en un solo móvil ayudas prácticas: oír mejor, ver mejor, p
 ## 2. Pantalla de inicio
 - **Saludo inicial**: al abrir la app, una voz en español dice la hora, el tiempo (temperatura máxima y mínima) y las citas del día con acompañante. Solo suena al abrir la app, no al volver de otra pantalla. Tocar el botón «Saludo» mientras habla lo para; un segundo toque lo vuelve a empezar. Tras el saludo aparece el botón «Ver citas de hoy», que abre directamente las citas (ya no se listan en la pantalla principal). Si no hay internet, usa la previsión guardada del mismo día.
 - **Botones** (en este orden): Contactos y Ubicación · Citas y Pastillas · Oír y Lupa.
+- **Pulsación visible**: todos los botones son sólidos y elevados, como una tecla física. Al tocarlos bajan y pierden profundidad para confirmar claramente la pulsación.
 - **Contador en el icono**: número de citas y tomas de pastillas que quedan hoy (solo con la app instalada en la pantalla de inicio).
 
 ## 3. Rueda dentada (Modo ajustes)

@@ -89,4 +89,5 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 ## 11. Convenciones
 - Documentación funcional y técnica se actualizan en el mismo cambio que el código.
 - Nada de colores fijos; tokens semánticos.
+- Los botones y enlaces con fondo reciben globalmente volumen 3D y desplazamiento de pulsación desde `src/styles.css`; `data-flat-button` queda reservado para superficies interactivas que no deban parecer una tecla.
 - Lectura de `localStorage` siempre con try/catch y fuera del render SSR.
