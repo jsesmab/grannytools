@@ -88,3 +88,8 @@ Solo la primera vez: 1) «¿Cómo te llamas?»; 2) permisos explicados uno a uno
 
 ## Vincular con un familiar
 Rueda dentada → «Vincular con un familiar» (en cualquier momento, también tras empezar solo). Muestra un QR grande y un código corto (GT-XXXXXX) para la futura app Grannytools Family. «Generar código nuevo» y, si está vinculado, «Desvincular». La app sigue funcionando igual sin internet.
+
+## Vinculación con varios familiares
+- El QR y el código corto son únicos para este teléfono y caducan a los 10 minutos; al usarse dejan de valer.
+- Pueden vincularse varios familiares. Cada uno tiene un perfil: **Administrador** (gestiona todo) o **Consultas** (solo ve, no modifica ni recibe avisos).
+- En «Familia vinculada» se cambia el perfil o se desvincula a cada persona.

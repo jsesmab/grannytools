@@ -1,12 +1,21 @@
 /**
- * Vinculación con la futura app Family. Todo local: genera un identificador de
- * dispositivo y un código corto. La app Family, al escanear el QR, deberá
- * registrar el vínculo y llamar a markLinked(nombre). Sin servidor todavía.
+ * Vinculación con la futura app Family (todo local, sin servidor todavía).
+ * - Cada teléfono tiene un deviceId único.
+ * - El QR es una invitación temporal (caduca a los 10 min) con un secreto aleatorio:
+ *   Family deberá validarla en el servidor; una invitación usada o caducada no sirve.
+ * - Varios familiares pueden vincularse, cada uno con rol "admin" o "consulta".
+ *   "consulta" solo ve datos; no modifica ni recibe avisos.
+ * Family llamará a addFamilyMember(nombre, rol) al completar la vinculación.
  */
 const DEVICE_KEY = "grannytools.deviceId";
-const CODE_KEY = "grannytools.link.code";
-const LINK_KEY = "grannytools.link.family";
+const INVITE_KEY = "grannytools.link.invite";
+const MEMBERS_KEY = "grannytools.link.members";
 export const LINK_EVT = "grannytools:link";
+export const INVITE_TTL_MS = 10 * 60 * 1000;
+
+export type FamilyRole = "admin" | "consulta";
+export type FamilyMember = { id: string; name: string; role: FamilyRole; at: string };
+export type Invite = { code: string; secret: string; expires: number };
 
 const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const rand = (n: number) => {
@@ -14,6 +23,7 @@ const rand = (n: number) => {
   crypto.getRandomValues(a);
   return Array.from(a, (b) => ALPHA[b % ALPHA.length]).join("");
 };
+const emit = () => window.dispatchEvent(new Event(LINK_EVT));
 
 export function getDeviceId(): string {
   let id = localStorage.getItem(DEVICE_KEY);
@@ -21,27 +31,36 @@ export function getDeviceId(): string {
   return id;
 }
 
-export function getLinkCode(renew = false): string {
-  let c = renew ? null : localStorage.getItem(CODE_KEY);
-  if (!c) { c = `GT-${rand(6)}`; localStorage.setItem(CODE_KEY, c); }
-  return c;
+export function getInvite(renew = false): Invite {
+  let inv: Invite | null = null;
+  try { inv = JSON.parse(localStorage.getItem(INVITE_KEY) ?? "null"); } catch { /* ignore */ }
+  if (renew || !inv || inv.expires < Date.now()) {
+    inv = { code: `GT-${rand(6)}`, secret: rand(24), expires: Date.now() + INVITE_TTL_MS };
+    localStorage.setItem(INVITE_KEY, JSON.stringify(inv));
+  }
+  return inv;
 }
 
-export function linkPayload(): string {
-  return JSON.stringify({ app: "grannytools", v: 1, device: getDeviceId(), code: getLinkCode() });
+export function linkPayload(inv = getInvite()): string {
+  return JSON.stringify({ app: "grannytools", v: 2, device: getDeviceId(), code: inv.code, secret: inv.secret, exp: inv.expires });
 }
 
-export function getLinkedFamily(): { name: string; at: string } | null {
-  try { return JSON.parse(localStorage.getItem(LINK_KEY) ?? "null"); } catch { return null; }
+export function getFamilyMembers(): FamilyMember[] {
+  try { return JSON.parse(localStorage.getItem(MEMBERS_KEY) ?? "[]"); } catch { return []; }
 }
 
-export function markLinked(name: string) {
-  localStorage.setItem(LINK_KEY, JSON.stringify({ name, at: new Date().toISOString() }));
-  window.dispatchEvent(new Event(LINK_EVT));
+const save = (m: FamilyMember[]) => { localStorage.setItem(MEMBERS_KEY, JSON.stringify(m)); emit(); };
+
+/** Llamado por Family al validar la invitación. La invitación se consume. */
+export function addFamilyMember(name: string, role: FamilyRole) {
+  save([...getFamilyMembers(), { id: crypto.randomUUID(), name, role, at: new Date().toISOString() }]);
+  localStorage.removeItem(INVITE_KEY);
 }
 
-export function unlink() {
-  localStorage.removeItem(LINK_KEY);
-  getLinkCode(true);
-  window.dispatchEvent(new Event(LINK_EVT));
+export function setMemberRole(id: string, role: FamilyRole) {
+  save(getFamilyMembers().map((m) => (m.id === id ? { ...m, role } : m)));
+}
+
+export function removeFamilyMember(id: string) {
+  save(getFamilyMembers().filter((m) => m.id !== id));
 }
