@@ -4,3 +4,5 @@
 
 - Button styling is global in src/styles.css: controls use a solid 3D resting state and visibly depress on activation so new actions inherit accessible feedback.
 - Agenda lock state lives in src/lib/care-lock.ts; screens read it via useCareLocked so a future Family sync can toggle it in one place.
+- Family data sync: the elder phone authenticates with a device secret (no account) and pushes a full snapshot via `deviceSync`; Family reads it through RLS — keeps the elder app offline-first.
+- Family writes go through server functions that verify the caller's admin role; tables are read-only for clients.
