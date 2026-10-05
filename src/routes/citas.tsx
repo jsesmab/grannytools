@@ -32,7 +32,8 @@ export const Route = createFileRoute("/citas")({
 type Person = { id: string; name: string; role: "cuidadora" | "familiar" | "medico"; color: string };
 type Entry = {
   id: string;
-  personId: string;
+  personId?: string; // persona del turno (solo turnos)
+  who?: string; // con quién es la cita (texto libre, solo citas)
   title: string;
   kind: "fija" | "periodica"; // fija = cita puntual · periodica = turno
   date?: string; // cita
@@ -134,6 +135,7 @@ function Citas() {
   const [eOpen, setEOpen] = useState(false);
   const [eEditId, setEEditId] = useState<string | null>(null);
   const [ePerson, setEPerson] = useState("");
+  const [eWho, setEWho] = useState("");
   const [eTitle, setETitle] = useState("");
   const [eKind, setEKind] = useState<Entry["kind"]>("periodica");
   const [eDate, setEDate] = useState("");
@@ -176,6 +178,7 @@ function Citas() {
   const openNew = (kind: Entry["kind"]) => {
     setEEditId(null);
     setEPerson(people[0]?.id ?? "");
+    setEWho("");
     setETitle("");
     setEKind(kind);
     setERepeat(kind === "fija" ? "once" : "weekly");
@@ -190,7 +193,9 @@ function Citas() {
 
   const openEdit = (e: Entry) => {
     setEEditId(e.id);
-    setEPerson(e.personId);
+    setEPerson(e.personId ?? "");
+    // Citas antiguas guardaban la persona: la mostramos como texto editable.
+    setEWho(e.who ?? (e.personId ? personById[e.personId]?.name ?? "" : ""));
     setETitle(e.title);
     setEKind(e.kind);
     setERepeat(e.kind === "periodica" || !e.date ? "weekly" : "once");
@@ -210,13 +215,14 @@ function Citas() {
   };
 
   const saveEntry = () => {
-    if (!ePerson) return;
+    if (eKind === "periodica" && !ePerson) return;
     const repeats = eKind === "periodica" || eRepeat === "weekly";
     if (!repeats && !eDate) return;
     if (repeats && eDays.length === 0) return;
     const base: Entry = {
       id: eEditId ?? uid(),
-      personId: ePerson,
+      ...(eKind === "periodica" ? { personId: ePerson } : {}),
+      ...(eKind === "fija" ? { who: eWho.trim() || undefined } : {}),
       title: eTitle.trim() || (eKind === "fija" ? "Cita" : "Turno"),
       kind: eKind,
       start: eStart,
@@ -229,6 +235,9 @@ function Citas() {
     setEntries(next); save(ENTRIES_KEY, next);
     closeForm();
   };
+
+  // Quien aparece en pantalla: texto libre de la cita o, en turnos, la persona elegida.
+  const entryWho = (e: Entry) => e.who ?? (e.personId ? personById[e.personId]?.name : undefined) ?? "";
 
   const removeEntry = (id: string) => {
     const next = entries.filter((e) => e.id !== id);
@@ -269,12 +278,12 @@ function Citas() {
                 <button
                   key={e.id}
                   onClick={() => openEdit(e)}
-                  title={`${personById[e.personId]?.name} · ${e.start}–${e.end} · ${e.title}`}
-                  className={`absolute top-0 flex h-full items-center overflow-hidden rounded-lg px-1 text-left text-white active:scale-[0.98] ${personById[e.personId]?.color ?? "bg-primary"}`}
+                  title={`${entryWho(e)} · ${e.start}–${e.end} · ${e.title}`}
+                  className={`absolute top-0 flex h-full items-center overflow-hidden rounded-lg px-1 text-left text-white active:scale-[0.98] ${personById[e.personId ?? ""]?.color ?? "bg-primary"}`}
                   style={{ left: `${(s / 1440) * 100}%`, width: `${Math.max(((en - s) / 1440) * 100, 4)}%` }}
                 >
                   <span className="truncate text-[11px] font-black leading-tight">
-                    {personById[e.personId]?.name}
+                    {entryWho(e) || e.title}
                     <span className="block text-[10px] font-normal opacity-90">{e.start}–{e.end}</span>
                   </span>
                 </button>
@@ -387,8 +396,7 @@ function Citas() {
               {tab === "citas" ? (
               <button
                 onClick={() => openNew("fija")}
-                disabled={people.length === 0}
-                className="flex items-center justify-center gap-2 rounded-2xl bg-warning py-4 text-lg font-black text-warning-foreground shadow active:scale-95 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-warning py-4 text-lg font-black text-warning-foreground shadow active:scale-95"
               >
                 <CalendarDays className="h-6 w-6" aria-hidden /> Nueva cita
               </button>
@@ -402,7 +410,7 @@ function Citas() {
               </button>
               )}
             </div>
-            {people.length === 0 && (
+            {tab === "turnos" && people.length === 0 && (
               <p className="text-center text-muted-foreground">Primero añade personas en el apartado «Personas».</p>
             )}
             <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>
@@ -439,9 +447,9 @@ function Citas() {
                             onClick={() => openEdit(e)}
                             className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-left text-sm font-bold text-secondary-foreground active:scale-[0.98]"
                           >
-                            <span className={`h-4 w-4 shrink-0 rounded-full ${personById[e.personId]?.color ?? "bg-primary"}`} />
+                            <span className={`h-4 w-4 shrink-0 rounded-full ${personById[e.personId ?? ""]?.color ?? "bg-primary"}`} />
                             <span className="flex-1 truncate">
-                              {e.start}–{e.end} · {e.title} · {personById[e.personId]?.name}
+                              {e.start}–{e.end} · {e.title}{entryWho(e) ? ` · ${entryWho(e)}` : ""}
                               {e.companion ? ` · con ${e.companion}` : ""}
                             </span>
                             <Pencil className="h-4 w-4 shrink-0" aria-hidden />
@@ -468,12 +476,26 @@ function Citas() {
                 <button onClick={() => setEKind("periodica")} className={`rounded-xl py-3 font-bold active:scale-95 ${eKind === "periodica" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>Turno</button>
               </div>
 
-              <label className="text-sm font-bold">{eKind === "fija" ? "¿Con quién es la cita?" : "Persona del turno"}</label>
-              <select value={ePerson} onChange={(e) => setEPerson(e.target.value)} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
-                {people.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+              {eKind === "fija" ? (
+                <>
+                  <label className="text-sm font-bold">¿Con quién es la cita?</label>
+                  <input
+                    value={eWho}
+                    onChange={(e) => setEWho(e.target.value)}
+                    placeholder="Cardiólogo, peluquería, María…"
+                    className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base"
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="text-sm font-bold">Persona del turno</label>
+                  <select value={ePerson} onChange={(e) => setEPerson(e.target.value)} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base">
+                    {people.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </>
+              )}
 
               <label className="text-sm font-bold">Descripción</label>
               <input value={eTitle} onChange={(e) => setETitle(e.target.value)} placeholder={eKind === "fija" ? "Cardiólogo, peluquería…" : "Turno de mañana…"} className="mb-2 w-full rounded-lg border-2 border-border bg-background px-3 py-2 text-base" />
