@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FamilyShell, StatusPill } from "@/components/FamilyShell";
 import { dayItems, eldersQuery, KIND_LABEL, membersQuery, syncLabel, ymd } from "@/lib/family-data";
 import { familyMemberAction, setElderCareMode } from "@/lib/family.functions";
@@ -39,7 +39,7 @@ function Ficha() {
   const memberAct = useServerFn(familyMemberAction);
   const [day, setDay] = useState(ymd());
   const [me, setMe] = useState<string>();
-  useState(() => { supabase.auth.getUser().then(({ data }) => setMe(data.user?.id)); });
+  useEffect(() => { supabase.auth.getUser().then(({ data }) => setMe(data.user?.id)); }, []);
 
   const e = elders.find((x) => x.id === id)!;
   const admin = e.role === "admin";
