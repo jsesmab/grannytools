@@ -14,13 +14,159 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      elder_devices: {
+        Row: {
+          created_at: string
+          device_id: string
+          elder_id: string
+          secret_hash: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          elder_id: string
+          secret_hash: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          elder_id?: string
+          secret_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elder_devices_elder_id_fkey"
+            columns: ["elder_id"]
+            isOneToOne: false
+            referencedRelation: "elders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elder_invites: {
+        Row: {
+          code: string
+          elder_id: string
+          expires_at: string
+          used_at: string | null
+        }
+        Insert: {
+          code: string
+          elder_id: string
+          expires_at: string
+          used_at?: string | null
+        }
+        Update: {
+          code?: string
+          elder_id?: string
+          expires_at?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elder_invites_elder_id_fkey"
+            columns: ["elder_id"]
+            isOneToOne: false
+            referencedRelation: "elders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elder_members: {
+        Row: {
+          created_at: string
+          elder_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          elder_id: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          elder_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elder_members_elder_id_fkey"
+            columns: ["elder_id"]
+            isOneToOne: false
+            referencedRelation: "elders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elders: {
+        Row: {
+          care_mode: string
+          care_mode_at: string
+          created_at: string
+          id: string
+          last_sync: string | null
+          name: string
+          snapshot: Json
+        }
+        Insert: {
+          care_mode?: string
+          care_mode_at?: string
+          created_at?: string
+          id?: string
+          last_sync?: string | null
+          name?: string
+          snapshot?: Json
+        }
+        Update: {
+          care_mode?: string
+          care_mode_at?: string
+          created_at?: string
+          id?: string
+          last_sync?: string | null
+          name?: string
+          snapshot?: Json
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string
+          id: string
+          phone: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id: string
+          phone?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_elder_member: {
+        Args: { _elder: string; _user: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
