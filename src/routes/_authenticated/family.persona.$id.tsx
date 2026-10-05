@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/family/persona/$id")({
     await context.queryClient.ensureQueryData(membersQuery(params.id));
   },
   component: Ficha,
-  errorComponent: ({ error }) => <p className="p-6">No se pudo cargar: {error.message}</p>,
+  errorComponent: ({ error }) => <p className="p-6">No se pudo cargar: {(error as Error).message}</p>,
   notFoundComponent: () => <p className="p-6">No tienes acceso a esta persona.</p>,
 });
 

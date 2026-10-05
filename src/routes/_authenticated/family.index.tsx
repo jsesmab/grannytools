@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/family/")({
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(eldersQuery),
   component: Personas,
-  errorComponent: ({ error }) => <p className="p-6">No se pudo cargar: {error.message}</p>,
+  errorComponent: ({ error }) => <p className="p-6">No se pudo cargar: {(error as Error).message}</p>,
   notFoundComponent: () => <p className="p-6">No encontrado</p>,
 });
 

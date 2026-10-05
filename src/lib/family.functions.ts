@@ -50,7 +50,7 @@ export const deviceSync = createServerFn({ method: "POST" })
     const { data: elder } = await db.from("elders").select("care_mode, care_mode_at").eq("id", elderId).single();
     let careMode = elder!.care_mode as "autonomo" | "protegido";
     let careModeAt = new Date(elder!.care_mode_at).getTime();
-    const patch: Record<string, unknown> = { name: data.name, snapshot: data.snapshot, last_sync: new Date().toISOString() };
+    const patch: { name: string; snapshot: any; last_sync: string; care_mode?: string; care_mode_at?: string } = { name: data.name, snapshot: data.snapshot, last_sync: new Date().toISOString() };
     if (data.careModeAt > careModeAt) {
       careMode = data.careMode; careModeAt = data.careModeAt;
       patch.care_mode = careMode; patch.care_mode_at = new Date(careModeAt).toISOString();
