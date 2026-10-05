@@ -78,6 +78,7 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 
 ## 9. Pastillas y citas
 - Pastillas: avisos con el reloj propio de la app (sin calendarios externos); tomas marcadas en `grannytools.meds.tomadas`; vencidas a histórico. En la app de tiendas los avisos con la app cerrada usarán notificaciones locales nativas.
+- Vista de Pastillas: cronograma lineal agrupando las tomas activas de hoy por hora (`Map<hora, Med[]>`, orden ascendente). Sin borrado ni botón de permiso de avisos en esta pantalla (borrado reservado a la futura versión familiar; permiso en Ajustes de inicio).
 - Citas: turnos por días/horario, citas fijas o recurrentes con acompañante y recordatorio; barras diarias con asignación de carriles para solapes; edición vía `?edit=<id>`.
 
 ## 9b. Tareas
