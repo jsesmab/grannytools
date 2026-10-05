@@ -544,6 +544,18 @@ function Home() {
             >
               Cómo se ve la aplicación
             </button>
+            <Link
+              to="/vincular"
+              className="block w-full rounded-2xl bg-card py-3 text-center text-lg font-bold shadow-sm"
+            >
+              Vincular con un familiar
+            </Link>
+            <button
+              onClick={() => { if (confirm("¿Volver a ver la bienvenida?")) { localStorage.removeItem("grannytools.onboarded"); window.location.reload(); } }}
+              className="w-full rounded-2xl bg-card py-3 text-lg font-bold shadow-sm"
+            >
+              Repetir bienvenida
+            </button>
           </div>
         )}
 

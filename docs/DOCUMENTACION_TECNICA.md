@@ -96,3 +96,8 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 ## Bloqueo de agenda (`src/lib/care-lock.ts`)
 `localStorage grannytools.careMode` = `autonomo` (defecto) | `protegido`; `.source` = `local` | `family`. `setCareMode(mode, source)` emite el evento `grannytools:caremode`; `useCareLocked()` lo escucha (también `storage`). Consumidores: `citas.tsx` (guardas en `openNew`/`openEdit`, oculta botones y Personas, `fieldset disabled` en TasksPanel), `pastillas.tsx` (oculta «Añadir medicina»), selector en ajustes de `index.tsx`. La app Family deberá llamar a `setCareMode(..., "family")` al sincronizar.
 En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario dentro de `<fieldset disabled>`, título «Datos de…», solo botón «Cerrar» (sin Guardar/Borrar). `TasksPanel` recibe `locked`.
+
+## Bienvenida y vinculación
+- `src/components/Onboarding.tsx` (montado en root): overlay si falta `localStorage grannytools.onboarded`. Pide permisos con gesto del usuario (geolocation, Notification, getUserMedia, `requestMotionPermission` + `setFallEnabled`). Guarda `grannytools.username`, contacto en `grannytools.contacts` y `setEmergencyPhone`.
+- `src/lib/family-link.ts`: `grannytools.deviceId` (UUID), `grannytools.link.code` (`GT-` + 6 chars), `grannytools.link.family` `{name, at}`. Payload QR: `{app:"grannytools",v:1,device,code}`. La app Family/sincronización deberá llamar a `markLinked(nombre)`; `unlink()` regenera código. Evento `grannytools:link`.
+- `src/routes/vincular.tsx`: QR con `qrcode.react`. Aún sin backend de emparejamiento.

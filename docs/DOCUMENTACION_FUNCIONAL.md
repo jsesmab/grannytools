@@ -82,3 +82,9 @@ Todos los datos se guardan solo en el móvil. No hay cuentas ni servidores. El t
 En la rueda dentada de inicio → «Cómo se ve la aplicación» hay dos botones: **Autónomo** (por defecto: la persona crea, modifica y borra citas, turnos, tareas y medicinas) y **🔒 Protegido** (solo consulta y marcar tomas/tareas; se ocultan «Nueva cita», «Nuevo turno», «Añadir medicina», Personas y la edición). Sin PIN. En la futura versión Family el familiar podrá cambiarlo a distancia.
 
 En modo Protegido, al tocar una cita, turno o tarea se ven todos sus datos (descripción, con quién, acompañante, fecha, horario, aviso) sin poder cambiarlos; solo aparece «Cerrar». «Hecha/No hecha» de tareas sigue activo.
+
+## Bienvenida (primera apertura)
+Solo la primera vez: 1) «¿Cómo te llamas?»; 2) permisos explicados uno a uno (ubicación, avisos, cámara y micrófono, sensor de caídas) con botón grande y «Volver a intentar» si se rechaza; 3) contacto de ayuda (nombre y teléfono, queda como contacto de alerta); 4) «Entrar a Grannytools» o «Vincular con un familiar». Se puede repetir desde la rueda dentada → «Repetir bienvenida».
+
+## Vincular con un familiar
+Rueda dentada → «Vincular con un familiar» (en cualquier momento, también tras empezar solo). Muestra un QR grande y un código corto (GT-XXXXXX) para la futura app Grannytools Family. «Generar código nuevo» y, si está vinculado, «Desvincular». La app sigue funcionando igual sin internet.

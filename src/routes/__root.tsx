@@ -16,6 +16,7 @@ import { AppReminders } from "../lib/reminders";
 import { FallGuard } from "../lib/fall-guard";
 import { TaskAlert } from "../lib/tasks";
 import { usePrefs } from "../hooks/use-prefs";
+import { Onboarding } from "../components/Onboarding";
 
 function NotFoundComponent() {
   return (
@@ -136,6 +137,7 @@ function RootComponent() {
       <AppReminders />
       <FallGuard />
       <TaskAlert />
+      <Onboarding />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
