@@ -41,6 +41,21 @@ export function getInvite(renew = false): Invite {
   return inv;
 }
 
+/** Invitación vigente sin crear una nueva (para la sincronización). */
+export function peekInvite(): Invite | null {
+  try {
+    const inv = JSON.parse(localStorage.getItem(INVITE_KEY) ?? "null") as Invite | null;
+    return inv && inv.expires > Date.now() ? inv : null;
+  } catch { return null; }
+}
+
+/** Lista de familiares que devuelve el servidor (fuente de verdad cuando hay conexión). */
+export function saveMembersFromServer(m: FamilyMember[]) {
+  const prev = localStorage.getItem(MEMBERS_KEY);
+  const next = JSON.stringify(m);
+  if (prev !== next) { localStorage.setItem(MEMBERS_KEY, next); emit(); }
+}
+
 export function linkPayload(inv = getInvite()): string {
   return JSON.stringify({ app: "grannytools", v: 2, device: getDeviceId(), code: inv.code, secret: inv.secret, exp: inv.expires });
 }
