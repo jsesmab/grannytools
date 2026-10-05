@@ -20,7 +20,12 @@ async function deviceElder(deviceId: string, secret: string, name = "") {
   }
   const { data: elder, error } = await supabaseAdmin.from("elders").insert({ name }).select("id").single();
   if (error) throw error;
-  await supabaseAdmin.from("elder_devices").insert({ device_id: deviceId, elder_id: elder.id, secret_hash: hash });
+  const { error: dErr } = await supabaseAdmin.from("elder_devices").insert({ device_id: deviceId, elder_id: elder.id, secret_hash: hash });
+  if (dErr) {
+    // Otra sincronización simultánea registró el teléfono: descartamos el duplicado.
+    await supabaseAdmin.from("elders").delete().eq("id", elder.id);
+    return deviceElder(deviceId, secret, name);
+  }
   return { db: supabaseAdmin, elderId: elder.id };
 }
 
