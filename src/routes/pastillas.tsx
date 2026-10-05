@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Pill, Plus, Trash2, Bell, BellOff, Check, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pill, Plus, Trash2, Check, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/pastillas")({
   head: () => ({
@@ -121,12 +121,6 @@ function Pastillas() {
     return () => clearInterval(id);
   }, [meds]);
 
-  const askNotif = async () => {
-    if (typeof Notification === "undefined") { setError("Este navegador no permite avisos."); return; }
-    const p = await Notification.requestPermission();
-    setNotifOn(p === "granted");
-    if (p !== "granted") setError("No se han permitido los avisos.");
-  };
 
   const addMed = () => {
     const n = name.trim();
@@ -165,16 +159,6 @@ function Pastillas() {
             <Pill className="h-6 w-6" aria-hidden />
           </div>
           <h1 className="text-xl font-bold">Pastillas</h1>
-          <button
-            onClick={askNotif}
-            aria-label="Permitir avisos"
-            className={[
-              "ml-auto flex h-10 w-10 items-center justify-center rounded-xl active:scale-[0.95]",
-              notifOn ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground",
-            ].join(" ")}
-          >
-            {notifOn ? <Bell className="h-5 w-5" aria-hidden /> : <BellOff className="h-5 w-5" aria-hidden />}
-          </button>
         </header>
 
         {due && (
@@ -198,81 +182,76 @@ function Pastillas() {
           </p>
         )}
 
-        <div className="mb-3 space-y-2">
-          {meds.map((m, i) => (isFinished(m) ? null : (
-            <div key={i} className="flex items-center gap-3 rounded-2xl bg-card p-3 shadow-sm">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning text-warning-foreground">
-                <Pill className="h-6 w-6" aria-hidden />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-lg font-black">{m.name}</div>
-                <div className="my-1 flex flex-wrap gap-1.5">
-                  {m.times.map((t) => {
-                    const on = !!taken[doseKey(m.name, t)];
-                    return (
-                      <button
-                        key={t}
-                        onClick={() => toggleDose(m.name, t)}
-                        aria-pressed={on}
-                        aria-label={`${m.name} a las ${t}: ${on ? "tomada" : "sin tomar"}`}
-                        className={[
-                          "flex items-center gap-1 rounded-xl px-3 py-2 text-base font-black active:scale-[0.95]",
-                          on ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground",
-                        ].join(" ")}
-                      >
-                        {on && <Check className="h-4 w-4" aria-hidden />}{t}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="text-xs font-bold text-muted-foreground">
-                  {m.until
-                    ? `Tratamiento: ${esDate(m.from ?? todayKey())} → ${esDate(m.until)}`
-                    : "Todos los días (crónico)"}
-                </div>
-              </div>
-              <button
-                onClick={() => save(meds.filter((_, idx) => idx !== i))}
-                aria-label={`Borrar ${m.name}`}
-                className="flex h-11 w-11 items-center justify-center rounded-xl bg-destructive text-destructive-foreground active:scale-[0.95]"
-              >
-                <Trash2 className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-          )))}
-        </div>
+        {(() => {
+          const slots = new Map<string, Med[]>();
+          for (const m of activeMeds) {
+            if (!isActiveToday(m)) continue;
+            for (const t of m.times) slots.set(t, [...(slots.get(t) ?? []), m]);
+          }
+          const now = new Date();
+          const hhmm = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+          const hours = [...slots.keys()].sort();
+          if (hours.length === 0) return null;
+          return (
+            <ol className="mb-3 space-y-2" aria-label="Tomas de hoy">
+              {hours.map((t) => (
+                <li key={t} className={["rounded-2xl bg-card p-3 shadow-sm", t < hhmm ? "" : "border-2 border-warning"].join(" ")}>
+                  <div className="mb-2 flex items-baseline gap-2">
+                    <span className="text-3xl font-black tabular-nums">{t}</span>
+                    <span className="text-sm font-bold text-muted-foreground">{t < hhmm ? "ya pasó" : "próxima"}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {slots.get(t)!.map((m) => {
+                      const on = !!taken[doseKey(m.name, t)];
+                      return (
+                        <button
+                          key={m.name}
+                          onClick={() => toggleDose(m.name, t)}
+                          aria-pressed={on}
+                          aria-label={`${m.name} a las ${t}: ${on ? "tomada, toca para desmarcar" : "sin tomar, toca para marcar"}`}
+                          className={[
+                            "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left",
+                            on ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground",
+                          ].join(" ")}
+                        >
+                          <Pill className="h-6 w-6 shrink-0" aria-hidden />
+                          <span className="min-w-0 flex-1 truncate text-lg font-black">{m.name}</span>
+                          <span className="flex items-center gap-1 text-base font-black">
+                            {on ? <><Check className="h-5 w-5" aria-hidden /> Tomada</> : "Tomar"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          );
+        })()}
 
         {finishedMeds.length > 0 && (
           <div className="mb-3">
             <button
               onClick={() => setShowHistory((v) => !v)}
-              className="w-full rounded-xl bg-secondary px-3 py-3 text-base font-bold text-secondary-foreground active:scale-[0.97]"
+              className="w-full rounded-xl bg-secondary px-3 py-3 text-base font-bold text-secondary-foreground"
             >
               {showHistory ? "Ocultar histórico" : `Ver histórico (${finishedMeds.length})`}
             </button>
             {showHistory && (
               <div className="mt-2 space-y-2">
-                {meds.map((m, i) => (isFinished(m) ? (
-                  <div key={i} className="flex items-center gap-3 rounded-2xl bg-card p-3 opacity-70 shadow-sm">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-base font-bold line-through">{m.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Terminado: {esDate(m.from ?? todayKey())} → {esDate(m.until!)}
-                      </div>
+                {finishedMeds.map((m, i) => (
+                  <div key={i} className="rounded-2xl bg-card p-3 opacity-70 shadow-sm">
+                    <div className="truncate text-base font-bold line-through">{m.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Terminado: {esDate(m.from ?? todayKey())} → {esDate(m.until!)}
                     </div>
-                    <button
-                      onClick={() => save(meds.filter((_, idx) => idx !== i))}
-                      aria-label={`Borrar del histórico ${m.name}`}
-                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-[0.95]"
-                    >
-                      <Trash2 className="h-5 w-5" aria-hidden />
-                    </button>
                   </div>
-                ) : null))}
+                ))}
               </div>
             )}
           </div>
         )}
+
 
 
 
