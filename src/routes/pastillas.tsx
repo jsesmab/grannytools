@@ -241,6 +241,22 @@ function Pastillas() {
           );
         })()}
 
+        {activeMeds.length > 0 && (
+          <section className="mb-3 rounded-2xl bg-card p-3 shadow-sm" aria-label="Mis tratamientos">
+            <h2 className="mb-2 text-lg font-black">Mis tratamientos</h2>
+            <ul className="space-y-2">
+              {activeMeds.map((m) => (
+                <li key={m.name} className="rounded-xl bg-secondary p-2 text-secondary-foreground">
+                  <span className="block text-lg font-black">{m.name}</span>
+                  <span className="block text-sm font-bold">Horas: {m.times.join(", ")}</span>
+                  <span className="block text-sm font-bold">{vigencia(m)}</span>
+                  {m.from && localDayKey(new Date()) < m.from && <span className="block text-sm">Empieza el {esDate(m.from)}</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {finishedMeds.length > 0 && (
           <div className="mb-3">
             <button
