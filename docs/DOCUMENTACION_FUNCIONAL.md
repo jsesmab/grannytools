@@ -77,7 +77,7 @@ Todos los datos se guardan solo en el móvil. No hay cuentas ni servidores. El t
 
 ## 13. Pendiente
 - Publicar y probar en un móvil real.
-- Decidir un widget grande para la versión de tiendas.
+- Probar el widget grande en móviles reales y completar la revisión de tiendas.
 
 ## Modo Autónomo / Protegido (agenda)
 En la rueda dentada de inicio → «Cómo se ve la aplicación» hay dos botones: **Autónomo** (por defecto: la persona crea, modifica y borra citas, turnos, tareas y medicinas) y **🔒 Protegido** (solo consulta y marcar tomas/tareas; se ocultan «Nueva cita», «Nuevo turno», «Añadir medicina», Personas y la edición). Sin PIN. En la futura versión Family el familiar podrá cambiarlo a distancia.
@@ -86,6 +86,18 @@ En modo Protegido, al tocar una cita, turno o tarea se ven todos sus datos (desc
 
 ## Bienvenida (primera apertura)
 Solo la primera vez: 1) «¿Cómo te llamas?»; 2) permisos explicados uno a uno (ubicación, avisos, cámara y micrófono, sensor de caídas) con botón grande y «Volver a intentar» si se rechaza; 3) contacto de ayuda (nombre y teléfono, queda como contacto de alerta); 4) «Entrar a Grannytools» o «Vincular con un familiar». Se puede repetir desde la rueda dentada → «Repetir bienvenida».
+
+### Icono gigante opcional
+- Durante el paso de permisos se pregunta si se quiere añadir un widget con **un único icono gigante de Grannytools**, no tres accesos separados. Tocar el icono abre Grannytools.
+- En Android se solicita al sistema añadirlo: hay que confirmar en la ventana del móvil. Se propone **4 × 4**; el tamaño exacto y la posibilidad de cambiarlo dependen del móvil y su pantalla de inicio.
+- En iPhone se utiliza el tamaño grande de Widgets (no una cuadrícula 4 × 4 exacta). Apple exige añadirlo manualmente desde la pantalla de inicio.
+- «Ahora no» permite continuar sin instalarlo. En navegador no existe un widget nativo: se informa de la alternativa de añadir la aplicación a la pantalla de inicio.
+
+### Dos aplicaciones de tienda
+- **Grannytools**: aplicación de la persona mayor, con el icono gigante y ayudas personales.
+- **Grannytools Family**: aplicación del familiar/cuidador, abre directamente Family y necesita conexión para su panel. No muestra la bienvenida ni los permisos del mayor.
+- Se preparan como productos separados. Precios, compra conjunta, cuentas de desarrollador y aprobación se configuran después en las tiendas; no se ha activado ningún cobro. Apple permite paquetes de apps de pago según sus condiciones; Google Play no ofrece un paquete equivalente automático.
+- El código del widget está preparado; aún requiere compilación y prueba en Android y crear la extensión correspondiente en iPhone. No están publicadas en tiendas.
 
 ## Vincular con un familiar
 Rueda dentada → «Vincular con un familiar» (en cualquier momento, también tras empezar solo). Muestra un QR grande y un código corto (GT-XXXXXX) para la futura app Grannytools Family. «Generar código nuevo» y, si está vinculado, «Desvincular». La app sigue funcionando igual sin internet.

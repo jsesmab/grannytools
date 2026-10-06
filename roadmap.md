@@ -7,8 +7,11 @@
 - [x] Simplificar Contactos: solo fotos y edición mediante un formulario único
 - [x] Mover activar y probar el aviso de caídas a los ajustes de Contactos en la pantalla principal
 - [x] Dejar preparado Capacitor (llamada y SMS directos en Android)
-- [ ] Publicar y probar en un móvil real
-- [ ] Decidir: widget grande para la versión de tiendas
+- [ ] Publicar y probar en un móvil real — requiere publicación autorizada y dispositivo real
+- [x] Preparar widget 4×4 de icono gigante único y ofrecerlo durante los permisos (alta web y preparación Android verificadas)
+- [x] Preparar identidades y empaquetado independientes Grannytools y Grannytools Family
+- [ ] Configurar y firmar extensión WidgetKit iPhone — requiere Xcode en Mac y cuenta del titular
+- [ ] Compilar, firmar y validar las dos apps para tiendas — requiere SDK Android/Xcode, cuentas del titular y pruebas nativas
 - [x] Family fase 1: cuentas, vinculación por código, sincronización, Mis personas, ficha, panel del día en ordenador
 - [x] Family fase 2: crear/modificar citas, medicinas y tareas desde Family; escáner QR con cámara
 

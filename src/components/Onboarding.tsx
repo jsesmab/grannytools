@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { loadContacts, saveContactsToStorage } from "@/lib/contacts";
 import { requestMotionPermission, setEmergencyPhone, setFallEnabled } from "@/lib/fall-detection";
+import { HomeWidgetOffer } from "@/components/HomeWidgetOffer";
 
 export const ONBOARDED_KEY = "grannytools.onboarded";
 const USER_NAME_KEY = "grannytools.username";
@@ -94,6 +95,7 @@ export function Onboarding() {
                 )}
               </div>
             ))}
+            <HomeWidgetOffer />
             <button className={`${big} bg-secondary text-secondary-foreground`} onClick={() => setStep(2)}>Siguiente</button>
           </>
         )}
