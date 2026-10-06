@@ -69,7 +69,7 @@ export const deviceSync = createServerFn({ method: "POST" })
     const { data: changes } = await (db as any).from("elder_changes").select("id, kind, op, item_key, item")
       .eq("elder_id", elderId).is("applied_at", null).order("created_at");
     if (changes?.length) await (db as any).from("elder_changes").update({ applied_at: new Date().toISOString() }).in("id", changes.map((c: any) => c.id));
-    return { careMode, careModeAt, members: await membersOf(db, elderId), changes: (changes ?? []) as { kind: "med" | "cita" | "task"; op: "upsert" | "delete"; item_key: string; item: Record<string, unknown> | null }[] };
+    return { careMode, careModeAt, members: await membersOf(db, elderId), changes: (changes ?? []) as { kind: "med" | "cita" | "task"; op: "upsert" | "delete"; item_key: string; item: Record<string, any> | null }[] };
   });
 
 /** El mayor gestiona desde su teléfono los familiares vinculados. */

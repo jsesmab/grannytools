@@ -65,7 +65,7 @@ export async function syncNow() {
     } });
     if (r.careModeAt > getCareModeAt() || r.careMode !== getCareMode()) setCareMode(r.careMode, "family", r.careModeAt);
     saveMembersFromServer(r.members as FamilyMember[]);
-    if (r.changes?.length) { applyChanges(r.changes); running = false; return syncNow(); }
+    if (r.changes?.length) { applyChanges(r.changes as Change[]); running = false; return syncNow(); }
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
   } catch (e) { console.warn("Sincronización Family pendiente", e); }
   finally { running = false; }
