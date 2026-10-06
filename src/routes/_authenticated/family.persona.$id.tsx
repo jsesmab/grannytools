@@ -6,6 +6,7 @@ import { FamilyShell, StatusPill } from "@/components/FamilyShell";
 import { dayItems, eldersQuery, KIND_LABEL, membersQuery, syncLabel, ymd } from "@/lib/family-data";
 import { familyMemberAction, setElderCareMode } from "@/lib/family.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { FamilyEditor } from "@/components/FamilyEditor";
 
 export const Route = createFileRoute("/_authenticated/family/persona/$id")({
   head: () => ({
@@ -91,22 +92,6 @@ function Ficha() {
         </section>
 
         <section className={card}>
-          <h2 className="text-xl font-extrabold">Medicinas</h2>
-          {(s.meds ?? []).length === 0 && <p className="text-muted-foreground">Sin medicinas.</p>}
-          {(s.meds ?? []).map((m, k) => (
-            <p key={k}><b>{m.name}</b> · {m.times.join(", ")}{m.until ? <span className="text-muted-foreground"> · hasta {m.until}</span> : null}</p>
-          ))}
-        </section>
-
-        <section className={card}>
-          <h2 className="text-xl font-extrabold">Tareas</h2>
-          {(s.tasks ?? []).length === 0 && <p className="text-muted-foreground">Sin tareas.</p>}
-          {(s.tasks ?? []).map((t) => (
-            <p key={t.id}><b>{t.time}</b> · {t.title} <span className="text-muted-foreground">{t.date ? `(${t.date})` : "(periódica)"}</span></p>
-          ))}
-        </section>
-
-        <section className={card}>
           <h2 className="text-xl font-extrabold">Contactos</h2>
           {(s.contacts ?? []).length === 0 && <p className="text-muted-foreground">Sin contactos.</p>}
           {(s.contacts ?? []).map((c, k) => (
@@ -135,7 +120,7 @@ function Ficha() {
           <p className="text-sm text-muted-foreground">Para añadir a alguien más, genera un código nuevo en el teléfono de la persona.</p>
         </section>
       </div>
-      <p className="text-sm text-muted-foreground">La edición de citas, medicinas y tareas desde Family llega en la siguiente fase.</p>
+      <FamilyEditor elderId={id} snapshot={s} admin={admin} />
     </FamilyShell>
   );
 }
