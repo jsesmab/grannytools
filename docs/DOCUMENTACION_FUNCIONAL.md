@@ -68,8 +68,8 @@ Muestra dónde estás y permite enviarlo a un familiar.
 - **Tareas**: puntuales (un día) o periódicas (días de la semana), con hora. A esa hora aparece un aviso a pantalla completa con voz y vibración y dos botones: **Hecha** / **No hecha**. En la lista de hoy se puede marcar o cambiar en cualquier momento.
 - Personas: cuidadoras, familiares y médicos, cada una con su color.
 - **Turnos** periódicos (días de la semana y horario) y **citas** fijas o recurrentes (p. ej. «Martes y viernes»), con acompañante. En las citas, «¿Con quién es la cita?» se escribe libremente (cardiólogo, peluquería…), sin elegir de una lista; la lista de personas solo se usa para los turnos.
-- Cada día se ve como una barra horaria con colores; los solapes se muestran en carriles.
-- Recuento de horas semanales. Tocar una barra la edita.
+- **Solo hoy** muestra cada cita, turno o tarea en una tarjeta grande con todos sus datos (horario, con quién, motivo, acompañante). **Semana completa** muestra los 7 días (lunes a domingo) con un contador; al tocar un día se despliega su detalle y al tocarlo otra vez se oculta. Se pueden abrir varios a la vez y desplazar la pantalla.
+- Recuento de horas semanales. Tocar una tarjeta la edita.
 - Aviso antes de cada cita.
 
 ## 12. Privacidad

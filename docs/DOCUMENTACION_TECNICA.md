@@ -116,3 +116,6 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 - Fase 2: `familyChange` (solo Administrador) guarda cambios en `elder_changes` (kind med|cita|task, op upsert|delete, item_key = name de medicina o id). `deviceSync` los entrega una vez (marca `applied_at`) y `applyChanges` en `family-sync.ts` los escribe en localStorage y vuelve a sincronizar. UI: `src/components/FamilyEditor.tsx` en la ficha (pendientes visibles). Escáner QR: `src/components/QrScanner.tsx` (jsqr, cámara trasera) en `/family/vincular`.
 - Vista hoy/semana: estado local `range` en `src/routes/citas.tsx` (RangeToggle) y `src/components/TasksPanel.tsx`; por defecto "hoy".
 - Huella / Face ID (Family): `src/lib/biometrics.ts`. Interruptor en `/family/perfil` (`grannytools.family.biometric`); `FamilyShell` muestra pantalla de bloqueo si está activado y no se ha desbloqueado en esta apertura (`sessionStorage grannytools.family.unlocked`). La sesión sigue siendo la de Lovable Cloud; la huella solo desbloquea. Solo en app nativa (plugin BiometricAuth). Guía en `docs/CAPACITOR.md` §6.
+
+## Vista de agenda (citas.tsx / TasksPanel.tsx)
+- Sin barras horarias: `Timeline` en citas.tsx ahora pinta tarjetas detalladas. Semana = lunes a domingo de la semana actual, estado `openDays` (ISO) para desplegar varios días.
