@@ -17,3 +17,6 @@
 - [x] Acceso biométrico (huella / Face ID) en Family, preparado para tiendas
 - [x] Family fase 2: crear/editar citas, medicinas y tareas + escáner QR
 - [x] Sync cada 2 h en reposo + inmediata al abrir/marcar; Panel del día: solo Citas por defecto, orden Citas/Tareas/Medicinas/Turnos, acceso a editar
+
+- [ ] Panel del día Family: corregir citas/tareas/medicinas/turnos y mostrar toda la información (web completa, móvil desplegable)
+- [ ] Medicinas: mostrar hasta cuándo dura el tratamiento
