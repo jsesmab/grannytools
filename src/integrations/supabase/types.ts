@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      elder_changes: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          created_by: string
+          elder_id: string
+          id: string
+          item: Json | null
+          item_key: string
+          kind: string
+          op: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          created_by: string
+          elder_id: string
+          id?: string
+          item?: Json | null
+          item_key: string
+          kind: string
+          op: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string
+          elder_id?: string
+          id?: string
+          item?: Json | null
+          item_key?: string
+          kind?: string
+          op?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elder_changes_elder_id_fkey"
+            columns: ["elder_id"]
+            isOneToOne: false
+            referencedRelation: "elders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elder_devices: {
         Row: {
           created_at: string
