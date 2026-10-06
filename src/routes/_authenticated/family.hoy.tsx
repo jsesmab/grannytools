@@ -28,6 +28,7 @@ function Hoy() {
   const { data: elders } = useSuspenseQuery(eldersQuery);
   const [kinds, setKinds] = useState<string[]>(["cita"]);
   const [who, setWho] = useState("todos");
+  const [expanded, setExpanded] = useState<string[]>([]);
   const now = new Date().toTimeString().slice(0, 5);
 
   const rows: Row[] = elders.filter((e) => who === "todos" || e.id === who)
@@ -56,21 +57,37 @@ function Hoy() {
         <section className="overflow-hidden rounded-3xl border-2 border-border bg-card">
           {hours.length === 0 && <p className="p-6 text-muted-foreground">Nada programado hoy.</p>}
           {hours.map((h) => (
-            <div key={h} className={`grid grid-cols-[72px_1fr] border-b border-border last:border-0 ${now.slice(0, 2) === h ? "bg-primary/5" : ""}`}>
-              <div className="border-r border-border p-3 text-2xl font-black">{h}:00</div>
-              <table className="w-full text-left">
-                <tbody>
-                  {rows.filter((r) => r.time.startsWith(h)).map((r, i) => (
-                    <tr key={i} className="border-b border-border/50 last:border-0">
-                      <td className="w-16 p-2 font-bold">{r.time}</td>
-                      <td className="w-40 p-2"><Link to="/family/persona/$id" params={{ id: r.elderId }} data-flat-button className="font-bold text-primary underline">{r.elder}</Link></td>
-                      <td className="w-24 p-2 text-sm font-semibold text-muted-foreground">{KIND_LABEL[r.kind]}</td>
-                      <td className="p-2">{r.title}{r.end ? ` (hasta ${r.end})` : ""}{r.detail ? <span className="text-muted-foreground"> · {r.detail}</span> : null}</td>
-                      <td className="w-28 p-2 text-right"><StatusPill status={r.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div key={h} className={`grid grid-cols-1 border-b border-border last:border-0 sm:grid-cols-[72px_1fr] ${now.slice(0, 2) === h ? "bg-primary/5" : ""}`}>
+              <div className="border-b border-border p-3 text-2xl font-black sm:border-b-0 sm:border-r">{h}:00</div>
+              <div className="divide-y divide-border/50">
+                {rows.filter((r) => r.time.startsWith(h)).map((r, i) => {
+                  const k = `${h}-${i}-${r.elderId}-${r.title}`;
+                  const isOpen = expanded.includes(k);
+                  return (
+                    <div key={k} className="p-3">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                        <div className="min-w-0">
+                          <p className="font-bold">
+                            <span className="mr-2 text-lg">{r.time}{r.end ? `–${r.end}` : ""}</span>
+                            <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">{KIND_LABEL[r.kind]}</span>
+                          </p>
+                          <p className="text-lg font-extrabold">{r.title}</p>
+                          <Link to="/family/persona/$id" params={{ id: r.elderId }} data-flat-button className="text-sm font-bold text-primary underline">{r.elder}</Link>
+                          {r.detail && <span className="text-sm text-muted-foreground"> · {r.detail}</span>}
+                        </div>
+                        <StatusPill status={r.status} />
+                      </div>
+                      {r.info && r.info.length > 0 && (<>
+                        <ul className={`mt-2 space-y-0.5 text-sm ${isOpen ? "block" : "hidden lg:block"}`}>
+                          {r.info.map((x) => <li key={x}>• {x}</li>)}
+                        </ul>
+                        <button data-flat-button onClick={() => setExpanded((p) => isOpen ? p.filter((x) => x !== k) : [...p, k])}
+                          className="mt-1 text-sm font-bold text-primary underline lg:hidden">{isOpen ? "Ocultar detalles ▲" : "Ver detalles ▼"}</button>
+                      </>)}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </section>
