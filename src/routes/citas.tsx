@@ -447,7 +447,7 @@ function Citas() {
                   <div>
                     <h2 className="mb-2 text-xl font-black">Hoy, {DAY_NAMES[t.i].toLowerCase()} {t.dt.getDate()}</h2>
                     {t.list.length === 0
-                      ? <p className="rounded-2xl bg-card p-5 text-center text-lg font-bold text-muted-foreground shadow">Hoy no tienes {noun[1]} previstos.</p>
+                      ? <p className="rounded-2xl bg-card p-5 text-center text-lg font-bold text-muted-foreground shadow">Hoy no hay {noun[1]}.</p>
                       : <Timeline list={t.list} />}
                   </div>
                 );

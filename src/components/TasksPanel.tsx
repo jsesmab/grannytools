@@ -27,8 +27,43 @@ export function TasksPanel({ locked = false }: { locked?: boolean }) {
   }, []);
 
   const today = isoDay();
-  const todays = tasks.filter((t) => taskIsOn(t)).sort((a, b) => a.time.localeCompare(b.time));
-  const others = tasks.filter((t) => !taskIsOn(t));
+  const byTime = (a: Task, b: Task) => a.time.localeCompare(b.time);
+  const todays = tasks.filter((t) => taskIsOn(t)).sort(byTime);
+  const [openDays, setOpenDays] = useState<string[]>([]);
+  const NAMES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  const weekDays = NAMES.map((name, i) => {
+    const dt = new Date(monday);
+    dt.setDate(monday.getDate() + i);
+    const iso = isoDay(dt);
+    return { name, dt, iso, isToday: iso === today, list: tasks.filter((t) => taskIsOn(t, dt)).sort(byTime) };
+  });
+  const card = (t: Task, canMark: boolean) => {
+    const s = canMark ? status[`${t.id}:${today}`] : undefined;
+    return (
+      <div key={t.id} className="rounded-2xl border-2 border-border bg-card p-3 shadow">
+        <button onClick={() => openForm(t)} data-flat-button className="mb-2 block w-full text-left">
+          <span className="block text-2xl font-black">{t.time}</span>
+          <span className="block text-xl font-bold">{t.title}</span>
+          <span className="block text-sm text-muted-foreground">
+            {t.date ? "Un día" : "Se repite"}{canMark ? ` · ${s === "hecha" ? "Realizada" : s === "no" ? "No realizada" : "Pendiente"}` : ""}
+          </span>
+        </button>
+        {canMark && (
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => mark(t.id, "hecha")} aria-pressed={s === "hecha"} className={`flex items-center justify-center gap-1 rounded-xl py-4 text-lg font-black active:scale-95 ${s === "hecha" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>
+              <CheckCircle2 className="h-6 w-6" aria-hidden /> Hecha
+            </button>
+            <button onClick={() => mark(t.id, "no")} aria-pressed={s === "no"} className={`flex items-center justify-center gap-1 rounded-xl py-4 text-lg font-black active:scale-95 ${s === "no" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground"}`}>
+              <XCircle className="h-6 w-6" aria-hidden /> No hecha
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const openForm = (t?: Task) => {
     setEditId(t?.id ?? null);
@@ -66,45 +101,31 @@ export function TasksPanel({ locked = false }: { locked?: boolean }) {
         ))}
       </div>
 
-      <div>
-        <h2 className="mb-2 text-lg font-bold">Hoy</h2>
-        {todays.length === 0 && <p className="text-sm text-muted-foreground">No hay tareas para hoy.</p>}
+      {range === "hoy" ? (
+        <div>
+          <h2 className="mb-2 text-xl font-black">Hoy</h2>
+          {todays.length === 0 && <p className="rounded-2xl bg-card p-5 text-center text-lg font-bold text-muted-foreground shadow">Hoy no hay tareas.</p>}
+          <div className="space-y-2">{todays.map((t) => card(t, true))}</div>
+        </div>
+      ) : (
         <div className="space-y-2">
-          {todays.map((t) => {
-            const s = status[`${t.id}:${today}`];
+          {weekDays.map((w) => {
+            const isOpen = openDays.includes(w.iso);
             return (
-              <div key={t.id} className="rounded-2xl bg-card p-3 shadow">
-                <button onClick={() => openForm(t)} className="mb-2 block w-full text-left">
-                  <span className="text-xl font-black">{t.time} · {t.title}</span>
-                  <span className="block text-sm text-muted-foreground">
-                    {s === "hecha" ? "Realizada" : s === "no" ? "No realizada" : "Pendiente"}
-                  </span>
+              <div key={w.iso} className="rounded-2xl bg-card shadow">
+                <button onClick={() => setOpenDays((p) => (p.includes(w.iso) ? p.filter((x) => x !== w.iso) : [...p, w.iso]))} aria-expanded={isOpen}
+                  className={`flex w-full items-center justify-between rounded-2xl px-4 py-4 text-left text-lg font-black ${w.isToday ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+                  <span>{w.name} {w.dt.getDate()}{w.isToday ? " (Hoy)" : ""}</span>
+                  <span className="text-base font-bold">{w.list.length === 0 ? "Sin actividad" : `${w.list.length} ${w.list.length === 1 ? "tarea" : "tareas"}`} {isOpen ? "▲" : "▼"}</span>
                 </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => mark(t.id, "hecha")} aria-pressed={s === "hecha"} className={`flex items-center justify-center gap-1 rounded-xl py-3 font-black active:scale-95 ${s === "hecha" ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                    <CheckCircle2 className="h-5 w-5" aria-hidden /> Hecha
-                  </button>
-                  <button onClick={() => mark(t.id, "no")} aria-pressed={s === "no"} className={`flex items-center justify-center gap-1 rounded-xl py-3 font-black active:scale-95 ${s === "no" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground"}`}>
-                    <XCircle className="h-5 w-5" aria-hidden /> No hecha
-                  </button>
-                </div>
+                {isOpen && (
+                  <div className="space-y-2 p-2">
+                    {w.list.length === 0 ? <p className="p-2 text-center text-muted-foreground">Nada este día.</p> : w.list.map((t) => card(t, w.isToday))}
+                  </div>
+                )}
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {range === "semana" && others.length > 0 && (
-        <div>
-          <h2 className="mb-2 text-lg font-bold">Otros días</h2>
-          <div className="space-y-2">
-            {others.map((t) => (
-              <button key={t.id} onClick={() => openForm(t)} className="flex w-full items-center gap-2 rounded-xl bg-secondary px-3 py-3 text-left font-bold text-secondary-foreground active:scale-[0.98]">
-                {t.date ? <CalendarDays className="h-5 w-5" aria-hidden /> : <Repeat className="h-5 w-5" aria-hidden />}
-                <span className="flex-1">{t.title}<span className="block text-sm font-normal">{describe(t)}</span></span>
-              </button>
-            ))}
-          </div>
         </div>
       )}
 
