@@ -19,7 +19,8 @@ export const Route = createFileRoute("/oir")({
       },
       { property: "og:title", content: "Grannytools — Oír mejor" },
       { property: "og:description", content: "Amplifica las voces a tu alrededor con tu móvil y tus auriculares." },
-
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Index,

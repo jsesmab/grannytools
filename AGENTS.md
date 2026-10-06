@@ -6,3 +6,5 @@
 - Agenda lock state lives in src/lib/care-lock.ts; screens read it via useCareLocked so a future Family sync can toggle it in one place.
 - Family data sync: the elder phone authenticates with a device secret (no account) and pushes a full snapshot via `deviceSync`; Family reads it through RLS — keeps the elder app offline-first.
 - Family writes go through server functions that verify the caller's admin role; tables are read-only for clients.
+- Native packages use separate Capacitor configurations and platform directories selected by scripts/prepare-native.mjs so building one product never overwrites the other.
+- Home widgets use a registered Capacitor bridge and native Android/WidgetKit sources; browsers only display installation guidance because web apps cannot pin native widgets.
