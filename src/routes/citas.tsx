@@ -120,7 +120,7 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function RangeToggle({ range, setRange }: { range: "hoy" | "semana"; setRange: (r: "hoy" | "semana") => void }) {
+function RangeToggle({ range, setRange }: { range: "hoy" | "semana"; setRange: (r: "hoy" | "semana") => void }) {
   return (
     <div className="grid grid-cols-2 gap-2" role="group" aria-label="Qué días ver">
       {(["hoy", "semana"] as const).map((r) => (

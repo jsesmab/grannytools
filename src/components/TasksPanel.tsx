@@ -11,6 +11,7 @@ export function TasksPanel({ locked = false }: { locked?: boolean }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [status, setStatus] = useState<Record<string, TaskStatus>>({});
   const [open, setOpen] = useState(false);
+  const [range, setRange] = useState<"hoy" | "semana">("hoy");
   const [editId, setEditId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("10:00");
@@ -56,6 +57,15 @@ export function TasksPanel({ locked = false }: { locked?: boolean }) {
         <Plus className="h-6 w-6" aria-hidden /> Nueva tarea
       </button>}
 
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Qué días ver">
+        {(["hoy", "semana"] as const).map((r) => (
+          <button key={r} onClick={() => setRange(r)} aria-pressed={range === r}
+            className={`rounded-xl py-3 text-lg font-black ${range === r ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+            {r === "hoy" ? "Solo hoy" : "Semana completa"}
+          </button>
+        ))}
+      </div>
+
       <div>
         <h2 className="mb-2 text-lg font-bold">Hoy</h2>
         {todays.length === 0 && <p className="text-sm text-muted-foreground">No hay tareas para hoy.</p>}
@@ -84,7 +94,7 @@ export function TasksPanel({ locked = false }: { locked?: boolean }) {
         </div>
       </div>
 
-      {others.length > 0 && (
+      {range === "semana" && others.length > 0 && (
         <div>
           <h2 className="mb-2 text-lg font-bold">Otros días</h2>
           <div className="space-y-2">
