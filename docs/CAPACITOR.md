@@ -20,6 +20,49 @@ npx cap open android
 ```
 Google Play exige justificar SEND_SMS / CALL_PHONE (formulario "Permissions Declaration": uso de emergencia/seguridad).
 
+## 1 bis. Dos productos independientes y widget gigante
+
+Capacitor está instalado. Compilar la web en el ordenador de desarrollo y preparar cada producto:
+```bash
+npm run build
+npm run cap:elder -- android
+npm run cap:family -- android
+# En Mac, con Xcode:
+npm run cap:elder -- ios
+npm run cap:family -- ios
+```
+Los scripts **no compilan ni firman** AAB/IPA. Abren dos proyectos independientes:
+
+| Producto | Identificador | Proyecto Android | Proyecto iOS |
+|---|---|---|---|
+| Grannytools | `com.grannytools.app` | `native/elder/android` | `native/elder/ios` |
+| Grannytools Family | `com.grannytools.family` | `native/family/android` | `native/family/ios` |
+
+La configuración predeterminada es Grannytools. Family carga `https://grannytools.lovable.app/family` (requiere web publicada actualizada y red); revisar este modelo de WebView antes de presentar a tiendas. No sustituye pruebas de autenticación/OAuth ni garantiza aprobación de Apple. El empaquetado local del mayor requiere comprobar navegación offline y recursos de todas las pantallas: una salida SSR no implica que toda ruta funcione como app local.
+
+### Android: widget listo para integrar
+`cap:elder` copia las fuentes de `native/elder/widget/android`, el icono `public/icon-512.png`, añade el receiver al manifest y registra `HomeWidgetPlugin` en MainActivity. Se puede ejecutar varias veces sin duplicar registros. No copia nada de esto a Family.
+
+Propuesta 4×4 con un único icono que abre Grannytools, redimensionable. Android 12+ usa celdas objetivo; en versiones anteriores se usan dimensiones mínimas. Desde Android 8, si el launcher lo admite, el botón del alta solicita anclarlo; el usuario confirma. No hay permiso especial ni instalación silenciosa. Si no hay soporte, se indica cómo añadirlo manualmente.
+
+Comprobar en dispositivo: aceptar/cancelar la solicitud, launcher sin soporte, añadir desde Widgets, tocar el icono con app cerrada, cambiar tamaño, reiniciar teléfono y confirmar que Family no contiene el widget.
+
+### iPhone: extensión WidgetKit pendiente de configurar en Xcode
+1. En el proyecto **elder**, añadir target **Widget Extension**, identificador `com.grannytools.app.widget`, deployment target iOS 17 o posterior; no Live Activity.
+2. Reemplazar el archivo Swift de ejemplo por `native/elder/widget/ios/GrannytoolsWidget.swift`. No conservar dos declaraciones `@main`.
+3. Añadir al Assets de la extensión un Image Set `GrannytoolsWidgetIcon` usando `public/icon-512.png` (para mayor resolución se puede preparar una exportación del mismo icono).
+4. En la app principal, registrar en URL Types el esquema `grannytools`; al tocar el widget el sistema abre la app. Este acceso solo abre la app, no procesa instrucciones ni datos externos.
+5. Verificar que la extensión está embebida en la app, elegir equipo/firma, probar el tamaño grande y `grannytools://open` en dispositivo.
+
+Apple no permite anclar widgets por código ni impone una cuadrícula exacta 4×4. Durante el alta se muestra la guía manual. La extensión no se añade automáticamente con `cap sync`.
+
+### Venta y controles previos a publicación
+- Crear dos fichas de apps y configurar sus precios de forma independiente. En Apple se puede solicitar un App Bundle de apps de pago conforme a los requisitos vigentes; Google Play no tiene compra conjunta equivalente automática. No hay cobros integrados ni precios inventados.
+- Pendiente: cuentas y firmas del titular, icono diferenciador de Family, capturas, política de privacidad, declaraciones de permisos/datos, clasificación de edad y pruebas reales.
+- Instalar e integrar los plugins específicos por producto: DirectEmergency solo elder; BiometricAuth solo Family. Instalar plugins en una dependencia compartida puede copiarlos a ambas apps: revisar cada proyecto y excluir plugins/permisos innecesarios.
+- Comprobar notificaciones con la app cerrada, detector en segundo plano, sesión segura de Family y biometría en dispositivo; lo documentado aquí no sustituye esas integraciones.
+- La admisión de SMS/llamadas y las afirmaciones médicas requieren revisión de las políticas; no prometer aceptación ni funcionamiento de emergencias sin validación real.
+
 ## 3. Plugin nativo DirectEmergency (android/app/src/main/java/com/grannytools/app/DirectEmergencyPlugin.java)
 ```java
 package com.grannytools.app;

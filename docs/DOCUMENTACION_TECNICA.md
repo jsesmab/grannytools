@@ -85,7 +85,15 @@ La gestión visual de contactos mantiene dos modos: normal (solo fotos; tocar ll
 - `TaskAlert` comprueba cada 30 s; ventana de 2 min desde la hora; dedupe diario en `tareas.avisadas`; no salta si ya tiene estado. Evento `grannytools-tasks` refresca el panel.
 
 ## 10. Empaquetado
-`npm run build` → `dist/client` → `npx cap add android && npx cap sync`. Detalles en `docs/CAPACITOR.md`.
+`npm run build` → `dist/client` → `npm run cap:elder -- android` o `npm run cap:family -- android` (también `ios`). Configuraciones separadas en `capacitor.elder.config.ts` y `capacitor.family.config.ts`, seleccionadas desde `capacitor.config.ts` por `GRANNYTOOLS_APP`. Directorios nativos independientes. Detalles y pendientes de release en `docs/CAPACITOR.md`.
+
+### Widget de icono gigante
+- `src/lib/home-widget.ts`: `registerPlugin("HomeWidget")`, comprueba soporte de anclaje antes de solicitarlo. No interpreta la solicitud como instalación confirmada.
+- `HomeWidgetOffer` en permisos de Onboarding: petición opcional, mensajes de fallo/no soporte, guía manual iOS y alternativa web. Sin acceso en el alta de Family.
+- `native/elder/widget/android`: proveedor RemoteViews con ImageView única e icono existente; PendingIntent inmutable que abre MainActivity. XML propone `targetCellWidth/Height=4`, fallback 250dp y permite redimensionar. Sin polling, datos personales ni permiso especial.
+- `scripts/prepare-native.mjs`: herramienta local de empaquetado (nunca importada en servidor); añade/sincroniza plataforma e instala idempotentemente el widget, receiver y registro del plugin Android.
+- `native/elder/widget/ios/GrannytoolsWidget.swift`: fuente WidgetKit para extensión iOS 17+, `.systemLarge`, imagen y URL `grannytools://open`. Requiere target de extensión, imagen, esquema URL y firma en Xcode; no se crea por Capacitor automáticamente.
+- Family usa inicialmente el sitio publicado `/family`; no debe considerarse un paquete offline completo ni listo para aprobación de tiendas. Revisar navegación OAuth en WebView, biometría, persistencia segura y política de tiendas antes de release.
 
 ## 11. Convenciones
 - Documentación funcional y técnica se actualizan en el mismo cambio que el código.
