@@ -1,12 +1,12 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FamilyShell, StatusPill } from "@/components/FamilyShell";
 import { dayItems, eldersQuery, KIND_LABEL, membersQuery, syncLabel, ymd } from "@/lib/family-data";
-import { familyMemberAction, setElderCareMode } from "@/lib/family.functions";
-import { supabase } from "@/integrations/supabase/client";
+import { setElderCareMode } from "@/lib/family.functions";
 import { FamilyEditor } from "@/components/FamilyEditor";
+import { FamilyMembers } from "@/components/FamilyMembers";
 
 export const Route = createFileRoute("/_authenticated/family/persona/$id")({
   head: () => ({
@@ -35,12 +35,8 @@ function Ficha() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
   const { data: elders } = useSuspenseQuery(eldersQuery);
-  const { data: members } = useSuspenseQuery(membersQuery(id));
   const setMode = useServerFn(setElderCareMode);
-  const memberAct = useServerFn(familyMemberAction);
   const [day, setDay] = useState(ymd());
-  const [me, setMe] = useState<string>();
-  useEffect(() => { supabase.auth.getUser().then(({ data }) => setMe(data.user?.id)); }, []);
 
   const e = elders.find((x) => x.id === id)!;
   const admin = e.role === "admin";
@@ -49,11 +45,6 @@ function Ficha() {
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["family"] });
   const changeMode = async (mode: "autonomo" | "protegido") => { await setMode({ data: { elderId: id, mode } }); refresh(); };
-  const act = async (memberId: string, action: "admin" | "consulta" | "remove") => {
-    if (action === "remove" && !confirm("¿Quitar a esta persona de la familia vinculada?")) return;
-    await memberAct({ data: { elderId: id, memberId, action } }); refresh();
-  };
-
   return (
     <FamilyShell title={e.name || "Sin nombre"} wide>
       <p className="text-muted-foreground">
@@ -99,26 +90,7 @@ function Ficha() {
           ))}
         </section>
 
-        <section className={`${card} lg:col-span-3`}>
-          <h2 className="text-xl font-extrabold">Familia vinculada</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {members.map((m) => (
-              <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-2xl border border-border p-3">
-                <span className="flex-1 font-bold">{m.profile?.display_name || "Familiar"}{m.user_id === me ? " (tú)" : ""}
-                  {m.profile?.phone ? <span className="block text-sm font-normal text-muted-foreground">{m.profile.phone}</span> : null}</span>
-                {admin ? (<>
-                  <select value={m.role} onChange={(ev) => act(m.id, ev.target.value as "admin" | "consulta")}
-                    className="rounded-xl border-2 border-input bg-background px-2 py-2 text-sm font-semibold">
-                    <option value="admin">Administrador</option>
-                    <option value="consulta">Consultas</option>
-                  </select>
-                  {m.user_id !== me && <button onClick={() => act(m.id, "remove")} className="rounded-xl bg-destructive px-3 py-2 text-sm font-bold text-destructive-foreground">Quitar</button>}
-                </>) : <span className="text-sm font-semibold">{m.role === "admin" ? "Administrador" : "Consultas"}</span>}
-              </div>
-            ))}
-          </div>
-          <p className="text-sm text-muted-foreground">Para añadir a alguien más, genera un código nuevo en el teléfono de la persona.</p>
-        </section>
+        <div className="lg:col-span-3"><FamilyMembers elderId={id} admin={admin} /></div>
       </div>
       <FamilyEditor elderId={id} snapshot={s} admin={admin} />
     </FamilyShell>
