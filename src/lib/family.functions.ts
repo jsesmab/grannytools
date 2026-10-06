@@ -65,7 +65,11 @@ export const deviceSync = createServerFn({ method: "POST" })
       const { data: ex } = await db.from("elder_invites").select("elder_id").eq("code", data.invite.code).maybeSingle();
       if (!ex) await db.from("elder_invites").insert({ code: data.invite.code, elder_id: elderId, expires_at: new Date(data.invite.expires).toISOString() });
     }
-    return { careMode, careModeAt, members: await membersOf(db, elderId) };
+    // Cambios que la familia ha preparado: se entregan una vez y se marcan como aplicados.
+    const { data: changes } = await (db as any).from("elder_changes").select("id, kind, op, item_key, item")
+      .eq("elder_id", elderId).is("applied_at", null).order("created_at");
+    if (changes?.length) await (db as any).from("elder_changes").update({ applied_at: new Date().toISOString() }).in("id", changes.map((c: any) => c.id));
+    return { careMode, careModeAt, members: await membersOf(db, elderId), changes: (changes ?? []) as { kind: "med" | "cita" | "task"; op: "upsert" | "delete"; item_key: string; item: Record<string, unknown> | null }[] };
   });
 
 /** El mayor gestiona desde su teléfono los familiares vinculados. */
@@ -121,5 +125,26 @@ export const familyMemberAction = createServerFn({ method: "POST" })
     const q = db.from("elder_members");
     if (data.action === "remove") await q.delete().eq("id", data.memberId).eq("elder_id", data.elderId);
     else await q.update({ role: data.action }).eq("id", data.memberId).eq("elder_id", data.elderId);
+    return { ok: true };
+  });
+
+/** Un Administrador crea, modifica o borra una cita, medicina o tarea. Llega al teléfono en su próxima sincronización. */
+export const familyChange = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    elderId: z.string().uuid(),
+    kind: z.enum(["med", "cita", "task"]),
+    op: z.enum(["upsert", "delete"]),
+    key: z.string().min(1).max(120),
+    item: z.record(z.string(), z.unknown()).nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context, data.elderId);
+    if (JSON.stringify(data.item ?? {}).length > 5000) throw new Error("Datos demasiado grandes");
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const { error } = await (db as any).from("elder_changes").insert({
+      elder_id: data.elderId, created_by: context.userId, kind: data.kind, op: data.op, item_key: data.key, item: data.item,
+    });
+    if (error) throw error;
     return { ok: true };
   });
