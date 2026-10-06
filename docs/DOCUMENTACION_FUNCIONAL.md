@@ -64,6 +64,7 @@ Muestra dónde estás y permite enviarlo a un familiar.
 
 ## 10. Citas, turnos y tareas
 - Al entrar aparecen tres botones grandes: **Citas**, **Turnos** y **Tareas** (y «Personas» para gestionar cuidadoras, familiares y médicos). Cada uno muestra solo lo suyo.
+- Citas, turnos y tareas se abren en **Solo hoy**; el botón **Semana completa** muestra todos los días y las citas con fecha.
 - **Tareas**: puntuales (un día) o periódicas (días de la semana), con hora. A esa hora aparece un aviso a pantalla completa con voz y vibración y dos botones: **Hecha** / **No hecha**. En la lista de hoy se puede marcar o cambiar en cualquier momento.
 - Personas: cuidadoras, familiares y médicos, cada una con su color.
 - **Turnos** periódicos (días de la semana y horario) y **citas** fijas o recurrentes (p. ej. «Martes y viernes»), con acompañante. En las citas, «¿Con quién es la cita?» se escribe libremente (cardiólogo, peluquería…), sin elegir de una lista; la lista de personas solo se usa para los turnos.
