@@ -48,6 +48,13 @@ function esDate(iso: string) {
   return `${d}/${mo}/${y}`;
 }
 
+/** Texto de hasta cuándo dura el tratamiento. */
+function vigencia(m: Med) {
+  if (!m.until) return "Tratamiento continuo";
+  const left = Math.round((new Date(m.until).getTime() - new Date(localDayKey(new Date())).getTime()) / 86400000);
+  return `📅 Hasta el ${esDate(m.until)} · ${left <= 0 ? "último día" : `quedan ${left} ${left === 1 ? "día" : "días"}`}`;
+}
+
 function beep() {
   try {
     const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -217,7 +224,10 @@ function Pastillas() {
                           ].join(" ")}
                         >
                           <Pill className="h-6 w-6 shrink-0" aria-hidden />
-                          <span className="min-w-0 flex-1 truncate text-lg font-black">{m.name}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-lg font-black">{m.name}</span>
+                            <span className="block text-sm font-bold opacity-80">{vigencia(m)}</span>
+                          </span>
                           <span className="flex items-center gap-1 text-base font-black">
                             {on ? <><Check className="h-5 w-5" aria-hidden /> Tomada</> : "Tomar"}
                           </span>
@@ -230,6 +240,22 @@ function Pastillas() {
             </ol>
           );
         })()}
+
+        {activeMeds.length > 0 && (
+          <section className="mb-3 rounded-2xl bg-card p-3 shadow-sm" aria-label="Mis tratamientos">
+            <h2 className="mb-2 text-lg font-black">Mis tratamientos</h2>
+            <ul className="space-y-2">
+              {activeMeds.map((m) => (
+                <li key={m.name} className="rounded-xl bg-secondary p-2 text-secondary-foreground">
+                  <span className="block text-lg font-black">{m.name}</span>
+                  <span className="block text-sm font-bold">Horas: {m.times.join(", ")}</span>
+                  <span className="block text-sm font-bold">{vigencia(m)}</span>
+                  {m.from && localDayKey(new Date()) < m.from && <span className="block text-sm">Empieza el {esDate(m.from)}</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {finishedMeds.length > 0 && (
           <div className="mb-3">

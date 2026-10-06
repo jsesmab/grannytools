@@ -122,3 +122,8 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 
 ## Family: lista desplegable
 `family.index.tsx` lista nombres con acordeón; reutiliza `FamilyEditor` (secciones colapsables en orden task, med, turno, cita; "turno" = entrada `periodica` enviada con kind `cita` en `familyChange`) y `FamilyMembers` (componente compartido con la ficha `/family/persona/$id`).
+
+## dayItems (src/lib/family-data.ts)
+- Coincidencia por `date` si existe, si no por `days` (independiente de `kind`); horas normalizadas con `normTime`.
+- `DayItem.info: string[]` con el detalle completo; family.hoy lo muestra siempre en `lg` y plegable en móvil.
+- pastillas.tsx: `vigencia(m)` muestra fecha fin y días restantes; sección «Mis tratamientos».

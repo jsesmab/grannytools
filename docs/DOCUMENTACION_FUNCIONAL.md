@@ -121,3 +121,8 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 ## Sincronización y Panel del día (Family)
 - El teléfono del mayor se sincroniza cada 2 horas en reposo, y al momento cuando se abre la app, se marca una pastilla o tarea, o vuelve la conexión.
 - El Panel del día empieza mostrando solo Citas; los filtros van en orden Citas, Tareas, Medicinas y Turnos. El recuadro «Añadir o modificar» abre la ficha de cada persona para dar de alta, cambiar o borrar.
+
+## Panel del día (Family) y vigencia de medicinas
+- Citas semanales y de un día, tareas, medicinas y turnos aparecen correctamente en el Panel del día.
+- Cada elemento muestra toda su información: horario, con quién, motivo, acompañante, repetición, tomas y hasta cuándo dura el tratamiento. En ordenador se ve todo; en el móvil, «Ver detalles».
+- En Medicinas del mayor, cada toma indica «Hasta el DD/MM/AAAA · quedan N días» o «Tratamiento continuo», y hay una lista «Mis tratamientos».
