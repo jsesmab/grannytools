@@ -8,7 +8,8 @@
 - [x] Mover activar y probar el aviso de caídas a los ajustes de Contactos en la pantalla principal
 - [x] Dejar preparado Capacitor (llamada y SMS directos en Android)
 - [ ] Publicar y probar en un móvil real
-- [ ] Decidir: widget grande para la versión de tiendas
+- [ ] Preparar widget 4×4 de icono gigante único y ofrecerlo durante los permisos
+- [ ] Preparar identidades y empaquetado independientes Grannytools y Grannytools Family
 - [x] Family fase 1: cuentas, vinculación por código, sincronización, Mis personas, ficha, panel del día en ordenador
 - [x] Family fase 2: crear/modificar citas, medicinas y tareas desde Family; escáner QR con cámara
 
