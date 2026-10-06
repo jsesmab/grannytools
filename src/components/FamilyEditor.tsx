@@ -69,7 +69,7 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
     } else if (!confirm("¿Borrar? Se quitará del teléfono al conectarse.")) return;
     const key = edit.key ?? String(item?.[kind === "med" ? "name" : "id"]);
     try {
-      await send({ data: { elderId, kind, op, key, item: item ? JSON.parse(JSON.stringify(item)) : null } });
+      await send({ data: { elderId, kind, op, key, item: item ? (JSON.parse(JSON.stringify(item)) as Record<string, any>) : null } });
       setEdit(null);
       qc.invalidateQueries({ queryKey: ["family", "pending", elderId] });
     } catch (e) { setErr((e as Error).message); }

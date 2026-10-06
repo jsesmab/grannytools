@@ -136,7 +136,7 @@ export const familyChange = createServerFn({ method: "POST" })
     kind: z.enum(["med", "cita", "task"]),
     op: z.enum(["upsert", "delete"]),
     key: z.string().min(1).max(120),
-    item: z.record(z.string(), z.unknown()).nullable(),
+    item: z.record(z.string(), z.any()).nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     await requireAdmin(context, data.elderId);
