@@ -114,3 +114,4 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 - Family: `/auth` (email + Google), `_authenticated/` con `/family` (Mis personas), `/family/hoy` (panel de ordenador con todas las personas por hora y «Sin marcar»), `/family/persona/$id` (ficha, modo de uso, familia vinculada), `/family/vincular` (canjea código; el primero es Administrador), `/family/perfil`.
 - En `/family` y `/auth` el root no monta avisos, caídas, bienvenida ni sincronización del mayor.
 - Fase 2 pendiente: edición remota de citas/medicinas/tareas (cola de cambios hacia el teléfono), escáner QR con cámara.
+- Vista hoy/semana: estado local `range` en `src/routes/citas.tsx` (RangeToggle) y `src/components/TasksPanel.tsx`; por defecto "hoy".
