@@ -48,6 +48,13 @@ function esDate(iso: string) {
   return `${d}/${mo}/${y}`;
 }
 
+/** Texto de hasta cuándo dura el tratamiento. */
+function vigencia(m: Med) {
+  if (!m.until) return "Tratamiento continuo";
+  const left = Math.round((new Date(m.until).getTime() - new Date(localDayKey(new Date())).getTime()) / 86400000);
+  return `📅 Hasta el ${esDate(m.until)} · ${left <= 0 ? "último día" : `quedan ${left} ${left === 1 ? "día" : "días"}`}`;
+}
+
 function beep() {
   try {
     const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -217,7 +224,10 @@ function Pastillas() {
                           ].join(" ")}
                         >
                           <Pill className="h-6 w-6 shrink-0" aria-hidden />
-                          <span className="min-w-0 flex-1 truncate text-lg font-black">{m.name}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-lg font-black">{m.name}</span>
+                            <span className="block text-sm font-bold opacity-80">{vigencia(m)}</span>
+                          </span>
                           <span className="flex items-center gap-1 text-base font-black">
                             {on ? <><Check className="h-5 w-5" aria-hidden /> Tomada</> : "Tomar"}
                           </span>
