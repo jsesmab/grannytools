@@ -120,6 +120,19 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+export function RangeToggle({ range, setRange }: { range: "hoy" | "semana"; setRange: (r: "hoy" | "semana") => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2" role="group" aria-label="Qué días ver">
+      {(["hoy", "semana"] as const).map((r) => (
+        <button key={r} onClick={() => setRange(r)} aria-pressed={range === r}
+          className={`rounded-xl py-3 text-lg font-black ${range === r ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+          {r === "hoy" ? "Solo hoy" : "Semana completa"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Citas() {
   const { edit: editId, view } = Route.useSearch();
   const { locked } = useCareLocked();
@@ -147,6 +160,7 @@ function Citas() {
   const [eCompanion, setECompanion] = useState("");
   const [eRemind, setERemind] = useState(DEFAULT_REMIND_MIN);
   const [eRepeat, setERepeat] = useState<"once" | "weekly">("once");
+  const [range, setRange] = useState<"hoy" | "semana">("hoy");
 
   useEffect(() => {
     setPeople(load<Person[]>(PEOPLE_KEY, []));
@@ -423,14 +437,19 @@ function Citas() {
             )}
             {!locked && <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>}
 
+            <RangeToggle range={range} setRange={setRange} />
+
             <div>
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> {tab === "turnos" ? "Turnos de cada semana" : "Citas que se repiten"}</h2>
+              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> {range === "hoy" ? (tab === "turnos" ? "Turnos de hoy" : "Citas de hoy") : tab === "turnos" ? "Turnos de cada semana" : "Citas que se repiten"}</h2>
               <div className="space-y-2">
                 {DAY_INDEX.map((d, i) => {
-                  const list = entries.filter((e) => e.days?.includes(d) && (tab === "turnos" ? e.kind === "periodica" : e.kind === "fija"));
+                  if (range === "hoy" && d !== new Date().getDay()) return null;
+                  const list = entries.filter((e) =>
+                    (e.days?.includes(d) || (range === "hoy" && e.date === todayISO())) &&
+                    (tab === "turnos" ? e.kind === "periodica" : e.kind === "fija"));
                   return (
                     <div key={d} className="rounded-2xl bg-card p-2 shadow">
-                      <p className="mb-1 font-bold">{DAY_NAMES[i]}</p>
+                      <p className="mb-1 font-bold">{range === "hoy" ? `Hoy, ${DAY_NAMES[i].toLowerCase()}` : DAY_NAMES[i]}</p>
                       <Timeline list={list} />
                     </div>
                   );
@@ -438,7 +457,7 @@ function Citas() {
               </div>
             </div>
 
-            {tab === "citas" && (<div>
+            {tab === "citas" && range === "semana" && (<div>
               <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><CalendarDays className="h-5 w-5" aria-hidden /> Citas con fecha</h2>
               {fixedByDate.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sin citas con fecha.</p>
