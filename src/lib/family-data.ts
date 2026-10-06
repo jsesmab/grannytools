@@ -56,7 +56,7 @@ export function dayItems(s: Snapshot, d = new Date()): DayItem[] {
         `Horario: ${start} – ${end}`,
         isCita && who ? `Con: ${who}` : "",
         !isCita && who ? `Hace el turno: ${who}` : "",
-        e.title && (isCita ? e.title !== (e.title || who) ? e.title : "" : `Nota: ${e.title}`),
+        e.title ? (isCita ? `Motivo: ${e.title}` : `Nota: ${e.title}`) : "",
         e.companion ? `Acompañante: ${e.companion}` : "",
         e.date ? "Un día" : `Se repite: ${daysTxt(e.days)}`,
       ].filter(Boolean) as string[],
