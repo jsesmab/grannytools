@@ -1,0 +1,150 @@
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { familyChange } from "@/lib/family.functions";
+import { supabase } from "@/integrations/supabase/client";
+import type { Snapshot } from "@/lib/family-data";
+
+type Kind = "med" | "cita" | "task";
+type Draft = Record<string, string | number[] | undefined>;
+const DAYS = [["L", 1], ["M", 2], ["X", 3], ["J", 4], ["V", 5], ["S", 6], ["D", 0]] as const;
+const uid = () => Math.random().toString(36).slice(2, 10);
+const input = "w-full rounded-xl border-2 border-input bg-background px-3 py-2";
+const card = "rounded-3xl border-2 border-border bg-card p-5 space-y-3";
+
+const pendingQuery = (elderId: string) => ({
+  queryKey: ["family", "pending", elderId],
+  queryFn: async () => {
+    const { data } = await (supabase as any).from("elder_changes").select("id, kind, op, item_key, item")
+      .eq("elder_id", elderId).is("applied_at", null).order("created_at");
+    return (data ?? []) as { id: string; kind: Kind; op: string; item_key: string; item: Record<string, unknown> | null }[];
+  },
+  refetchInterval: 30_000,
+});
+
+const LABEL: Record<Kind, string> = { med: "Medicinas", cita: "Citas", task: "Tareas" };
+
+export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; snapshot: Snapshot; admin: boolean }) {
+  const qc = useQueryClient();
+  const send = useServerFn(familyChange);
+  const { data: pending = [] } = useQuery(pendingQuery(elderId));
+  const [edit, setEdit] = useState<{ kind: Kind; key?: string; d: Draft } | null>(null);
+  const [err, setErr] = useState("");
+
+  const lists: Record<Kind, { key: string; label: string; raw: Record<string, unknown> }[]> = {
+    med: (snapshot.meds ?? []).map((m) => ({ key: m.name, label: `${m.name} · ${m.times.join(", ")}${m.until ? ` · hasta ${m.until}` : ""}`, raw: m })),
+    cita: (snapshot.entries ?? []).filter((e) => e.kind === "fija").map((e) => ({ key: e.id, label: `${e.date ?? "Semanal"} · ${e.start}–${e.end} · ${e.title}${e.who ? ` · ${e.who}` : ""}`, raw: e })),
+    task: (snapshot.tasks ?? []).map((t) => ({ key: t.id, label: `${t.time} · ${t.title} ${t.date ? `(${t.date})` : "(periódica)"}`, raw: t })),
+  };
+
+  const open = (kind: Kind, raw?: Record<string, unknown>, key?: string) => {
+    const r = (raw ?? {}) as any;
+    const d: Draft = kind === "med"
+      ? { name: r.name ?? "", times: (r.times ?? ["09:00"]).join(", "), from: r.from, until: r.until }
+      : kind === "cita"
+        ? { title: r.title ?? "", who: r.who ?? "", companion: r.companion ?? "", date: r.date ?? (r.days ? undefined : new Date().toISOString().slice(0, 10)), days: r.days, start: r.start ?? "10:00", end: r.end ?? "11:00" }
+        : { title: r.title ?? "", time: r.time ?? "10:00", date: r.date ?? (r.days ? undefined : new Date().toISOString().slice(0, 10)), days: r.days };
+    setErr(""); setEdit({ kind, key, d: { ...d, _raw: undefined } });
+  };
+
+  const submit = async (op: "upsert" | "delete") => {
+    if (!edit) return;
+    const { kind, d } = edit;
+    const orig = (lists[kind].find((x) => x.key === edit.key)?.raw ?? {}) as Record<string, unknown>;
+    let item: Record<string, unknown> | null = null;
+    const repeat = Array.isArray(d.days);
+    if (op === "upsert") {
+      if (kind === "med") {
+        const times = String(d.times).split(/[,\s]+/).filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map((t) => t.padStart(5, "0"));
+        if (!String(d.name).trim() || !times.length) return setErr("Pon nombre y al menos una hora (ej. 09:00, 21:00).");
+        item = { ...orig, name: String(d.name).trim(), times, from: d.from || undefined, until: d.until || undefined };
+      } else {
+        if (!String(d.title).trim()) return setErr("Pon un título.");
+        if (repeat && !(d.days as number[]).length) return setErr("Elige algún día.");
+        const when = repeat ? { days: d.days, date: undefined } : { date: d.date, days: undefined };
+        item = kind === "cita"
+          ? { remindMin: 60, ...orig, id: edit.key ?? uid(), kind: "fija", title: String(d.title).trim(), who: String(d.who).trim() || undefined, companion: String(d.companion).trim() || undefined, start: d.start, end: d.end, ...when }
+          : { ...orig, id: edit.key ?? uid(), title: String(d.title).trim(), time: d.time, ...when };
+      }
+    } else if (!confirm("¿Borrar? Se quitará del teléfono al conectarse.")) return;
+    const key = edit.key ?? String(item?.[kind === "med" ? "name" : "id"]);
+    try {
+      await send({ data: { elderId, kind, op, key, item: item ? JSON.parse(JSON.stringify(item)) : null } });
+      setEdit(null);
+      qc.invalidateQueries({ queryKey: ["family", "pending", elderId] });
+    } catch (e) { setErr((e as Error).message); }
+  };
+
+  const set = (k: string, v: string | number[] | undefined) => setEdit((x) => x && { ...x, d: { ...x.d, [k]: v } });
+
+  return (
+    <>
+      {pending.length > 0 && (
+        <section className="rounded-3xl border-2 border-warning bg-warning/15 p-4">
+          <p className="font-bold">⏳ {pending.length} cambio(s) esperando a que el teléfono se conecte:</p>
+          <ul className="ml-5 list-disc text-sm">
+            {pending.map((p) => <li key={p.id}>{p.op === "delete" ? "Borrar" : "Guardar"} {LABEL[p.kind].toLowerCase().slice(0, -1)}: {String(p.item?.title ?? p.item?.name ?? p.item_key)}</li>)}
+          </ul>
+        </section>
+      )}
+      <div className="grid gap-5 lg:grid-cols-3">
+        {(["cita", "med", "task"] as Kind[]).map((kind) => (
+          <section key={kind} className={card}>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xl font-extrabold">{LABEL[kind]}</h2>
+              {admin && <button onClick={() => open(kind)} className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">+ Añadir</button>}
+            </div>
+            {lists[kind].length === 0 && <p className="text-muted-foreground">Nada todavía.</p>}
+            {lists[kind].map((x) => admin ? (
+              <button key={x.key} data-flat-button onClick={() => open(kind, x.raw, x.key)} className="block w-full rounded-xl px-2 py-1 text-left hover:bg-muted">{x.label} ✏️</button>
+            ) : <p key={x.key}>{x.label}</p>)}
+          </section>
+        ))}
+      </div>
+
+      {edit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4" role="dialog" aria-label="Editar">
+          <div className="w-full max-w-md space-y-3 rounded-3xl bg-card p-5 shadow-xl">
+            <h2 className="text-xl font-extrabold">{edit.key ? "Modificar" : "Añadir"} {LABEL[edit.kind].toLowerCase().slice(0, -1)}</h2>
+            {edit.kind === "med" ? (<>
+              <input className={input} placeholder="Nombre" value={String(edit.d.name ?? "")} onChange={(e) => set("name", e.target.value)} />
+              <input className={input} placeholder="Horas: 09:00, 21:00" value={String(edit.d.times ?? "")} onChange={(e) => set("times", e.target.value)} />
+              <label className="block text-sm font-bold">Desde<input type="date" className={input} value={String(edit.d.from ?? "")} onChange={(e) => set("from", e.target.value)} /></label>
+              <label className="block text-sm font-bold">Hasta (vacío = crónico)<input type="date" className={input} value={String(edit.d.until ?? "")} onChange={(e) => set("until", e.target.value)} /></label>
+            </>) : (<>
+              <input className={input} placeholder="Título" value={String(edit.d.title ?? "")} onChange={(e) => set("title", e.target.value)} />
+              {edit.kind === "cita" && <>
+                <input className={input} placeholder="Con quién (médico, lugar…)" value={String(edit.d.who ?? "")} onChange={(e) => set("who", e.target.value)} />
+                <input className={input} placeholder="Acompañante" value={String(edit.d.companion ?? "")} onChange={(e) => set("companion", e.target.value)} />
+              </>}
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => set("days", undefined)} className={`rounded-xl py-2 font-bold ${!Array.isArray(edit.d.days) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>Un día</button>
+                <button onClick={() => set("days", [1, 2, 3, 4, 5])} className={`rounded-xl py-2 font-bold ${Array.isArray(edit.d.days) ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>Cada semana</button>
+              </div>
+              {Array.isArray(edit.d.days) ? (
+                <div className="flex gap-1">{DAYS.map(([l, n]) => {
+                  const on = (edit.d.days as number[]).includes(n);
+                  return <button key={n} onClick={() => set("days", on ? (edit.d.days as number[]).filter((x) => x !== n) : [...(edit.d.days as number[]), n])}
+                    className={`flex-1 rounded-lg py-2 font-bold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>{l}</button>;
+                })}</div>
+              ) : <input type="date" className={input} value={String(edit.d.date ?? "")} onChange={(e) => set("date", e.target.value)} />}
+              {edit.kind === "cita" ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-sm font-bold">Empieza<input type="time" className={input} value={String(edit.d.start)} onChange={(e) => set("start", e.target.value)} /></label>
+                  <label className="text-sm font-bold">Termina<input type="time" className={input} value={String(edit.d.end)} onChange={(e) => set("end", e.target.value)} /></label>
+                </div>
+              ) : <label className="block text-sm font-bold">Hora<input type="time" className={input} value={String(edit.d.time)} onChange={(e) => set("time", e.target.value)} /></label>}
+            </>)}
+            {err && <p className="font-semibold text-destructive">{err}</p>}
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => submit("upsert")} className="flex-1 rounded-2xl bg-primary py-3 font-bold text-primary-foreground">Guardar</button>
+              {edit.key && <button onClick={() => submit("delete")} className="rounded-2xl bg-destructive px-4 py-3 font-bold text-destructive-foreground">Borrar</button>}
+              <button onClick={() => setEdit(null)} className="rounded-2xl bg-secondary px-4 py-3 font-bold text-secondary-foreground">Cancelar</button>
+            </div>
+            <p className="text-sm text-muted-foreground">Se aplicará en el teléfono en cuanto se conecte (normalmente en un minuto).</p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
