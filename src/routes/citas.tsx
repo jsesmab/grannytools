@@ -424,7 +424,7 @@ function Citas() {
             {tab === "turnos" && people.length === 0 && (
               <p className="text-center text-muted-foreground">Primero añade personas en el apartado «Personas».</p>
             )}
-            {!locked && <p className="text-center text-sm text-muted-foreground">Toca una barra para modificarla.</p>}
+            {!locked && <p className="text-center text-sm text-muted-foreground">Toca una tarjeta para modificarla.</p>}
 
             <RangeToggle range={range} setRange={setRange} />
 
@@ -447,7 +447,7 @@ function Citas() {
                   <div>
                     <h2 className="mb-2 text-xl font-black">Hoy, {DAY_NAMES[t.i].toLowerCase()} {t.dt.getDate()}</h2>
                     {t.list.length === 0
-                      ? <p className="rounded-2xl bg-card p-5 text-center text-lg font-bold text-muted-foreground shadow">Hoy no tienes {noun[1]} previstas{tab === "turnos" ? "" : ""}.</p>
+                      ? <p className="rounded-2xl bg-card p-5 text-center text-lg font-bold text-muted-foreground shadow">Hoy no tienes {noun[1]} previstos.</p>
                       : <Timeline list={t.list} />}
                   </div>
                 );
