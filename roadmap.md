@@ -10,9 +10,9 @@
 - [ ] Publicar y probar en un móvil real
 - [ ] Decidir: widget grande para la versión de tiendas
 - [x] Family fase 1: cuentas, vinculación por código, sincronización, Mis personas, ficha, panel del día en ordenador
-- [ ] Family fase 2: crear/modificar citas, medicinas y tareas desde Family; escáner QR con cámara
+- [x] Family fase 2: crear/modificar citas, medicinas y tareas desde Family; escáner QR con cámara
 
 ## Próximo
 - [x] Citas, turnos y tareas: «Solo hoy» por defecto, botón «Semana completa»
 - [x] Acceso biométrico (huella / Face ID) en Family, preparado para tiendas
-- [ ] Family fase 2: crear/editar citas, medicinas y tareas + escáner QR
+- [x] Family fase 2: crear/editar citas, medicinas y tareas + escáner QR

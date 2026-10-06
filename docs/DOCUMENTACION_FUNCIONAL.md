@@ -108,3 +108,9 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 - En **Mi perfil** → «Entrar con huella o Face ID» → **Activar** (solo en la app instalada desde las tiendas).
 - Al abrir la app pedirá la huella o la cara; si falla, «Entrar con contraseña».
 - La huella nunca sale del teléfono.
+
+## 12. Family fase 2: cambiar la agenda desde Family
+- En la ficha de cada persona, un **Administrador** puede añadir, modificar o borrar **citas, medicinas y tareas** (✏️ sobre cada una, o «+ Añadir»).
+- Los cambios llegan al teléfono en cuanto se conecta (normalmente en un minuto). Mientras, aparece un aviso amarillo con los cambios en espera.
+- Consultas solo ve.
+- **Vincular**: botón «📷 Escanear el QR» para leer con la cámara el código del teléfono de la persona.
