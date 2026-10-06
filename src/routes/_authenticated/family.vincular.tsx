@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { QrScanner } from "@/components/QrScanner";
 import { FamilyShell } from "@/components/FamilyShell";
 import { redeemInvite } from "@/lib/family.functions";
 
@@ -27,11 +28,12 @@ function Vincular() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const go = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setMsg("");
+  const [scan, setScan] = useState(false);
+  const go = async (e?: React.FormEvent, raw?: string) => {
+    e?.preventDefault(); setBusy(true); setMsg("");
     try {
-      // Acepta también el contenido del QR pegado.
-      let c = code.trim();
+      // Acepta también el contenido del QR (leído con la cámara o pegado).
+      let c = (raw ?? code).trim();
       try { const j = JSON.parse(c); if (j?.code) c = j.code; } catch { /* código escrito */ }
       const r = await redeem({ data: { code: c } });
       if (!r.ok) { setMsg(r.error); return; }
@@ -41,10 +43,15 @@ function Vincular() {
     finally { setBusy(false); }
   };
 
+  const onQr = useCallback((t: string) => { setScan(false); void go(undefined, t); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <FamilyShell title="Vincular persona">
       <form onSubmit={go} className="max-w-md space-y-4 rounded-3xl border-2 border-border bg-card p-6">
-        <p>En el teléfono de la persona: rueda de <b>Ajustes</b> → <b>Vincular con un familiar</b>. Escribe el código que aparece (caduca en 10 min).</p>
+        <p>En el teléfono de la persona: rueda de <b>Ajustes</b> → <b>Vincular con un familiar</b>. Escanea el QR o escribe el código que aparece (caduca en 10 min).</p>
+        {scan ? <QrScanner onCode={onQr} onClose={() => setScan(false)} />
+          : <button type="button" onClick={() => setScan(true)} className="w-full rounded-2xl bg-success py-4 text-lg font-bold text-success-foreground">📷 Escanear el QR</button>}
+        <p className="text-center text-sm text-muted-foreground">o escribe el código</p>
         <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={9}
           className="w-full rounded-xl border-2 border-input bg-background px-4 py-4 text-center text-3xl font-black tracking-widest" />
         <button disabled={busy} className="w-full rounded-2xl bg-primary py-3 text-lg font-bold text-primary-foreground">Vincular</button>

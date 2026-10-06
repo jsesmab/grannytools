@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { clearUnlock, needsUnlock, verifyBiometric } from "@/lib/biometrics";
 import { supabase } from "@/integrations/supabase/client";
 
 const NAV = [
@@ -15,9 +16,26 @@ export function FamilyShell({ title, children, wide }: { title: string; children
   const nav = useNavigate();
   const out = async () => {
     await qc.cancelQueries(); qc.clear();
+    clearUnlock();
     await supabase.auth.signOut();
     nav({ to: "/auth", replace: true });
   };
+  const [locked, setLocked] = useState(false);
+  useEffect(() => { setLocked(needsUnlock()); }, []);
+  const unlock = async () => { if (await verifyBiometric()) setLocked(false); };
+  useEffect(() => { if (locked) void unlock(); }, [locked]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (locked) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
+        <div className="w-full max-w-sm space-y-4 rounded-3xl border-2 border-border bg-card p-6 text-center">
+          <p className="text-5xl" aria-hidden>🔒</p>
+          <h1 className="text-2xl font-extrabold">Grannytools Family</h1>
+          <button onClick={unlock} className="w-full rounded-2xl bg-primary py-4 text-lg font-bold text-primary-foreground">Entrar con huella / Face ID</button>
+          <button onClick={out} className="w-full rounded-2xl bg-secondary py-3 font-bold text-secondary-foreground">Entrar con contraseña</button>
+        </div>
+      </main>
+    );
+  }
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b-2 border-border bg-card">

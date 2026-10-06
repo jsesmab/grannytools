@@ -35,6 +35,21 @@ function snapshot() {
   };
 }
 
+type Change = { kind: "med" | "cita" | "task"; op: "upsert" | "delete"; item_key: string; item: Record<string, unknown> | null };
+const STORE = { med: ["grannytools.meds", "name"], cita: ["grannytools.citas.entries", "id"], task: ["grannytools.tareas", "id"] } as const;
+
+/** Aplica en el teléfono los cambios hechos desde Family (el teléfono sigue mandando). */
+export function applyChanges(changes: Change[]) {
+  for (const c of changes) {
+    const [key, idField] = STORE[c.kind];
+    const list = (json(key, []) as Record<string, unknown>[]).filter((x) => String(x[idField]) !== c.item_key);
+    if (c.op === "upsert" && c.item) list.push(c.item);
+    localStorage.setItem(key, JSON.stringify(list));
+  }
+  window.dispatchEvent(new Event("grannytools-tasks"));
+  window.dispatchEvent(new Event("storage"));
+}
+
 let running = false;
 export async function syncNow() {
   if (running || typeof navigator === "undefined" || !navigator.onLine) return;
@@ -50,6 +65,7 @@ export async function syncNow() {
     } });
     if (r.careModeAt > getCareModeAt() || r.careMode !== getCareMode()) setCareMode(r.careMode, "family", r.careModeAt);
     saveMembersFromServer(r.members as FamilyMember[]);
+    if (r.changes?.length) { applyChanges(r.changes as Change[]); running = false; return syncNow(); }
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
   } catch (e) { console.warn("Sincronización Family pendiente", e); }
   finally { running = false; }

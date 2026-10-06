@@ -63,3 +63,12 @@ Apple no permite llamar ni enviar SMS sin confirmación: se mantiene el comporta
 
 ## 5. Detector de caídas con pantalla apagada
 Conectar `@capacitor/motion` (o un servicio en primer plano de Android) a `pushAcceleration()` de `src/lib/fall-detection.ts`.
+
+## 6. Huella / Face ID (app Family)
+```bash
+npm i @aparajita/capacitor-biometric-auth && npx cap sync
+```
+- Android (AndroidManifest.xml): `<uses-permission android:name="android.permission.USE_BIOMETRIC" />`
+- iOS (Info.plist): `NSFaceIDUsageDescription` = «Grannytools Family usa Face ID para darte acceso rápido y seguro a los datos de tu familiar.»
+- Código: `src/lib/biometrics.ts` (lo detecta en `window.Capacitor.Plugins.BiometricAuth`; sin plugin, la opción no aparece).
+- Privacidad: la biometría la valida el sistema; no se guarda ni se envía. Añadir cláusula informativa en la política de privacidad.

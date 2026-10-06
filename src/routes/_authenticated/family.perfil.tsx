@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FamilyShell } from "@/components/FamilyShell";
 import { supabase } from "@/integrations/supabase/client";
+import { biometricAvailable, biometricEnabled, setBiometricEnabled } from "@/lib/biometrics";
 
 export const Route = createFileRoute("/_authenticated/family/perfil")({
   head: () => ({
@@ -20,6 +21,13 @@ export const Route = createFileRoute("/_authenticated/family/perfil")({
 function Perfil() {
   const [p, setP] = useState({ display_name: "", phone: "", avatar_url: "" });
   const [msg, setMsg] = useState("");
+  const [bioOk, setBioOk] = useState(false);
+  const [bioOn, setBioOn] = useState(false);
+  useEffect(() => { biometricAvailable().then(setBioOk); setBioOn(biometricEnabled()); }, []);
+  const toggleBio = async () => {
+    const ok = await setBiometricEnabled(!bioOn);
+    if (ok) setBioOn(!bioOn); else setMsg("No se pudo comprobar la huella.");
+  };
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       const { data: row } = await supabase.from("profiles").select("display_name, phone, avatar_url").eq("id", data.user!.id).maybeSingle();
@@ -62,6 +70,19 @@ function Perfil() {
         <button className="w-full rounded-2xl bg-primary py-3 text-lg font-bold text-primary-foreground">Guardar</button>
         {msg && <p className="font-semibold">{msg}</p>}
       </form>
+      <section className="max-w-md space-y-3 rounded-3xl border-2 border-border bg-card p-6">
+        <h2 className="text-xl font-extrabold">Entrar con huella o Face ID</h2>
+        {bioOk ? (
+          <>
+            <p className="text-muted-foreground">Al abrir la app te pedirá la huella o la cara en lugar de la contraseña. Tu huella nunca sale del teléfono.</p>
+            <button onClick={toggleBio} aria-pressed={bioOn} className={`w-full rounded-2xl py-3 text-lg font-bold ${bioOn ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>
+              {bioOn ? "Activado — tocar para desactivar" : "Activar"}
+            </button>
+          </>
+        ) : (
+          <p className="text-muted-foreground">Disponible en la app Family instalada desde Google Play o App Store, en teléfonos con huella o Face ID.</p>
+        )}
+      </section>
     </FamilyShell>
   );
 }
