@@ -14,5 +14,5 @@
 
 ## Próximo
 - [x] Citas, turnos y tareas: «Solo hoy» por defecto, botón «Semana completa»
-- [ ] Acceso biométrico (huella / Face ID) preparado para tiendas
+- [x] Acceso biométrico (huella / Face ID) en Family, preparado para tiendas
 - [ ] Family fase 2: crear/editar citas, medicinas y tareas + escáner QR

@@ -103,3 +103,8 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 - Ficha de la persona: agenda por día, medicinas, tareas, contactos, modo Autónomo/Protegido (solo Administrador) y familia vinculada.
 - El teléfono del mayor sigue funcionando sin internet; se pone al día cuando tiene conexión.
 - Próxima fase: crear y modificar citas, medicinas y tareas desde Family.
+
+## 11. Family: entrar con huella o Face ID
+- En **Mi perfil** → «Entrar con huella o Face ID» → **Activar** (solo en la app instalada desde las tiendas).
+- Al abrir la app pedirá la huella o la cara; si falla, «Entrar con contraseña».
+- La huella nunca sale del teléfono.

@@ -115,3 +115,4 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 - En `/family` y `/auth` el root no monta avisos, caídas, bienvenida ni sincronización del mayor.
 - Fase 2 pendiente: edición remota de citas/medicinas/tareas (cola de cambios hacia el teléfono), escáner QR con cámara.
 - Vista hoy/semana: estado local `range` en `src/routes/citas.tsx` (RangeToggle) y `src/components/TasksPanel.tsx`; por defecto "hoy".
+- Huella / Face ID (Family): `src/lib/biometrics.ts`. Interruptor en `/family/perfil` (`grannytools.family.biometric`); `FamilyShell` muestra pantalla de bloqueo si está activado y no se ha desbloqueado en esta apertura (`sessionStorage grannytools.family.unlocked`). La sesión sigue siendo la de Lovable Cloud; la huella solo desbloquea. Solo en app nativa (plugin BiometricAuth). Guía en `docs/CAPACITOR.md` §6.
