@@ -22,11 +22,11 @@ export const Route = createFileRoute("/_authenticated/family/hoy")({
 });
 
 type Row = DayItem & { elderId: string; elder: string };
-const KINDS = ["cita", "turno", "medicina", "tarea"] as const;
+const KINDS = ["cita", "tarea", "medicina", "turno"] as const;
 
 function Hoy() {
   const { data: elders } = useSuspenseQuery(eldersQuery);
-  const [kinds, setKinds] = useState<string[]>([...KINDS]);
+  const [kinds, setKinds] = useState<string[]>(["cita"]);
   const [who, setWho] = useState("todos");
   const now = new Date().toTimeString().slice(0, 5);
 
@@ -86,6 +86,13 @@ function Hoy() {
             <h2 className="text-lg font-extrabold">Sincronización</h2>
             {elders.map((e) => (
               <p key={e.id} className="flex justify-between text-sm"><span>{e.name || "Sin nombre"}</span><span className="text-muted-foreground">{syncLabel(e.last_sync)}</span></p>
+            ))}
+          </div>
+          <div className="rounded-3xl border-2 border-border bg-card p-4">
+            <h2 className="text-lg font-extrabold">Añadir o modificar</h2>
+            <p className="mb-2 text-sm text-muted-foreground">Citas, tareas, medicinas y turnos de cada persona:</p>
+            {elders.map((e) => (
+              <Link key={e.id} to="/family/persona/$id" params={{ id: e.id }} className="mb-2 block rounded-xl bg-primary px-3 py-2 text-center font-bold text-primary-foreground">✏️ {e.name || "Sin nombre"}</Link>
             ))}
           </div>
         </aside>

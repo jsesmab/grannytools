@@ -78,15 +78,23 @@ export async function memberAction(memberId: string, action: "admin" | "consulta
   saveMembersFromServer(r.members as FamilyMember[]);
 }
 
-/** Montado en el root solo en la app del mayor: sincroniza al abrir, cada minuto y al recuperar conexión. */
+/** Montado en el root solo en la app del mayor: en reposo cada 2 h; al instante al abrir/volver a la app,
+ *  al recuperar conexión y al marcar pastillas o tareas. */
+export const IDLE_SYNC_MS = 2 * 60 * 60 * 1000;
 export function FamilySync() {
   useEffect(() => {
     const go = () => { void syncNow(); };
+    const vis = () => { if (document.visibilityState === "visible") go(); };
     go();
-    const t = setInterval(go, 60_000);
+    const t = setInterval(go, IDLE_SYNC_MS);
     window.addEventListener("online", go);
     window.addEventListener(SYNC_EVT, go);
-    return () => { clearInterval(t); window.removeEventListener("online", go); window.removeEventListener(SYNC_EVT, go); };
+    window.addEventListener("grannytools-tasks", go);
+    document.addEventListener("visibilitychange", vis);
+    return () => {
+      clearInterval(t); window.removeEventListener("online", go); window.removeEventListener(SYNC_EVT, go);
+      window.removeEventListener("grannytools-tasks", go); document.removeEventListener("visibilitychange", vis);
+    };
   }, []);
   return null;
 }

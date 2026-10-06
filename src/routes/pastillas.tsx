@@ -147,7 +147,7 @@ function Pastillas() {
     const on = force ?? !next[k];
     if (on) next[k] = new Date().toISOString(); else delete next[k];
     setTaken(next);
-    try { localStorage.setItem(TAKEN_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    try { localStorage.setItem(TAKEN_KEY, JSON.stringify(next)); window.dispatchEvent(new Event("grannytools:syncnow")); } catch { /* ignore */ }
   };
 
   return (
