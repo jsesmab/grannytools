@@ -5,7 +5,7 @@ import { familyChange } from "@/lib/family.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { Snapshot } from "@/lib/family-data";
 
-type Kind = "med" | "cita" | "task";
+type Kind = "med" | "cita" | "task" | "turno";
 type Draft = Record<string, string | number[] | undefined>;
 const DAYS = [["L", 1], ["M", 2], ["X", 3], ["J", 4], ["V", 5], ["S", 6], ["D", 0]] as const;
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -22,7 +22,8 @@ const pendingQuery = (elderId: string) => ({
   refetchInterval: 30_000,
 });
 
-const LABEL: Record<Kind, string> = { med: "Medicinas", cita: "Citas", task: "Tareas" };
+const LABEL: Record<Kind, string> = { med: "Medicinas", cita: "Citas", task: "Tareas", turno: "Turnos" };
+const ORDER: Kind[] = ["task", "med", "turno", "cita"];
 
 export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; snapshot: Snapshot; admin: boolean }) {
   const qc = useQueryClient();
@@ -30,10 +31,13 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
   const { data: pending = [] } = useQuery(pendingQuery(elderId));
   const [edit, setEdit] = useState<{ kind: Kind; key?: string; d: Draft } | null>(null);
   const [err, setErr] = useState("");
+  const [openK, setOpenK] = useState<Kind[]>([]);
+  const people = snapshot.people ?? [];
 
   const lists: Record<Kind, { key: string; label: string; raw: Record<string, unknown> }[]> = {
     med: (snapshot.meds ?? []).map((m) => ({ key: m.name, label: `${m.name} · ${m.times.join(", ")}${m.until ? ` · hasta ${m.until}` : ""}`, raw: m })),
     cita: (snapshot.entries ?? []).filter((e) => e.kind === "fija").map((e) => ({ key: e.id, label: `${e.date ?? "Semanal"} · ${e.start}–${e.end} · ${e.title}${e.who ? ` · ${e.who}` : ""}`, raw: e })),
+    turno: (snapshot.entries ?? []).filter((e) => e.kind === "periodica").map((e) => ({ key: e.id, label: `${(e.days ?? []).map((n) => DAYS.find((d) => d[1] === n)?.[0]).join("")} · ${e.start}–${e.end} · ${people.find((p) => p.id === e.personId)?.name ?? e.who ?? e.title}`, raw: e })),
     task: (snapshot.tasks ?? []).map((t) => ({ key: t.id, label: `${t.time} · ${t.title} ${t.date ? `(${t.date})` : "(periódica)"}`, raw: t })),
   };
 
@@ -41,6 +45,8 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
     const r = (raw ?? {}) as any;
     const d: Draft = kind === "med"
       ? { name: r.name ?? "", times: (r.times ?? ["09:00"]).join(", "), from: r.from, until: r.until }
+      : kind === "turno"
+        ? { title: r.title ?? "", personId: r.personId ?? people[0]?.id ?? "", who: r.who ?? "", days: r.days ?? [1, 2, 3, 4, 5], start: r.start ?? "09:00", end: r.end ?? "14:00" }
       : kind === "cita"
         ? { title: r.title ?? "", who: r.who ?? "", companion: r.companion ?? "", date: r.date ?? (r.days ? undefined : new Date().toISOString().slice(0, 10)), days: r.days, start: r.start ?? "10:00", end: r.end ?? "11:00" }
         : { title: r.title ?? "", time: r.time ?? "10:00", date: r.date ?? (r.days ? undefined : new Date().toISOString().slice(0, 10)), days: r.days };
@@ -58,6 +64,10 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
         const times = String(d.times).split(/[,\s]+/).filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map((t) => t.padStart(5, "0"));
         if (!String(d.name).trim() || !times.length) return setErr("Pon nombre y al menos una hora (ej. 09:00, 21:00).");
         item = { ...orig, name: String(d.name).trim(), times, from: d.from || undefined, until: d.until || undefined };
+      } else if (kind === "turno") {
+        if (!d.personId && !String(d.who).trim()) return setErr("Elige quién hace el turno.");
+        if (!(d.days as number[]).length) return setErr("Elige algún día.");
+        item = { remindMin: 0, ...orig, id: edit.key ?? uid(), kind: "periodica", title: String(d.title).trim() || undefined, personId: d.personId || undefined, who: String(d.who ?? "").trim() || undefined, days: d.days, start: d.start, end: d.end };
       } else {
         if (!String(d.title).trim()) return setErr("Pon un título.");
         if (repeat && !(d.days as number[]).length) return setErr("Elige algún día.");
@@ -69,7 +79,7 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
     } else if (!confirm("¿Borrar? Se quitará del teléfono al conectarse.")) return;
     const key = edit.key ?? String(item?.[kind === "med" ? "name" : "id"]);
     try {
-      await send({ data: { elderId, kind, op, key, item: item ? (JSON.parse(JSON.stringify(item)) as Record<string, any>) : null } });
+      await send({ data: { elderId, kind: kind === "turno" ? "cita" : kind, op, key, item: item ? (JSON.parse(JSON.stringify(item)) as Record<string, any>) : null } });
       setEdit(null);
       qc.invalidateQueries({ queryKey: ["family", "pending", elderId] });
     } catch (e) { setErr((e as Error).message); }
@@ -83,30 +93,49 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
         <section className="rounded-3xl border-2 border-warning bg-warning/15 p-4">
           <p className="font-bold">⏳ {pending.length} cambio(s) esperando a que el teléfono se conecte:</p>
           <ul className="ml-5 list-disc text-sm">
-            {pending.map((p) => <li key={p.id}>{p.op === "delete" ? "Borrar" : "Guardar"} {LABEL[p.kind].toLowerCase().slice(0, -1)}: {String(p.item?.title ?? p.item?.name ?? p.item_key)}</li>)}
+            {pending.map((p) => <li key={p.id}>{p.op === "delete" ? "Borrar" : "Guardar"} {LABEL[p.kind === "cita" && (p.item as any)?.kind === "periodica" ? "turno" : p.kind].toLowerCase().slice(0, -1)}: {String(p.item?.title ?? p.item?.name ?? p.item_key)}</li>)}
           </ul>
         </section>
       )}
-      <div className="grid gap-5 lg:grid-cols-3">
-        {(["cita", "med", "task"] as Kind[]).map((kind) => (
+      <div className="space-y-3">
+        {ORDER.map((kind) => { const on = openK.includes(kind); return (
           <section key={kind} className={card}>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xl font-extrabold">{LABEL[kind]}</h2>
-              {admin && <button onClick={() => open(kind)} className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">+ Añadir</button>}
+              <button data-flat-button aria-expanded={on} onClick={() => setOpenK((o) => on ? o.filter((x) => x !== kind) : [...o, kind])}
+                className="flex flex-1 items-center gap-2 text-left text-xl font-extrabold">
+                <span>{on ? "▾" : "▸"}</span>{LABEL[kind]} <span className="text-sm font-semibold text-muted-foreground">({lists[kind].length})</span>
+              </button>
+              {admin && <button onClick={() => { open(kind); setOpenK((o) => o.includes(kind) ? o : [...o, kind]); }} className="rounded-xl bg-primary px-3 py-2 text-sm font-bold text-primary-foreground">+ Añadir</button>}
             </div>
-            {lists[kind].length === 0 && <p className="text-muted-foreground">Nada todavía.</p>}
+            {on && <>{lists[kind].length === 0 && <p className="text-muted-foreground">Nada todavía.</p>}
             {lists[kind].map((x) => admin ? (
               <button key={x.key} data-flat-button onClick={() => open(kind, x.raw, x.key)} className="block w-full rounded-xl px-2 py-1 text-left hover:bg-muted">{x.label} ✏️</button>
-            ) : <p key={x.key}>{x.label}</p>)}
+            ) : <p key={x.key}>{x.label}</p>)}</>}
           </section>
-        ))}
+        ); })}
       </div>
 
       {edit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4" role="dialog" aria-label="Editar">
           <div className="w-full max-w-md space-y-3 rounded-3xl bg-card p-5 shadow-xl">
             <h2 className="text-xl font-extrabold">{edit.key ? "Modificar" : "Añadir"} {LABEL[edit.kind].toLowerCase().slice(0, -1)}</h2>
-            {edit.kind === "med" ? (<>
+            {edit.kind === "turno" ? (<>
+              {people.length > 0 ? (
+                <select className={input} value={String(edit.d.personId ?? "")} onChange={(e) => set("personId", e.target.value)}>
+                  {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              ) : <input className={input} placeholder="Quién hace el turno" value={String(edit.d.who ?? "")} onChange={(e) => set("who", e.target.value)} />}
+              <input className={input} placeholder="Nota (opcional)" value={String(edit.d.title ?? "")} onChange={(e) => set("title", e.target.value)} />
+              <div className="flex gap-1">{DAYS.map(([l, n]) => {
+                const on = (edit.d.days as number[]).includes(n);
+                return <button key={n} onClick={() => set("days", on ? (edit.d.days as number[]).filter((x) => x !== n) : [...(edit.d.days as number[]), n])}
+                  className={`flex-1 rounded-lg py-2 font-bold ${on ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}>{l}</button>;
+              })}</div>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-sm font-bold">Empieza<input type="time" className={input} value={String(edit.d.start)} onChange={(e) => set("start", e.target.value)} /></label>
+                <label className="text-sm font-bold">Termina<input type="time" className={input} value={String(edit.d.end)} onChange={(e) => set("end", e.target.value)} /></label>
+              </div>
+            </>) : edit.kind === "med" ? (<>
               <input className={input} placeholder="Nombre" value={String(edit.d.name ?? "")} onChange={(e) => set("name", e.target.value)} />
               <input className={input} placeholder="Horas: 09:00, 21:00" value={String(edit.d.times ?? "")} onChange={(e) => set("times", e.target.value)} />
               <label className="block text-sm font-bold">Desde<input type="date" className={input} value={String(edit.d.from ?? "")} onChange={(e) => set("from", e.target.value)} /></label>

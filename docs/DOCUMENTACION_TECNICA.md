@@ -119,3 +119,6 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 
 ## Vista de agenda (citas.tsx / TasksPanel.tsx)
 - Sin barras horarias: `Timeline` en citas.tsx ahora pinta tarjetas detalladas. Semana = lunes a domingo de la semana actual, estado `openDays` (ISO) para desplegar varios días.
+
+## Family: lista desplegable
+`family.index.tsx` lista nombres con acordeón; reutiliza `FamilyEditor` (secciones colapsables en orden task, med, turno, cita; "turno" = entrada `periodica` enviada con kind `cita` en `familyChange`) y `FamilyMembers` (componente compartido con la ficha `/family/persona/$id`).

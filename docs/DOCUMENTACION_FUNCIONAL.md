@@ -114,3 +114,6 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 - Los cambios llegan al teléfono en cuanto se conecta (normalmente en un minuto). Mientras, aparece un aviso amarillo con los cambios en espera.
 - Consultas solo ve.
 - **Vincular**: botón «📷 Escanear el QR» para leer con la cámara el código del teléfono de la persona.
+
+## Family: Mis personas (desplegable)
+«Mis personas» muestra solo los nombres de las personas atendidas. Al tocar un nombre se despliega: Tareas, Medicinas, Turnos y Citas (cada sección se abre/cierra por separado; el Administrador puede añadir y modificar) y el panel «Familia vinculada» con los familiares de esa persona.

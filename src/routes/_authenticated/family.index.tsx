@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { FamilyShell } from "@/components/FamilyShell";
-import { dayItems, eldersQuery, syncLabel } from "@/lib/family-data";
+import { useState } from "react";
+import { eldersQuery, syncLabel } from "@/lib/family-data";
+import { FamilyEditor } from "@/components/FamilyEditor";
+import { FamilyMembers } from "@/components/FamilyMembers";
 
 export const Route = createFileRoute("/_authenticated/family/")({
   head: () => ({
@@ -22,9 +25,9 @@ export const Route = createFileRoute("/_authenticated/family/")({
 
 function Personas() {
   const { data: elders } = useSuspenseQuery(eldersQuery);
-  const now = new Date().toTimeString().slice(0, 5);
+  const [open, setOpen] = useState<string[]>([]);
   return (
-    <FamilyShell title="Mis personas">
+    <FamilyShell title="Mis personas" wide>
       {elders.length === 0 && (
         <div className="rounded-3xl border-2 border-dashed border-border p-8 text-center">
           <p className="text-xl font-bold">Aún no cuidas a nadie.</p>
@@ -32,23 +35,26 @@ function Personas() {
           <Link to="/family/vincular" className="mt-4 inline-block rounded-2xl bg-primary px-6 py-3 font-bold text-primary-foreground">Vincular persona</Link>
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="space-y-4">
         {elders.map((e) => {
-          const next = dayItems(e.snapshot).filter((i) => i.time >= now && i.status !== "hecha").slice(0, 3);
+          const on = open.includes(e.id);
+          const admin = e.role === "admin";
           return (
-            <Link key={e.id} to="/family/persona/$id" params={{ id: e.id }} data-flat-button
-              className="block space-y-3 rounded-3xl border-2 border-border bg-card p-5 hover:border-primary">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-2xl font-extrabold">{e.name || "Sin nombre"}</h2>
-                <span className="rounded-lg bg-muted px-2 py-1 text-xs font-bold">{e.role === "admin" ? "Administrador" : "Consultas"}</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {syncLabel(e.last_sync)} · Modo {e.care_mode === "protegido" ? "Protegido" : "Autónomo"}
-              </p>
-              {next.length ? next.map((i, k) => (
-                <p key={k} className="text-base"><b>{i.time}</b> · {i.title}</p>
-              )) : <p className="text-muted-foreground">Nada más por hoy.</p>}
-            </Link>
+            <div key={e.id} className="space-y-3">
+              <button data-flat-button aria-expanded={on} onClick={() => setOpen((o) => on ? o.filter((x) => x !== e.id) : [...o, e.id])}
+                className="flex w-full items-center gap-3 rounded-3xl border-2 border-border bg-card p-5 text-left hover:border-primary">
+                <span className="text-2xl">{on ? "▾" : "▸"}</span>
+                <span className="flex-1 text-2xl font-extrabold">{e.name || "Sin nombre"}</span>
+                <span className="rounded-lg bg-muted px-2 py-1 text-xs font-bold">{admin ? "Administrador" : "Consultas"}</span>
+              </button>
+              {on && (
+                <div className="space-y-3 pl-2 sm:pl-6">
+                  <p className="text-sm text-muted-foreground">{syncLabel(e.last_sync)}{!admin && " · solo ver"} · <Link to="/family/persona/$id" params={{ id: e.id }} className="text-primary underline">Ficha completa</Link></p>
+                  <FamilyEditor elderId={e.id} snapshot={e.snapshot} admin={admin} />
+                  <FamilyMembers elderId={e.id} admin={admin} />
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
