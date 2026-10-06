@@ -161,6 +161,7 @@ function Citas() {
   const [eRemind, setERemind] = useState(DEFAULT_REMIND_MIN);
   const [eRepeat, setERepeat] = useState<"once" | "weekly">("once");
   const [range, setRange] = useState<"hoy" | "semana">("hoy");
+  const [openDays, setOpenDays] = useState<string[]>([]);
 
   useEffect(() => {
     setPeople(load<Person[]>(PEOPLE_KEY, []));
@@ -280,42 +281,30 @@ function Citas() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [entries]);
 
-  // Barra temporal de un día: una fila por carril, colores de cada persona.
-  const Timeline = ({ list }: { list: Entry[] }) => {
-    if (list.length === 0) return <p className="text-sm text-muted-foreground">Sin turnos</p>;
-    const lanes = buildLanes(list);
-    return (
-      <div className="space-y-1">
-        {lanes.map((lane, li) => (
-          <div key={li} className="relative h-10 overflow-hidden rounded-lg bg-secondary">
-            {lane.map((e) => {
-              const s = toMin(e.start);
-              const en = endMin(e.start, e.end);
-              return (
-                <button
-                  key={e.id}
-                  onClick={() => openEdit(e)}
-                  title={`${entryWho(e)} · ${e.start}–${e.end} · ${e.title}`}
-                  className={`absolute top-0 flex h-full items-center overflow-hidden rounded-lg px-1 text-left text-white active:scale-[0.98] ${personById[e.personId ?? ""]?.color ?? "bg-primary"}`}
-                  style={{ left: `${(s / 1440) * 100}%`, width: `${Math.max(((en - s) / 1440) * 100, 4)}%` }}
-                >
-                  <span className="truncate text-[11px] font-black leading-tight">
-                    {entryWho(e) || e.title}
-                    <span className="block text-[10px] font-normal opacity-90">{e.start}–{e.end}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ))}
-        <div className="flex justify-between px-0.5 text-[10px] text-muted-foreground">
-          {["0", "6", "12", "18", "24"].map((h) => (
-            <span key={h}>{h}h</span>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  // Lista detallada de un día: una tarjeta grande por cita o turno.
+  const Timeline = ({ list }: { list: Entry[] }) => (
+    <div className="space-y-2">
+      {[...list].sort((a, b) => toMin(a.start) - toMin(b.start)).map((e) => {
+        const p = personById[e.personId ?? ""];
+        return (
+          <button key={e.id} onClick={() => openEdit(e)} data-flat-button
+            className="flex w-full items-stretch gap-3 rounded-2xl border-2 border-border bg-card p-3 text-left shadow active:scale-[0.99]">
+            <span className={`w-2 shrink-0 rounded-full ${p?.color ?? "bg-primary"}`} aria-hidden />
+            <span className="flex-1">
+              <span className="block text-2xl font-black">{e.start} – {e.end}
+                {e.kind === "periodica" && <span className="text-base font-bold text-muted-foreground"> · {hoursBetween(e.start, e.end)} h</span>}
+              </span>
+              {entryWho(e) && <span className="block text-xl font-bold">{entryWho(e)}{p ? ` · ${ROLES.find((r) => r.v === p.role)?.label ?? ""}` : ""}</span>}
+              {e.title && <span className="block text-lg">{e.title}</span>}
+              {e.companion && <span className="block text-lg text-muted-foreground">Te acompaña: {e.companion}</span>}
+              {e.date && <span className="block text-sm text-muted-foreground">{e.date}</span>}
+            </span>
+            {!locked && <Pencil className="h-5 w-5 shrink-0 self-center" aria-hidden />}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -439,55 +428,59 @@ function Citas() {
 
             <RangeToggle range={range} setRange={setRange} />
 
-            <div>
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Repeat className="h-5 w-5" aria-hidden /> {range === "hoy" ? (tab === "turnos" ? "Turnos de hoy" : "Citas de hoy") : tab === "turnos" ? "Turnos de cada semana" : "Citas que se repiten"}</h2>
-              <div className="space-y-2">
-                {DAY_INDEX.map((d, i) => {
-                  if (range === "hoy" && d !== new Date().getDay()) return null;
-                  const list = entries.filter((e) =>
-                    (e.days?.includes(d) || (range === "hoy" && e.date === todayISO())) &&
-                    (tab === "turnos" ? e.kind === "periodica" : e.kind === "fija"));
-                  return (
-                    <div key={d} className="rounded-2xl bg-card p-2 shadow">
-                      <p className="mb-1 font-bold">{range === "hoy" ? `Hoy, ${DAY_NAMES[i].toLowerCase()}` : DAY_NAMES[i]}</p>
-                      <Timeline list={list} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {tab === "citas" && range === "semana" && (<div>
-              <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><CalendarDays className="h-5 w-5" aria-hidden /> Citas con fecha</h2>
-              {fixedByDate.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sin citas con fecha.</p>
-              ) : (
+            {(() => {
+              const isKind = (e: Entry) => (tab === "turnos" ? e.kind === "periodica" : e.kind === "fija");
+              const now = new Date();
+              const monday = new Date(now);
+              monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+              const week = DAY_INDEX.map((d, i) => {
+                const dt = new Date(monday);
+                dt.setDate(monday.getDate() + i);
+                const iso = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+                const list = entries.filter((e) => isKind(e) && (e.days?.includes(d) || e.date === iso));
+                return { d, i, iso, dt, list, isToday: iso === todayISO() };
+              });
+              const noun = tab === "turnos" ? ["turno", "turnos"] : ["cita", "citas"];
+              if (range === "hoy") {
+                const t = week.find((w) => w.isToday)!;
+                return (
+                  <div>
+                    <h2 className="mb-2 text-xl font-black">Hoy, {DAY_NAMES[t.i].toLowerCase()} {t.dt.getDate()}</h2>
+                    {t.list.length === 0
+                      ? <p className="rounded-2xl bg-card p-5 text-center text-lg font-bold text-muted-foreground shadow">Hoy no tienes {noun[1]} previstas{tab === "turnos" ? "" : ""}.</p>
+                      : <Timeline list={t.list} />}
+                  </div>
+                );
+              }
+              return (
                 <div className="space-y-2">
-                  {fixedByDate.map(([date, list]) => (
-                    <div key={date} className="rounded-2xl bg-card p-2 shadow">
-                      <p className="mb-1 font-bold">{date}</p>
-                      <Timeline list={list} />
-                      <div className="mt-1 space-y-1">
-                        {[...list].sort((a, b) => toMin(a.start) - toMin(b.start)).map((e) => (
-                          <button
-                            key={e.id}
-                            onClick={() => openEdit(e)}
-                            className="flex w-full items-center gap-2 rounded-lg bg-secondary px-2 py-2 text-left text-sm font-bold text-secondary-foreground active:scale-[0.98]"
-                          >
-                            <span className={`h-4 w-4 shrink-0 rounded-full ${personById[e.personId ?? ""]?.color ?? "bg-primary"}`} />
-                            <span className="flex-1 truncate">
-                              {e.start}–{e.end} · {e.title}{entryWho(e) ? ` · ${entryWho(e)}` : ""}
-                              {e.companion ? ` · con ${e.companion}` : ""}
-                            </span>
-                            <Pencil className="h-4 w-4 shrink-0" aria-hidden />
-                          </button>
-                        ))}
+                  {week.map((w) => {
+                    const isOpen = openDays.includes(w.iso);
+                    return (
+                      <div key={w.iso} className="rounded-2xl bg-card shadow">
+                        <button
+                          onClick={() => setOpenDays((p) => (p.includes(w.iso) ? p.filter((x) => x !== w.iso) : [...p, w.iso]))}
+                          aria-expanded={isOpen}
+                          className={`flex w-full items-center justify-between rounded-2xl px-4 py-4 text-left text-lg font-black ${w.isToday ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"}`}
+                        >
+                          <span>{DAY_NAMES[w.i]} {w.dt.getDate()}{w.isToday ? " (Hoy)" : ""}</span>
+                          <span className="text-base font-bold">
+                            {w.list.length === 0 ? "Sin actividad" : `${w.list.length} ${w.list.length === 1 ? noun[0] : noun[1]}`} {isOpen ? "▲" : "▼"}
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="p-2">
+                            {w.list.length === 0
+                              ? <p className="p-2 text-center text-muted-foreground">Nada este día.</p>
+                              : <Timeline list={w.list} />}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
-            </div>)}
+              );
+            })()}
           </section>
         )}
 
