@@ -117,3 +117,7 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 
 ## Family: Mis personas (desplegable)
 «Mis personas» muestra solo los nombres de las personas atendidas. Al tocar un nombre se despliega: Tareas, Medicinas, Turnos y Citas (cada sección se abre/cierra por separado; el Administrador puede añadir y modificar) y el panel «Familia vinculada» con los familiares de esa persona.
+
+## Sincronización y Panel del día (Family)
+- El teléfono del mayor se sincroniza cada 2 horas en reposo, y al momento cuando se abre la app, se marca una pastilla o tarea, o vuelve la conexión.
+- El Panel del día empieza mostrando solo Citas; los filtros van en orden Citas, Tareas, Medicinas y Turnos. El recuadro «Añadir o modificar» abre la ficha de cada persona para dar de alta, cambiar o borrar.
