@@ -135,3 +135,6 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 - Coincidencia por `date` si existe, si no por `days` (independiente de `kind`); horas normalizadas con `normTime`.
 - `DayItem.info: string[]` con el detalle completo; family.hoy lo muestra siempre en `lg` y plegable en móvil.
 - pastillas.tsx: `vigencia(m)` muestra fecha fin y días restantes; sección «Mis tratamientos».
+
+## Autoridad del modo de uso
+deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no tiene elder_members, el servidor fuerza "autonomo"; si tiene, solo setElderCareMode (Administrador) lo cambia. En Ajustes del mayor el modo es de solo lectura.

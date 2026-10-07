@@ -13,7 +13,8 @@ import {
   setFallEnabled,
 } from "@/lib/fall-detection";
 import { simulateFall } from "@/lib/fall-guard";
-import { useCareLocked, setCareMode } from "@/lib/care-lock";
+import { useCareLocked } from "@/lib/care-lock";
+import { getFamilyMembers, LINK_EVT } from "@/lib/family-link";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -150,6 +151,8 @@ function Home() {
   const [showPrefs, setShowPrefs] = useState(false);
   const [sheet, setSheet] = useState<SheetKey | null>(null);
   const { locked: careLocked } = useCareLocked();
+  const [hasFamily, setHasFamily] = useState(false);
+  useEffect(() => { const r = () => setHasFamily(getFamilyMembers().length > 0); r(); window.addEventListener(LINK_EVT, r); return () => window.removeEventListener(LINK_EVT, r); }, []);
   const [notifOn, setNotifOn] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
   const [fallOn, setFallOn] = useState(false);
