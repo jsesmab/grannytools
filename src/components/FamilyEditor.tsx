@@ -137,7 +137,28 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
               </div>
             </>) : edit.kind === "med" ? (<>
               <input className={input} placeholder="Nombre" value={String(edit.d.name ?? "")} onChange={(e) => set("name", e.target.value)} />
-              <input className={input} placeholder="Horas: 09:00, 21:00" value={String(edit.d.times ?? "")} onChange={(e) => set("times", e.target.value)} />
+              {(() => {
+                const list = String(edit.d.times ?? "").split(/[,\s]+/).filter(Boolean);
+                const save = (l: string[]) => set("times", l.join(", "));
+                return (
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold">Tomas al día ({list.length})</p>
+                    {list.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-16 text-sm font-bold">Toma {i + 1}</span>
+                        <input type="time" className={input} value={t.padStart(5, "0")}
+                          onChange={(e) => { const l = [...list]; l[i] = e.target.value; save(l); }} />
+                        {list.length > 1 && (
+                          <button type="button" aria-label={`Quitar toma ${i + 1}`} onClick={() => save(list.filter((_, j) => j !== i))}
+                            className="rounded-xl bg-secondary px-3 py-2 font-bold text-secondary-foreground">✕</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => save([...list, list.length ? "21:00" : "09:00"])}
+                      className="w-full rounded-xl bg-secondary py-2 font-bold text-secondary-foreground">+ Añadir otra toma</button>
+                  </div>
+                );
+              })()}
               <label className="block text-sm font-bold">Desde<input type="date" className={input} value={String(edit.d.from ?? "")} onChange={(e) => set("from", e.target.value)} /></label>
               <label className="block text-sm font-bold">Hasta (vacío = crónico)<input type="date" className={input} value={String(edit.d.until ?? "")} onChange={(e) => set("until", e.target.value)} /></label>
             </>) : (<>
