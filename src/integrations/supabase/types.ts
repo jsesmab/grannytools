@@ -121,6 +121,7 @@ export type Database = {
           created_at: string
           elder_id: string
           id: string
+          last_active_at: string
           role: string
           user_id: string
         }
@@ -128,6 +129,7 @@ export type Database = {
           created_at?: string
           elder_id: string
           id?: string
+          last_active_at?: string
           role?: string
           user_id: string
         }
@@ -135,6 +137,7 @@ export type Database = {
           created_at?: string
           elder_id?: string
           id?: string
+          last_active_at?: string
           role?: string
           user_id?: string
         }
