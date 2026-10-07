@@ -154,3 +154,5 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 `__root.tsx` selecciona la identidad de instalación en `head({ matches })` según los pathnames `/family`, `/family/*` y `/auth`: un único manifiesto, favicons, apple-touch-icon, título de instalación y color. La selección pertenece al HTML inicial y a la navegación del router, no a un `useEffect`; así funciona también cuando el layout autenticado es `ssr:false`, sin cambiar sus guardas. `/auth` está fuera del scope de Family y puede mostrarse fuera de la ventana instalada según el navegador; tras iniciar sesión vuelve a `/family`.
 
 `auth.tsx` y `FamilyShell.tsx` muestran el icono existente de Family a 112 × 112 antes de las opciones (incluido el desbloqueo biométrico). Validar el HTML sin JavaScript de `/family` y `/auth`, y volver a instalar en un dispositivo real después de publicar; una instalación antigua puede conservar su identidad en caché.
+
+- FamilyEditor: las tomas de una medicina se editan como lista de selectores de hora (se guardan en el borrador como texto separado por comas y se validan en save()).
