@@ -138,3 +138,7 @@ En modo protegido, citas, turnos y tareas se abren en solo lectura: formulario d
 
 ## Autoridad del modo de uso
 deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no tiene elder_members, el servidor fuerza "autonomo"; si tiene, solo setElderCareMode (Administrador) lo cambia. En Ajustes del mayor el modo es de solo lectura.
+
+
+## Límite de plan
+`redeemInvite` cuenta las filas de `elder_members` del usuario; si ya tiene 2 y el código es de otra persona, devuelve `ok:false` con mensaje de plan profesional. La suscripción profesional queda pendiente.
