@@ -138,6 +138,7 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 - Citas semanales y de un día, tareas, medicinas y turnos aparecen correctamente en el Panel del día.
 - Cada elemento muestra toda su información: horario, con quién, motivo, acompañante, repetición, tomas y hasta cuándo dura el tratamiento. En ordenador se ve todo; en el móvil, «Ver detalles».
 - En Medicinas del mayor, cada toma indica «Hasta el DD/MM/AAAA · quedan N días» o «Tratamiento continuo», y hay una lista «Mis tratamientos».
+- En Family, al dar de alta o modificar una medicina se pueden añadir varias tomas (botón «+ Añadir otra toma», cada una con su selector de hora y ✕ para quitarla), igual que en Grannytools.
 
 ## Modo de uso (Autónomo / Protegido)
 - Sin familia vinculada: la persona es siempre Autónoma.
