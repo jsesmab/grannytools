@@ -139,6 +139,16 @@ function RootComponent() {
   const isFamily = path.startsWith("/family") || path.startsWith("/auth");
   usePrefs();
 
+  // Family se instala como app aparte: manifiesto, icono y nombre propios.
+  useEffect(() => {
+    const set = (sel: string, attr: string, val: string) =>
+      document.querySelectorAll(sel).forEach((el) => el.setAttribute(attr, val));
+    set('link[rel="manifest"]', "href", isFamily ? "/family.webmanifest" : "/manifest.webmanifest");
+    set('link[rel="apple-touch-icon"]', "href", isFamily ? "/family-apple-touch-icon.png" : "/apple-touch-icon.png");
+    set('meta[name="apple-mobile-web-app-title"]', "content", isFamily ? "Family" : "Grannytools");
+    set('meta[name="theme-color"]', "content", isFamily ? "#0b8a6e" : "#2563eb");
+  }, [isFamily]);
+
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;

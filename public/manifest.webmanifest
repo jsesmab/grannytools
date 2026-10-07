@@ -2,6 +2,7 @@
   "name": "Grannytools — Ayudas para el día a día",
   "short_name": "Grannytools",
   "description": "Oír mejor, lupa con la cámara y contactos de ayuda con un solo toque.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

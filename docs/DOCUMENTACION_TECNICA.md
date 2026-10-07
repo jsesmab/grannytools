@@ -147,3 +147,6 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 - `elder_members.last_active_at`: `familyHeartbeat` (montado en `FamilyShell`) lo actualiza como mucho una vez por hora.
 - `deviceSync` devuelve `paused=true` si la persona tiene familiares y ninguno ha abierto Family en 30 días (`INACTIVE_MS`). Sin familiares no se pausa (necesita publicar la invitación).
 - Teléfono: `grannytools.syncPaused`; en pausa solo sincroniza una vez al día. `requestSync()` (p. ej. desde Vincular) y los cambios recibidos fuerzan la sincronización. Al volver un familiar, la siguiente comprobación diaria la reactiva.
+
+## Manifiesto web de Family
+`public/family.webmanifest` (id/start_url `/family`, iconos `family-icon-192/512.png`, `family-apple-touch-icon.png`). `__root.tsx` intercambia en cliente el `link[rel=manifest]`, `apple-touch-icon`, `apple-mobile-web-app-title` y `theme-color` cuando la ruta empieza por `/family` o `/auth`. `manifest.webmanifest` tiene `id: "/"` para que el navegador trate ambas como apps distintas.
