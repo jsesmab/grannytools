@@ -16,6 +16,7 @@
 - [x] Family fase 2: crear/modificar citas, medicinas y tareas desde Family; escáner QR con cámara
 
 ## Próximo
+- [x] Corregir identidad de instalación web de Family y mostrar su icono antes de las opciones; HTML inicial y pantalla de acceso verificados sin errores.
 - [x] Citas, turnos y tareas: «Solo hoy» por defecto, botón «Semana completa»
 - [x] Acceso biométrico (huella / Face ID) en Family, preparado para tiendas
 - [x] Family fase 2: crear/editar citas, medicinas y tareas + escáner QR

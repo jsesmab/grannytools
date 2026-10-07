@@ -31,6 +31,7 @@ export function FamilyShell({ title, children, wide }: { title: string; children
     return (
       <main className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
         <div className="w-full max-w-sm space-y-4 rounded-3xl border-2 border-border bg-card p-6 text-center">
+          <img src="/family-icon-192.png" alt="Grannytools Family" width={112} height={112} className="mx-auto h-28 w-28 object-contain" />
           <p className="text-5xl" aria-hidden>🔒</p>
           <h1 className="text-2xl font-extrabold">Grannytools Family</h1>
           <button onClick={unlock} className="w-full rounded-2xl bg-primary py-4 text-lg font-bold text-primary-foreground">Entrar con huella / Face ID</button>
@@ -42,6 +43,9 @@ export function FamilyShell({ title, children, wide }: { title: string; children
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b-2 border-border bg-card">
+        <div className="flex justify-center pt-4">
+          <img src="/family-icon-192.png" alt="Grannytools Family" width={112} height={112} className="h-28 w-28 object-contain" />
+        </div>
         <div className={`mx-auto flex flex-wrap items-center gap-2 px-4 py-3 ${wide ? "max-w-7xl" : "max-w-4xl"}`}>
           <span className="mr-3 text-lg font-black text-primary">Grannytools Family</span>
           <nav className="flex flex-1 flex-wrap gap-2">

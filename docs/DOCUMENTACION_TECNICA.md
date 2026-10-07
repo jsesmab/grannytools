@@ -149,4 +149,8 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 - Teléfono: `grannytools.syncPaused`; en pausa solo sincroniza una vez al día. `requestSync()` (p. ej. desde Vincular) y los cambios recibidos fuerzan la sincronización. Al volver un familiar, la siguiente comprobación diaria la reactiva.
 
 ## Manifiesto web de Family
-`public/family.webmanifest` (id/start_url `/family`, iconos `family-icon-192/512.png`, `family-apple-touch-icon.png`). `__root.tsx` intercambia en cliente el `link[rel=manifest]`, `apple-touch-icon`, `apple-mobile-web-app-title` y `theme-color` cuando la ruta empieza por `/family` o `/auth`. `manifest.webmanifest` tiene `id: "/"` para que el navegador trate ambas como apps distintas.
+`public/family.webmanifest` usa id/start_url `/family` y scope `/family`; iconos `family-icon-192/512.png`, `family-apple-touch-icon.png`. `manifest.webmanifest` conserva `id: "/"`.
+
+`__root.tsx` selecciona la identidad de instalación en `head({ matches })` según los pathnames `/family`, `/family/*` y `/auth`: un único manifiesto, favicons, apple-touch-icon, título de instalación y color. La selección pertenece al HTML inicial y a la navegación del router, no a un `useEffect`; así funciona también cuando el layout autenticado es `ssr:false`, sin cambiar sus guardas. `/auth` está fuera del scope de Family y puede mostrarse fuera de la ventana instalada según el navegador; tras iniciar sesión vuelve a `/family`.
+
+`auth.tsx` y `FamilyShell.tsx` muestran el icono existente de Family a 112 × 112 antes de las opciones (incluido el desbloqueo biométrico). Validar el HTML sin JavaScript de `/family` y `/auth`, y volver a instalar en un dispositivo real después de publicar; una instalación antigua puede conservar su identidad en caché.

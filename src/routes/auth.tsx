@@ -54,6 +54,7 @@ function AuthPage() {
     <main className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
       <div className="w-full max-w-md space-y-5 rounded-3xl border-2 border-border bg-card p-6">
         <div>
+          <img src="/family-icon-192.png" alt="Grannytools Family" width={112} height={112} className="mx-auto mb-4 h-28 w-28 object-contain" />
           <p className="text-sm font-bold uppercase tracking-wider text-primary">Grannytools Family</p>
           <h1 className="text-3xl font-extrabold">{mode === "in" ? "Entrar" : "Crear cuenta"}</h1>
           <p className="mt-1 text-muted-foreground">Para familiares y cuidadores.</p>
