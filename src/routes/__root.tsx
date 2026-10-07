@@ -82,14 +82,16 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  head: ({ matches }) => {
+    const family = matches.some((match) => match.pathname === "/auth" || match.pathname === "/family" || match.pathname.startsWith("/family/"));
+    return {
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#2563eb" },
+      { name: "theme-color", content: family ? "#0b8a6e" : "#2563eb" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-      { name: "apple-mobile-web-app-title", content: "Grannytools" },
+      { name: "apple-mobile-web-app-title", content: family ? "Family" : "Grannytools" },
       { name: "mobile-web-app-capable", content: "yes" },
       { title: "Grannytools — Ayudas prácticas para mayores" },
       { name: "description", content: "Grannytools: oír mejor, lupa con la cámara y contactos de ayuda con un solo toque. Pensado para personas mayores." },
@@ -105,12 +107,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
-      { rel: "icon", href: "/icon-512.png", type: "image/png", sizes: "512x512" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: family ? "/family.webmanifest" : "/manifest.webmanifest" },
+      { rel: "icon", href: family ? "/family-icon-192.png" : "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { rel: "icon", href: family ? "/family-icon-512.png" : "/icon-512.png", type: "image/png", sizes: "512x512" },
+      { rel: "apple-touch-icon", href: family ? "/family-apple-touch-icon.png" : "/apple-touch-icon.png" },
     ],
-  }),
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -138,16 +141,6 @@ function RootComponent() {
   // Family (panel del familiar/cuidador) no lleva avisos, caídas ni bienvenida del mayor.
   const isFamily = path.startsWith("/family") || path.startsWith("/auth");
   usePrefs();
-
-  // Family se instala como app aparte: manifiesto, icono y nombre propios.
-  useEffect(() => {
-    const set = (sel: string, attr: string, val: string) =>
-      document.querySelectorAll(sel).forEach((el) => el.setAttribute(attr, val));
-    set('link[rel="manifest"]', "href", isFamily ? "/family.webmanifest" : "/manifest.webmanifest");
-    set('link[rel="apple-touch-icon"]', "href", isFamily ? "/family-apple-touch-icon.png" : "/apple-touch-icon.png");
-    set('meta[name="apple-mobile-web-app-title"]', "content", isFamily ? "Family" : "Grannytools");
-    set('meta[name="theme-color"]', "content", isFamily ? "#0b8a6e" : "#2563eb");
-  }, [isFamily]);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {

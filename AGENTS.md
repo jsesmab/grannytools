@@ -8,3 +8,4 @@
 - Family writes go through server functions that verify the caller's admin role; tables are read-only for clients.
 - Native packages use separate Capacitor configurations and platform directories selected by scripts/prepare-native.mjs so building one product never overwrites the other.
 - Home widgets use a registered Capacitor bridge and native Android/WidgetKit sources; browsers only display installation guidance because web apps cannot pin native widgets.
+- Web installation identity is selected in the root head from matched pathnames, including client-only Family routes and auth; never mutate installation tags in an effect, because installers need correct initial HTML and a single manifest.
