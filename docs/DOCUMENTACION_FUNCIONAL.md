@@ -146,3 +146,6 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 
 ## Límite de personas atendidas
 Cada familiar puede atender hasta 2 personas con la descarga de Family (4,99 €). Al intentar vincular una 3.ª, se muestra un aviso: hace falta el plan profesional por suscripción (residencias/profesionales).
+
+## Ahorro por inactividad
+Si ningún familiar abre Family durante 30 días, el teléfono del mayor deja de sincronizar con frecuencia y solo lo comprueba una vez al día. Todo sigue funcionando en el teléfono sin conexión. En cuanto un familiar vuelve a abrir Family, la sincronización normal se reanuda en menos de un día.

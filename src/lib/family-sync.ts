@@ -51,8 +51,15 @@ export function applyChanges(changes: Change[]) {
 }
 
 let running = false;
-export async function syncNow() {
+/** Pausa por inactividad de Family: solo se comprueba una vez al día (o al forzar desde Vincular). */
+const PAUSED_KEY = "grannytools.syncPaused";
+const PAUSED_CHECK_MS = 24 * 60 * 60 * 1000;
+export async function syncNow(force = false) {
   if (running || typeof navigator === "undefined" || !navigator.onLine) return;
+  if (!force && localStorage.getItem(PAUSED_KEY) === "1") {
+    const last = Date.parse(localStorage.getItem(LAST_SYNC_KEY) ?? "") || 0;
+    if (Date.now() - last < PAUSED_CHECK_MS) return;
+  }
   running = true;
   try {
     const inv = peekInvite();
@@ -65,7 +72,8 @@ export async function syncNow() {
     } });
     if (r.careModeAt > getCareModeAt() || r.careMode !== getCareMode()) setCareMode(r.careMode, "family", r.careModeAt);
     saveMembersFromServer(r.members as FamilyMember[]);
-    if (r.changes?.length) { applyChanges(r.changes as Change[]); running = false; return syncNow(); }
+    localStorage.setItem(PAUSED_KEY, r.paused ? "1" : "0");
+    if (r.changes?.length) { applyChanges(r.changes as Change[]); running = false; return syncNow(true); }
     localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
   } catch (e) { console.warn("Sincronización Family pendiente", e); }
   finally { running = false; }

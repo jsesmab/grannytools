@@ -142,3 +142,8 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 
 ## Límite de plan
 `redeemInvite` cuenta las filas de `elder_members` del usuario; si ya tiene 2 y el código es de otra persona, devuelve `ok:false` con mensaje de plan profesional. La suscripción profesional queda pendiente.
+
+## Pausa por inactividad de Family
+- `elder_members.last_active_at`: `familyHeartbeat` (montado en `FamilyShell`) lo actualiza como mucho una vez por hora.
+- `deviceSync` devuelve `paused=true` si la persona tiene familiares y ninguno ha abierto Family en 30 días (`INACTIVE_MS`). Sin familiares no se pausa (necesita publicar la invitación).
+- Teléfono: `grannytools.syncPaused`; en pausa solo sincroniza una vez al día. `requestSync()` (p. ej. desde Vincular) y los cambios recibidos fuerzan la sincronización. Al volver un familiar, la siguiente comprobación diaria la reactiva.

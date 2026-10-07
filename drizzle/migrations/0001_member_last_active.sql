@@ -1,0 +1,1 @@
+ALTER TABLE public.elder_members ADD COLUMN IF NOT EXISTS last_active_at timestamptz NOT NULL DEFAULT now();

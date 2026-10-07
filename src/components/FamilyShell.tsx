@@ -3,6 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { clearUnlock, needsUnlock, verifyBiometric } from "@/lib/biometrics";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { familyHeartbeat } from "@/lib/family.functions";
 
 const NAV = [
   { to: "/family", label: "Mis personas" },
@@ -21,7 +23,8 @@ export function FamilyShell({ title, children, wide }: { title: string; children
     nav({ to: "/auth", replace: true });
   };
   const [locked, setLocked] = useState(false);
-  useEffect(() => { setLocked(needsUnlock()); }, []);
+  const beat = useServerFn(familyHeartbeat);
+  useEffect(() => { setLocked(needsUnlock()); void beat().catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const unlock = async () => { if (await verifyBiometric()) setLocked(false); };
   useEffect(() => { if (locked) void unlock(); }, [locked]); // eslint-disable-line react-hooks/exhaustive-deps
   if (locked) {
