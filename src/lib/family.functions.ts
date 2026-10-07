@@ -56,8 +56,10 @@ export const deviceSync = createServerFn({ method: "POST" })
     let careMode = elder!.care_mode as "autonomo" | "protegido";
     let careModeAt = new Date(elder!.care_mode_at).getTime();
     const patch: { name: string; snapshot: any; last_sync: string; care_mode?: string; care_mode_at?: string } = { name: data.name, snapshot: data.snapshot, last_sync: new Date().toISOString() };
-    if (data.careModeAt > careModeAt) {
-      careMode = data.careMode; careModeAt = data.careModeAt;
+    // Con familia vinculada, solo Family cambia el modo; sin familia, el mayor es siempre autónomo.
+    const { count } = await db.from("elder_members").select("id", { count: "exact", head: true }).eq("elder_id", elderId);
+    if (!count && careMode !== "autonomo") {
+      careMode = "autonomo"; careModeAt = Date.now();
       patch.care_mode = careMode; patch.care_mode_at = new Date(careModeAt).toISOString();
     }
     await db.from("elders").update(patch).eq("id", elderId);
