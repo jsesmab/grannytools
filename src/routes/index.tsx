@@ -608,24 +608,12 @@ function Home() {
                   </button>
                   <div className="space-y-2 rounded-xl border-2 border-border p-3">
                     <p className="text-sm font-bold">Citas, turnos, tareas y medicinas</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setCareMode("autonomo")}
-                        aria-pressed={!careLocked}
-                        className={`rounded-xl py-3 text-base font-bold ${!careLocked ? "bg-success text-success-foreground" : "bg-secondary text-secondary-foreground"}`}
-                      >
-                        Autónomo
-                      </button>
-                      <button
-                        onClick={() => setCareMode("protegido")}
-                        aria-pressed={careLocked}
-                        className={`rounded-xl py-3 text-base font-bold ${careLocked ? "bg-warning text-warning-foreground" : "bg-secondary text-secondary-foreground"}`}
-                      >
-                        🔒 Protegido
-                      </button>
-                    </div>
+                    <p className={`rounded-xl py-3 text-center text-base font-bold ${careLocked ? "bg-warning text-warning-foreground" : "bg-success text-success-foreground"}`}>
+                      {careLocked ? "🔒 Protegido" : "Autónomo"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {careLocked ? "Solo se pueden consultar y marcar como hechas." : "Puedes crear, cambiar y borrar libremente."}
+                      {hasFamily ? " Este modo lo decide tu familiar desde Grannytools Family." : ""}
                     </p>
                   </div>
                 </>
