@@ -94,6 +94,11 @@ export const redeemInvite = createServerFn({ method: "POST" })
     const { data: inv } = await db.from("elder_invites").select("*").eq("code", data.code).maybeSingle();
     if (!inv || inv.used_at || new Date(inv.expires_at).getTime() < Date.now())
       return { ok: false as const, error: "El código no existe, ya se usó o ha caducado. Pide uno nuevo en el teléfono." };
+    // Plan incluido en la descarga: hasta 2 personas atendidas. Desde la 3.ª, plan profesional (suscripción).
+    const { data: mine } = await db.from("elder_members").select("elder_id").eq("user_id", context.userId);
+    const already = (mine ?? []).some((m) => m.elder_id === inv.elder_id);
+    if (!already && (mine?.length ?? 0) >= 2)
+      return { ok: false as const, error: "Tu plan incluye hasta 2 personas atendidas. Para cuidar a más (profesionales o residencias) necesitas el plan profesional por suscripción." };
     const { count } = await db.from("elder_members").select("id", { count: "exact", head: true }).eq("elder_id", inv.elder_id);
     const { error } = await db.from("elder_members").upsert(
       { elder_id: inv.elder_id, user_id: context.userId, role: count ? "consulta" : "admin" },

@@ -142,3 +142,7 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 ## Modo de uso (Autónomo / Protegido)
 - Sin familia vinculada: la persona es siempre Autónoma.
 - Con familia vinculada: solo un Administrador de Grannytools Family puede cambiar el modo; el teléfono del mayor solo lo muestra.
+
+
+## Límite de personas atendidas
+Cada familiar puede atender hasta 2 personas con la descarga de Family (4,99 €). Al intentar vincular una 3.ª, se muestra un aviso: hace falta el plan profesional por suscripción (residencias/profesionales).
