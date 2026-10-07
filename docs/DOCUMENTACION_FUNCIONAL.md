@@ -149,3 +149,6 @@ Cada familiar puede atender hasta 2 personas con la descarga de Family (4,99 €
 
 ## Ahorro por inactividad
 Si ningún familiar abre Family durante 30 días, el teléfono del mayor deja de sincronizar con frecuencia y solo lo comprueba una vez al día. Todo sigue funcionando en el teléfono sin conexión. En cuanto un familiar vuelve a abrir Family, la sincronización normal se reanuda en menos de un día.
+
+## Icono propio de Grannytools Family (acceso web)
+Al abrir `/family` en el móvil y pulsar «Añadir a pantalla de inicio», se crea un icono independiente llamado **Family** (manos que sostienen un corazón con una pareja de mayores, fondo verde). Ese icono abre siempre directamente Family; el icono de Grannytools sigue abriendo la portada del mayor.
