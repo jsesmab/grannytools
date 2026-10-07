@@ -8,6 +8,18 @@ async function sha256(s: string) {
 }
 
 const deviceAuth = { deviceId: z.string().min(8).max(80), secret: z.string().min(16).max(120) };
+const INACTIVE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Family abierta: marca al familiar como activo en todas sus personas (como mucho una vez cada hora). */
+export const familyHeartbeat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+    await (db as any).from("elder_members").update({ last_active_at: new Date().toISOString() })
+      .eq("user_id", context.userId).lt("last_active_at", hourAgo);
+    return { ok: true };
+  });
 
 /** Verifica (o registra) el teléfono del mayor y devuelve su elder_id. */
 async function deviceElder(deviceId: string, secret: string, name = "") {
@@ -71,7 +83,11 @@ export const deviceSync = createServerFn({ method: "POST" })
     const { data: changes } = await (db as any).from("elder_changes").select("id, kind, op, item_key, item")
       .eq("elder_id", elderId).is("applied_at", null).order("created_at");
     if (changes?.length) await (db as any).from("elder_changes").update({ applied_at: new Date().toISOString() }).in("id", changes.map((c: any) => c.id));
-    return { careMode, careModeAt, members: await membersOf(db, elderId), changes: (changes ?? []) as { kind: "med" | "cita" | "task"; op: "upsert" | "delete"; item_key: string; item: Record<string, any> | null }[] };
+    // Ahorro: si hay familia vinculada pero nadie ha abierto Family en 30 días, el teléfono pausa la sincronización.
+    const { data: act } = await (db as any).from("elder_members").select("last_active_at").eq("elder_id", elderId);
+    const limit = Date.now() - INACTIVE_MS;
+    const paused = !!act?.length && !act.some((a: any) => new Date(a.last_active_at).getTime() > limit);
+    return { careMode, careModeAt, paused, members: await membersOf(db, elderId), changes: (changes ?? []) as { kind: "med" | "cita" | "task"; op: "upsert" | "delete"; item_key: string; item: Record<string, any> | null }[] };
   });
 
 /** El mayor gestiona desde su teléfono los familiares vinculados. */
