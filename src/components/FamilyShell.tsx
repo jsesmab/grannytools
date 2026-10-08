@@ -9,7 +9,6 @@ import { familyHeartbeat } from "@/lib/family.functions";
 const NAV = [
   { to: "/family", label: "Mis personas" },
   { to: "/family/hoy", label: "Panel del día" },
-  { to: "/family/vincular", label: "Vincular" },
   { to: "/family/historico", label: "Histórico" },
 ] as const;
 

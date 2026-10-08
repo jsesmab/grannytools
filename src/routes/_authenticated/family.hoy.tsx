@@ -39,7 +39,7 @@ function Hoy() {
   const missed = rows.filter((r) => r.status === "pasada");
 
   return (
-    <FamilyShell title={`Panel del día · ${new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}`} wide>
+    <FamilyShell title={`Panel del día · ${who === "todos" ? "Todas las personas" : (elders.find((x) => x.id === who)?.name || "Sin nombre")} · ${new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}`} wide>
       <div className="flex flex-wrap items-center gap-2">
         {KINDS.map((k) => (
           <button key={k} onClick={() => setKinds(kinds.includes(k) ? kinds.filter((x) => x !== k) : [...kinds, k])}

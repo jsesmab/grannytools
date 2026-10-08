@@ -162,3 +162,7 @@ La instalación web tiene nombre, icono y dirección inicial propios desde que s
 - Orden único en toda Family: Citas, Tareas, Medicinas, Turnos. La agenda de la ficha se agrupa por concepto e incluye Turnos.
 - Lo caducado (tratamientos terminados, citas y tareas de un día ya pasadas) deja de verse en la ficha y pasa a «Histórico».
 - Botón «Histórico» junto a «Vincular»: filtros por persona, concepto y fechas Desde/Hasta (por defecto, últimos 90 días).
+
+## Family: Vincular dentro de «Mis personas»
+- «Vincular» ya no está en el menú diario; está en «Mis personas» con el botón «+ Vincular otra persona».
+- Panel del día e Histórico muestran en el título la persona elegida (o «Todas las personas»).
