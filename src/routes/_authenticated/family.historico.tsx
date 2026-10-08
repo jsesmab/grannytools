@@ -61,7 +61,7 @@ function Historico() {
     .sort((a, b) => b.date.localeCompare(a.date));
   const sel = "rounded-xl border-2 border-input bg-background px-3 py-2 font-semibold";
   return (
-    <FamilyShell title="Histórico" wide>
+    <FamilyShell title={`Histórico · ${who === "todos" ? "Todas las personas" : (elders.find((x) => x.id === who)?.name || "Sin nombre")}`} wide>
       <div className="flex flex-wrap items-end gap-2">
         <select value={who} onChange={(e) => setWho(e.target.value)} className={sel}>
           <option value="todos">Todas las personas</option>

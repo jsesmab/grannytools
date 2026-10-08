@@ -58,6 +58,11 @@ function Personas() {
           );
         })}
       </div>
+      {elders.length > 0 && (
+        <Link to="/family/vincular" className="mt-6 block rounded-3xl border-2 border-dashed border-primary p-5 text-center text-xl font-bold text-primary">
+          + Vincular otra persona
+        </Link>
+      )}
     </FamilyShell>
   );
 }

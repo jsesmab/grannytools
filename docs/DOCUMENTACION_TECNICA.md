@@ -163,3 +163,7 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 - `/family/editar/$id` (`family.editar.$id.tsx`) renderiza solo `FamilyEditor`; enlazado desde el Panel del día.
 - `/family/historico` (`family.historico.tsx`) calcula el histórico desde el snapshot: meds con `until` < hoy, entries/tasks con `date` < hoy y registros `taskStatus` pasados de tareas periódicas. Filtra por persona, concepto y rango.
 - `FamilyEditor` ordena `cita, task, med, turno` y filtra lo caducado con `live()`.
+
+## Family: navegación
+- NAV de FamilyShell: Mis personas, Panel del día, Histórico. /family/vincular se enlaza desde family.index.tsx.
+- Los títulos de family.hoy y family.historico incluyen el nombre del selector `who`.
