@@ -285,7 +285,7 @@ function Citas() {
   const Timeline = ({ list }: { list: Entry[] }) => (
     <div className="space-y-2">
       {[...list].sort((a, b) => toMin(a.start) - toMin(b.start)).map((e) => {
-        const p = personById[e.personId ?? ""];
+        const p = e.kind === "periodica" ? personById[e.personId ?? ""] : undefined; // solo los turnos llevan persona asignada
         return (
           <button key={e.id} onClick={() => openEdit(e)} data-flat-button
             className="flex w-full items-stretch gap-3 rounded-2xl border-2 border-border bg-card p-3 text-left shadow active:scale-[0.99]">

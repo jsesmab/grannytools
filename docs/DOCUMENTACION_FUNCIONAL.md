@@ -112,6 +112,7 @@ Rueda dentada → «Vincular con un familiar» (en cualquier momento, también t
 - Para vincular: en el teléfono del mayor, Ajustes → «Vincular con un familiar»; el familiar escribe el código en «Vincular». El primero es Administrador; los siguientes entran como Consultas.
 - Varios familiares pueden cuidar a una persona y un cuidador puede atender a muchas personas (pensado para residencias).
 - «Mis personas»: tarjetas con lo próximo de cada uno. «Panel del día» (ideal en ordenador): todas las citas, turnos, medicinas y tareas de todas las personas, hora a hora, con lo que está sin marcar.
+- Barra superior de Family: al abrir, «Mis personas» queda activa con las personas vinculadas debajo; **Mis personas**, **Panel del día** y **Vincular** en la misma línea; **Salir** arriba a la derecha junto al icono, con **Mi perfil** justo debajo.
 - Ficha de la persona: agenda por día, medicinas, tareas, contactos, modo Autónomo/Protegido (solo Administrador) y familia vinculada.
 - El teléfono del mayor sigue funcionando sin internet; se pone al día cuando tiene conexión.
 - Próxima fase: crear y modificar citas, medicinas y tareas desde Family.
