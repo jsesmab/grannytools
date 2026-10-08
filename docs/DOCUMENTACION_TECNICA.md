@@ -158,3 +158,8 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 `auth.tsx` y `FamilyShell.tsx` muestran el icono existente de Family a 112 × 112 antes de las opciones (incluido el desbloqueo biométrico). Validar el HTML sin JavaScript de `/family` y `/auth`, y volver a instalar en un dispositivo real después de publicar; una instalación antigua puede conservar su identidad en caché.
 
 - FamilyEditor: las tomas de una medicina se editan como lista de selectores de hora (se guardan en el borrador como texto separado por comas y se validan en save()).
+
+## Family: rutas editar e histórico
+- `/family/editar/$id` (`family.editar.$id.tsx`) renderiza solo `FamilyEditor`; enlazado desde el Panel del día.
+- `/family/historico` (`family.historico.tsx`) calcula el histórico desde el snapshot: meds con `until` < hoy, entries/tasks con `date` < hoy y registros `taskStatus` pasados de tareas periódicas. Filtra por persona, concepto y rango.
+- `FamilyEditor` ordena `cita, task, med, turno` y filtra lo caducado con `live()`.

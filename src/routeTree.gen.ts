@@ -20,9 +20,11 @@ import { Route as PastillasRouteImport } from './routes/pastillas'
 import { Route as UbicacionRouteImport } from './routes/ubicacion'
 import { Route as VincularRouteImport } from './routes/vincular'
 import { Route as AuthenticatedFamilyIndexRouteImport } from './routes/_authenticated/family.index'
+import { Route as AuthenticatedFamilyHistoricoRouteImport } from './routes/_authenticated/family.historico'
 import { Route as AuthenticatedFamilyHoyRouteImport } from './routes/_authenticated/family.hoy'
 import { Route as AuthenticatedFamilyPerfilRouteImport } from './routes/_authenticated/family.perfil'
 import { Route as AuthenticatedFamilyVincularRouteImport } from './routes/_authenticated/family.vincular'
+import { Route as AuthenticatedFamilyEditarIdRouteImport } from './routes/_authenticated/family.editar.$id'
 import { Route as AuthenticatedFamilyPersonaIdRouteImport } from './routes/_authenticated/family.persona.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -80,6 +82,12 @@ const AuthenticatedFamilyIndexRoute =
     path: '/family/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFamilyHistoricoRoute =
+  AuthenticatedFamilyHistoricoRouteImport.update({
+    id: '/family/historico',
+    path: '/family/historico',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFamilyHoyRoute = AuthenticatedFamilyHoyRouteImport.update({
   id: '/family/hoy',
   path: '/family/hoy',
@@ -95,6 +103,12 @@ const AuthenticatedFamilyVincularRoute =
   AuthenticatedFamilyVincularRouteImport.update({
     id: '/family/vincular',
     path: '/family/vincular',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFamilyEditarIdRoute =
+  AuthenticatedFamilyEditarIdRouteImport.update({
+    id: '/family/editar/$id',
+    path: '/family/editar/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedFamilyPersonaIdRoute =
@@ -114,10 +128,12 @@ export interface FileRoutesByFullPath {
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
+  '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
   '/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/family/': typeof AuthenticatedFamilyIndexRoute
+  '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
 }
 export interface FileRoutesByTo {
@@ -130,10 +146,12 @@ export interface FileRoutesByTo {
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
+  '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
   '/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/family': typeof AuthenticatedFamilyIndexRoute
+  '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
 }
 export interface FileRoutesById {
@@ -148,10 +166,12 @@ export interface FileRoutesById {
   '/pastillas': typeof PastillasRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
+  '/_authenticated/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/_authenticated/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/_authenticated/family/perfil': typeof AuthenticatedFamilyPerfilRoute
   '/_authenticated/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/_authenticated/family/': typeof AuthenticatedFamilyIndexRoute
+  '/_authenticated/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/_authenticated/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
 }
 export interface FileRouteTypes {
@@ -166,10 +186,12 @@ export interface FileRouteTypes {
     | '/pastillas'
     | '/ubicacion'
     | '/vincular'
+    | '/family/historico'
     | '/family/hoy'
     | '/family/perfil'
     | '/family/vincular'
     | '/family/'
+    | '/family/editar/$id'
     | '/family/persona/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -182,10 +204,12 @@ export interface FileRouteTypes {
     | '/pastillas'
     | '/ubicacion'
     | '/vincular'
+    | '/family/historico'
     | '/family/hoy'
     | '/family/perfil'
     | '/family/vincular'
     | '/family'
+    | '/family/editar/$id'
     | '/family/persona/$id'
   id:
     | '__root__'
@@ -199,10 +223,12 @@ export interface FileRouteTypes {
     | '/pastillas'
     | '/ubicacion'
     | '/vincular'
+    | '/_authenticated/family/historico'
     | '/_authenticated/family/hoy'
     | '/_authenticated/family/perfil'
     | '/_authenticated/family/vincular'
     | '/_authenticated/family/'
+    | '/_authenticated/family/editar/$id'
     | '/_authenticated/family/persona/$id'
   fileRoutesById: FileRoutesById
 }
@@ -298,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/family/historico': {
+      id: '/_authenticated/family/historico'
+      path: '/family/historico'
+      fullPath: '/family/historico'
+      preLoaderRoute: typeof AuthenticatedFamilyHistoricoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/family/hoy': {
       id: '/_authenticated/family/hoy'
       path: '/family/hoy'
@@ -319,6 +352,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyVincularRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/family/editar/$id': {
+      id: '/_authenticated/family/editar/$id'
+      path: '/family/editar/$id'
+      fullPath: '/family/editar/$id'
+      preLoaderRoute: typeof AuthenticatedFamilyEditarIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/family/persona/$id': {
       id: '/_authenticated/family/persona/$id'
       path: '/family/persona/$id'
@@ -330,18 +370,22 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedFamilyHistoricoRoute: typeof AuthenticatedFamilyHistoricoRoute
   AuthenticatedFamilyHoyRoute: typeof AuthenticatedFamilyHoyRoute
   AuthenticatedFamilyPerfilRoute: typeof AuthenticatedFamilyPerfilRoute
   AuthenticatedFamilyVincularRoute: typeof AuthenticatedFamilyVincularRoute
   AuthenticatedFamilyIndexRoute: typeof AuthenticatedFamilyIndexRoute
+  AuthenticatedFamilyEditarIdRoute: typeof AuthenticatedFamilyEditarIdRoute
   AuthenticatedFamilyPersonaIdRoute: typeof AuthenticatedFamilyPersonaIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedFamilyHistoricoRoute: AuthenticatedFamilyHistoricoRoute,
   AuthenticatedFamilyHoyRoute: AuthenticatedFamilyHoyRoute,
   AuthenticatedFamilyPerfilRoute: AuthenticatedFamilyPerfilRoute,
   AuthenticatedFamilyVincularRoute: AuthenticatedFamilyVincularRoute,
   AuthenticatedFamilyIndexRoute: AuthenticatedFamilyIndexRoute,
+  AuthenticatedFamilyEditarIdRoute: AuthenticatedFamilyEditarIdRoute,
   AuthenticatedFamilyPersonaIdRoute: AuthenticatedFamilyPersonaIdRoute,
 }
 
