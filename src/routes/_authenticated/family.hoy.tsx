@@ -109,7 +109,7 @@ function Hoy() {
             <h2 className="text-lg font-extrabold">Añadir o modificar</h2>
             <p className="mb-2 text-sm text-muted-foreground">Citas, tareas, medicinas y turnos de cada persona:</p>
             {elders.map((e) => (
-              <Link key={e.id} to="/family/persona/$id" params={{ id: e.id }} className="mb-2 block rounded-xl bg-primary px-3 py-2 text-center font-bold text-primary-foreground">✏️ {e.name || "Sin nombre"}</Link>
+              <Link key={e.id} to="/family/editar/$id" params={{ id: e.id }} className="mb-2 block rounded-xl bg-primary px-3 py-2 text-center font-bold text-primary-foreground">✏️ {e.name || "Sin nombre"}</Link>
             ))}
           </div>
         </aside>

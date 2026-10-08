@@ -23,7 +23,7 @@ const pendingQuery = (elderId: string) => ({
 });
 
 const LABEL: Record<Kind, string> = { med: "Medicinas", cita: "Citas", task: "Tareas", turno: "Turnos" };
-const ORDER: Kind[] = ["task", "med", "turno", "cita"];
+const ORDER: Kind[] = ["cita", "task", "med", "turno"];
 
 export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; snapshot: Snapshot; admin: boolean }) {
   const qc = useQueryClient();
@@ -34,11 +34,14 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
   const [openK, setOpenK] = useState<Kind[]>([]);
   const people = snapshot.people ?? [];
 
+  const today = new Date().toISOString().slice(0, 10);
+  // Lo caducado (tratamientos terminados, citas/tareas de un día ya pasadas) vive en Histórico.
+  const live = <T extends { until?: string; date?: string }>(x: T) => !(x.until && x.until < today) && !(x.date && x.date < today);
   const lists: Record<Kind, { key: string; label: string; raw: Record<string, unknown> }[]> = {
-    med: (snapshot.meds ?? []).map((m) => ({ key: m.name, label: `${m.name} · ${m.times.join(", ")}${m.until ? ` · hasta ${m.until}` : ""}`, raw: m })),
-    cita: (snapshot.entries ?? []).filter((e) => e.kind === "fija").map((e) => ({ key: e.id, label: `${e.date ?? "Semanal"} · ${e.start}–${e.end} · ${e.title}${e.who ? ` · ${e.who}` : ""}`, raw: e })),
+    med: (snapshot.meds ?? []).filter(live).map((m) => ({ key: m.name, label: `${m.name} · ${m.times.join(", ")}${m.until ? ` · hasta ${m.until}` : ""}`, raw: m })),
+    cita: (snapshot.entries ?? []).filter((e) => e.kind === "fija" && live(e)).map((e) => ({ key: e.id, label: `${e.date ?? "Semanal"} · ${e.start}–${e.end} · ${e.title}${e.who ? ` · ${e.who}` : ""}`, raw: e })),
     turno: (snapshot.entries ?? []).filter((e) => e.kind === "periodica").map((e) => ({ key: e.id, label: `${(e.days ?? []).map((n) => DAYS.find((d) => d[1] === n)?.[0]).join("")} · ${e.start}–${e.end} · ${people.find((p) => p.id === e.personId)?.name ?? e.who ?? e.title}`, raw: e })),
-    task: (snapshot.tasks ?? []).map((t) => ({ key: t.id, label: `${t.time} · ${t.title} ${t.date ? `(${t.date})` : "(periódica)"}`, raw: t })),
+    task: (snapshot.tasks ?? []).filter(live).map((t) => ({ key: t.id, label: `${t.time} · ${t.title} ${t.date ? `(${t.date})` : "(periódica)"}`, raw: t })),
   };
 
   const open = (kind: Kind, raw?: Record<string, unknown>, key?: string) => {
