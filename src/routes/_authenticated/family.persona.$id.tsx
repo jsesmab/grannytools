@@ -59,14 +59,22 @@ function Ficha() {
               className="rounded-xl border-2 border-input bg-background px-3 py-2 font-semibold" />
           </div>
           {items.length === 0 && <p className="text-muted-foreground">Nada programado.</p>}
-          {items.map((i, k) => (
-            <div key={k} className="flex items-center gap-3 border-b border-border pb-2 last:border-0">
-              <span className="w-14 text-lg font-black">{i.time}</span>
-              <span className="w-20 text-xs font-bold uppercase text-muted-foreground">{KIND_LABEL[i.kind]}</span>
-              <span className="flex-1">{i.title}{i.end ? ` (hasta ${i.end})` : ""}{i.detail ? <span className="text-muted-foreground"> · {i.detail}</span> : null}</span>
-              <StatusPill status={i.status} />
-            </div>
-          ))}
+          {(["cita", "tarea", "medicina", "turno"] as const).map((kind) => {
+            const g = items.filter((i) => i.kind === kind);
+            if (!g.length) return null;
+            return (
+              <div key={kind} className="space-y-2">
+                <h3 className="text-sm font-black uppercase text-primary">{KIND_LABEL[kind]}s ({g.length})</h3>
+                {g.map((i, k) => (
+                  <div key={k} className="flex items-center gap-3 border-b border-border pb-2 last:border-0">
+                    <span className="w-14 text-lg font-black">{i.time}</span>
+                    <span className="flex-1">{i.title}{i.end ? ` (hasta ${i.end})` : ""}{i.detail ? <span className="text-muted-foreground"> · {i.detail}</span> : null}</span>
+                    <StatusPill status={i.status} />
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </section>
 
         <section className={card}>

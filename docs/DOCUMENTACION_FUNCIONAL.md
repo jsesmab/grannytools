@@ -156,3 +156,9 @@ Si ningún familiar abre Family durante 30 días, el teléfono del mayor deja de
 Family muestra su icono (manos que sostienen un corazón con una pareja de mayores, fondo verde) antes de las opciones, tanto al entrar con la cuenta como en el panel y en el desbloqueo con huella.
 
 La instalación web tiene nombre, icono y dirección inicial propios desde que se carga la página. Para sustituir un acceso antiguo que abría Grannytools: eliminar el acceso incorrecto y volver a instalar desde `https://grannytools.lovable.app/family` después de actualizar la publicación. Family abre en `/family`; si no hay sesión, solicita entrar en la cuenta. Grannytools conserva su acceso independiente. La instalación definitiva debe comprobarse en el móvil, ya que depende del navegador.
+
+## Family: Añadir o modificar, Histórico y orden por conceptos
+- En el Panel del día, «Añadir o modificar» abre solo la pantalla de edición de la persona (no la ficha completa).
+- Orden único en toda Family: Citas, Tareas, Medicinas, Turnos. La agenda de la ficha se agrupa por concepto e incluye Turnos.
+- Lo caducado (tratamientos terminados, citas y tareas de un día ya pasadas) deja de verse en la ficha y pasa a «Histórico».
+- Botón «Histórico» junto a «Vincular»: filtros por persona, concepto y fechas Desde/Hasta (por defecto, últimos 90 días).
