@@ -10,7 +10,6 @@ const NAV = [
   { to: "/family", label: "Mis personas" },
   { to: "/family/hoy", label: "Panel del día" },
   { to: "/family/vincular", label: "Vincular" },
-  { to: "/family/perfil", label: "Mi perfil" },
 ] as const;
 
 export function FamilyShell({ title, children, wide }: { title: string; children: ReactNode; wide?: boolean }) {
