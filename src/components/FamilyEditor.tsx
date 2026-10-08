@@ -73,7 +73,7 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
         if (repeat && !(d.days as number[]).length) return setErr("Elige algún día.");
         const when = repeat ? { days: d.days, date: undefined } : { date: d.date, days: undefined };
         item = kind === "cita"
-          ? { remindMin: 60, ...orig, id: edit.key ?? uid(), kind: "fija", title: String(d.title).trim(), who: String(d.who).trim() || undefined, companion: String(d.companion).trim() || undefined, start: d.start, end: d.end, ...when }
+          ? { remindMin: 60, ...orig, id: edit.key ?? uid(), kind: "fija", title: String(d.title).trim(), who: String(d.who).trim() || undefined, companion: String(d.companion).trim() || undefined, start: d.start, end: d.end, ...when, personId: undefined }
           : { ...orig, id: edit.key ?? uid(), title: String(d.title).trim(), time: d.time, ...when };
       }
     } else if (!confirm("¿Borrar? Se quitará del teléfono al conectarse.")) return;
