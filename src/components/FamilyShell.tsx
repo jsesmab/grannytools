@@ -42,8 +42,12 @@ export function FamilyShell({ title, children, wide }: { title: string; children
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b-2 border-border bg-card">
-        <div className="flex justify-center pt-4">
+        <div className={`mx-auto flex items-start justify-between gap-3 px-4 pt-4 ${wide ? "max-w-7xl" : "max-w-4xl"}`}>
           <img src="/family-icon-192.png" alt="Grannytools Family" width={112} height={112} className="h-28 w-28 object-contain" />
+          <div className="flex flex-col items-stretch gap-2">
+            <button onClick={out} className="rounded-xl bg-muted px-4 py-2 text-sm font-bold text-foreground">Salir</button>
+            <Link to="/family/perfil" className="rounded-xl bg-secondary px-4 py-2 text-center text-sm font-bold text-secondary-foreground">Mi perfil</Link>
+          </div>
         </div>
         <div className={`mx-auto flex flex-wrap items-center gap-2 px-4 py-3 ${wide ? "max-w-7xl" : "max-w-4xl"}`}>
           <span className="mr-3 text-lg font-black text-primary">Grannytools Family</span>
@@ -56,7 +60,6 @@ export function FamilyShell({ title, children, wide }: { title: string; children
               </Link>
             ))}
           </nav>
-          <button onClick={out} className="rounded-xl bg-muted px-3 py-2 text-sm font-bold text-foreground">Salir</button>
         </div>
       </header>
       <main className={`mx-auto space-y-5 p-4 ${wide ? "max-w-7xl" : "max-w-4xl"}`}>
