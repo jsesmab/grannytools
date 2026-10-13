@@ -107,20 +107,20 @@ export const redeemInvite = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ code: z.string().trim().toUpperCase().regex(/^GT-[A-Z0-9]{6}$/, "Código no válido") }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
-    const { data: inv } = await db.from("elder_invites").select("*").eq("code", data.code).maybeSingle();
-    if (!inv || inv.used_at || new Date(inv.expires_at).getTime() < Date.now())
-      return { ok: false as const, error: "El código no existe, ya se usó o ha caducado. Pide uno nuevo en el teléfono." };
-    // La descarga es gratis (demo). Vincular personas reales requiere un plan; el límite depende del plan.
+    // Primero el cupo del plan: así el aviso de cambio de plan aparece aunque el código no sea válido.
     const { data: mine } = await db.from("elder_members").select("elder_id").eq("user_id", context.userId);
-    const already = (mine ?? []).some((m) => m.elder_id === inv.elder_id);
+    const { data: inv } = await db.from("elder_invites").select("*").eq("code", data.code).maybeSingle();
+    const already = !!inv && (mine ?? []).some((m) => m.elder_id === inv.elder_id);
     if (!already) {
       const { planLimit } = await import("@/lib/plans");
       const { data: subs } = await db.from("subscriptions").select("price_id, quantity, status, current_period_end").eq("user_id", context.userId);
       const { limit } = planLimit(subs ?? []);
       if (limit === 0) return { ok: false as const, needPlan: true, error: "Para vincular a una persona real necesitas contratar un plan." };
       if ((mine?.length ?? 0) >= limit)
-        return { ok: false as const, needPlan: true, error: `Tu plan permite ${limit} personas y ya las tienes. Cambia a un plan mayor para vincular más.` };
+        return { ok: false as const, needPlan: true, error: `Tu plan permite ${limit} personas y ya tienes ${mine?.length}. Cambia a un plan mayor o desvincula a alguien para vincular más.` };
     }
+    if (!inv || inv.used_at || new Date(inv.expires_at).getTime() < Date.now())
+      return { ok: false as const, error: "El código no existe, ya se usó o ha caducado. Pide uno nuevo en el teléfono." };
     const { count } = await db.from("elder_members").select("id", { count: "exact", head: true }).eq("elder_id", inv.elder_id);
     const { error } = await db.from("elder_members").upsert(
       { elder_id: inv.elder_id, user_id: context.userId, role: count ? "consulta" : "admin" },
@@ -175,5 +175,18 @@ export const familyChange = createServerFn({ method: "POST" })
       elder_id: data.elderId, created_by: context.userId, kind: data.kind, op: data.op, item_key: data.key, item: data.item,
     });
     if (error) throw error;
+    return { ok: true };
+  });
+
+/** El familiar deja de cuidar a una persona (libera un hueco de su plan). Si era el único Administrador, otro familiar pasa a serlo. */
+export const leaveElder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ elderId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    await db.from("elder_members").delete().eq("elder_id", data.elderId).eq("user_id", context.userId);
+    const { data: rest } = await db.from("elder_members").select("id, role").eq("elder_id", data.elderId).order("created_at");
+    if (rest?.length && !rest.some((r) => r.role === "admin"))
+      await db.from("elder_members").update({ role: "admin" }).eq("id", rest[0].id);
     return { ok: true };
   });
