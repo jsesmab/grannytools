@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CitasRouteImport } from './routes/citas'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as LupaRouteImport } from './routes/lupa'
 import { Route as OirRouteImport } from './routes/oir'
 import { Route as PanicoRouteImport } from './routes/panico'
@@ -46,6 +47,11 @@ const AuthRoute = AuthRouteImport.update({
 const CitasRoute = CitasRouteImport.update({
   id: '/citas',
   path: '/citas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LupaRoute = LupaRouteImport.update({
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
+  '/demo': typeof DemoRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
+  '/demo': typeof DemoRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
+  '/demo': typeof DemoRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/citas'
+    | '/demo'
     | '/lupa'
     | '/oir'
     | '/panico'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/citas'
+    | '/demo'
     | '/lupa'
     | '/oir'
     | '/panico'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/citas'
+    | '/demo'
     | '/lupa'
     | '/oir'
     | '/panico'
@@ -263,6 +275,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   CitasRoute: typeof CitasRoute
+  DemoRoute: typeof DemoRoute
   LupaRoute: typeof LupaRoute
   OirRoute: typeof OirRoute
   PanicoRoute: typeof PanicoRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/citas'
       fullPath: '/citas'
       preLoaderRoute: typeof CitasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lupa': {
@@ -440,6 +460,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   CitasRoute: CitasRoute,
+  DemoRoute: DemoRoute,
   LupaRoute: LupaRoute,
   OirRoute: OirRoute,
   PanicoRoute: PanicoRoute,
