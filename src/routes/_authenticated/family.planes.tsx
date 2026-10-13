@@ -126,7 +126,7 @@ function Planes() {
       <div className="grid gap-4 md:grid-cols-2">{PLANS.filter((p) => p.group === "familia").map(card)}</div>
       <h2 className="text-2xl font-extrabold">Empresas y residencias · pago mensual</h2>
       <div className="grid gap-4 md:grid-cols-3">{PLANS.filter((p) => p.group === "empresa").map(card)}</div>
-      <p className="text-sm text-muted-foreground">Precios con impuestos incluidos según tu país. Puedes cambiar de plan o darte de baja cuando quieras desde «Gestionar o dar de baja».</p>
+      <p className="text-sm text-muted-foreground">Los impuestos se calculan al pagar según tu país. Puedes cambiar de plan o darte de baja cuando quieras desde «Gestionar o dar de baja».</p>
     </FamilyShell>
   );
 }

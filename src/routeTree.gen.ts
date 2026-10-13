@@ -23,6 +23,7 @@ import { Route as AuthenticatedFamilyIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedFamilyHistoricoRouteImport } from './routes/_authenticated/family.historico'
 import { Route as AuthenticatedFamilyHoyRouteImport } from './routes/_authenticated/family.hoy'
 import { Route as AuthenticatedFamilyPerfilRouteImport } from './routes/_authenticated/family.perfil'
+import { Route as AuthenticatedFamilyPlanesRouteImport } from './routes/_authenticated/family.planes'
 import { Route as AuthenticatedFamilyVincularRouteImport } from './routes/_authenticated/family.vincular'
 import { Route as AuthenticatedFamilyEditarIdRouteImport } from './routes/_authenticated/family.editar.$id'
 import { Route as AuthenticatedFamilyPersonaIdRouteImport } from './routes/_authenticated/family.persona.$id'
@@ -100,6 +101,12 @@ const AuthenticatedFamilyPerfilRoute =
     path: '/family/perfil',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFamilyPlanesRoute =
+  AuthenticatedFamilyPlanesRouteImport.update({
+    id: '/family/planes',
+    path: '/family/planes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFamilyVincularRoute =
   AuthenticatedFamilyVincularRouteImport.update({
     id: '/family/vincular',
@@ -138,6 +145,7 @@ export interface FileRoutesByFullPath {
   '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/family/planes': typeof AuthenticatedFamilyPlanesRoute
   '/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/family/': typeof AuthenticatedFamilyIndexRoute
   '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
@@ -157,6 +165,7 @@ export interface FileRoutesByTo {
   '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/family/planes': typeof AuthenticatedFamilyPlanesRoute
   '/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/family': typeof AuthenticatedFamilyIndexRoute
   '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
@@ -178,6 +187,7 @@ export interface FileRoutesById {
   '/_authenticated/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/_authenticated/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/_authenticated/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/_authenticated/family/planes': typeof AuthenticatedFamilyPlanesRoute
   '/_authenticated/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/_authenticated/family/': typeof AuthenticatedFamilyIndexRoute
   '/_authenticated/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | '/family/historico'
     | '/family/hoy'
     | '/family/perfil'
+    | '/family/planes'
     | '/family/vincular'
     | '/family/'
     | '/family/editar/$id'
@@ -218,6 +229,7 @@ export interface FileRouteTypes {
     | '/family/historico'
     | '/family/hoy'
     | '/family/perfil'
+    | '/family/planes'
     | '/family/vincular'
     | '/family'
     | '/family/editar/$id'
@@ -238,6 +250,7 @@ export interface FileRouteTypes {
     | '/_authenticated/family/historico'
     | '/_authenticated/family/hoy'
     | '/_authenticated/family/perfil'
+    | '/_authenticated/family/planes'
     | '/_authenticated/family/vincular'
     | '/_authenticated/family/'
     | '/_authenticated/family/editar/$id'
@@ -359,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyPerfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/family/planes': {
+      id: '/_authenticated/family/planes'
+      path: '/family/planes'
+      fullPath: '/family/planes'
+      preLoaderRoute: typeof AuthenticatedFamilyPlanesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/family/vincular': {
       id: '/_authenticated/family/vincular'
       path: '/family/vincular'
@@ -394,6 +414,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFamilyHistoricoRoute: typeof AuthenticatedFamilyHistoricoRoute
   AuthenticatedFamilyHoyRoute: typeof AuthenticatedFamilyHoyRoute
   AuthenticatedFamilyPerfilRoute: typeof AuthenticatedFamilyPerfilRoute
+  AuthenticatedFamilyPlanesRoute: typeof AuthenticatedFamilyPlanesRoute
   AuthenticatedFamilyVincularRoute: typeof AuthenticatedFamilyVincularRoute
   AuthenticatedFamilyIndexRoute: typeof AuthenticatedFamilyIndexRoute
   AuthenticatedFamilyEditarIdRoute: typeof AuthenticatedFamilyEditarIdRoute
@@ -404,6 +425,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFamilyHistoricoRoute: AuthenticatedFamilyHistoricoRoute,
   AuthenticatedFamilyHoyRoute: AuthenticatedFamilyHoyRoute,
   AuthenticatedFamilyPerfilRoute: AuthenticatedFamilyPerfilRoute,
+  AuthenticatedFamilyPlanesRoute: AuthenticatedFamilyPlanesRoute,
   AuthenticatedFamilyVincularRoute: AuthenticatedFamilyVincularRoute,
   AuthenticatedFamilyIndexRoute: AuthenticatedFamilyIndexRoute,
   AuthenticatedFamilyEditarIdRoute: AuthenticatedFamilyEditarIdRoute,
