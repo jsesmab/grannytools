@@ -18,6 +18,8 @@ import { Route as LupaRouteImport } from './routes/lupa'
 import { Route as OirRouteImport } from './routes/oir'
 import { Route as PanicoRouteImport } from './routes/panico'
 import { Route as PastillasRouteImport } from './routes/pastillas'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as UbicacionRouteImport } from './routes/ubicacion'
 import { Route as VincularRouteImport } from './routes/vincular'
 import { Route as AuthenticatedFamilyIndexRouteImport } from './routes/_authenticated/family.index'
@@ -72,6 +74,16 @@ const PanicoRoute = PanicoRouteImport.update({
 const PastillasRoute = PastillasRouteImport.update({
   id: '/pastillas',
   path: '/pastillas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UbicacionRoute = UbicacionRouteImport.update({
@@ -147,6 +159,8 @@ export interface FileRoutesByFullPath {
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
   '/pastillas': typeof PastillasRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
   '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
@@ -168,6 +182,8 @@ export interface FileRoutesByTo {
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
   '/pastillas': typeof PastillasRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
   '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
@@ -191,6 +207,8 @@ export interface FileRoutesById {
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
   '/pastillas': typeof PastillasRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/ubicacion': typeof UbicacionRoute
   '/vincular': typeof VincularRoute
   '/_authenticated/family/historico': typeof AuthenticatedFamilyHistoricoRoute
@@ -214,6 +232,8 @@ export interface FileRouteTypes {
     | '/oir'
     | '/panico'
     | '/pastillas'
+    | '/privacidad'
+    | '/terminos'
     | '/ubicacion'
     | '/vincular'
     | '/family/historico'
@@ -235,6 +255,8 @@ export interface FileRouteTypes {
     | '/oir'
     | '/panico'
     | '/pastillas'
+    | '/privacidad'
+    | '/terminos'
     | '/ubicacion'
     | '/vincular'
     | '/family/historico'
@@ -257,6 +279,8 @@ export interface FileRouteTypes {
     | '/oir'
     | '/panico'
     | '/pastillas'
+    | '/privacidad'
+    | '/terminos'
     | '/ubicacion'
     | '/vincular'
     | '/_authenticated/family/historico'
@@ -280,6 +304,8 @@ export interface RootRouteChildren {
   OirRoute: typeof OirRoute
   PanicoRoute: typeof PanicoRoute
   PastillasRoute: typeof PastillasRoute
+  PrivacidadRoute: typeof PrivacidadRoute
+  TerminosRoute: typeof TerminosRoute
   UbicacionRoute: typeof UbicacionRoute
   VincularRoute: typeof VincularRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -348,6 +374,20 @@ declare module '@tanstack/react-router' {
       path: '/pastillas'
       fullPath: '/pastillas'
       preLoaderRoute: typeof PastillasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ubicacion': {
@@ -465,6 +505,8 @@ const rootRouteChildren: RootRouteChildren = {
   OirRoute: OirRoute,
   PanicoRoute: PanicoRoute,
   PastillasRoute: PastillasRoute,
+  PrivacidadRoute: PrivacidadRoute,
+  TerminosRoute: TerminosRoute,
   UbicacionRoute: UbicacionRoute,
   VincularRoute: VincularRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
