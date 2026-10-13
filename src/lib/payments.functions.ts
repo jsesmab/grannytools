@@ -44,8 +44,20 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }
       if (!customerId) customerId = (await stripe.customers.create({ ...(email && { email }), metadata: { userId } })).id;
 
+      // Precio con IVA incluido: el cliente paga exactamente lo anunciado.
+      const productId = typeof price.product === "string" ? price.product : price.product.id;
       const session = await stripe.checkout.sessions.create({
-        line_items: [{ price: price.id, quantity }],
+        line_items: [{
+          quantity,
+          price_data: {
+            currency: price.currency,
+            product: productId,
+            unit_amount: price.unit_amount ?? 0,
+            tax_behavior: "inclusive",
+            recurring: { interval: price.recurring?.interval ?? "month", interval_count: price.recurring?.interval_count ?? 1 },
+            metadata: { lovable_external_id: data.priceId },
+          },
+        }],
         mode: "subscription",
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
