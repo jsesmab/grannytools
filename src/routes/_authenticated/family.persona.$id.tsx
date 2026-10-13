@@ -98,7 +98,7 @@ function Ficha() {
           ))}
         </section>
 
-        <div className="lg:col-span-3"><FamilyMembers elderId={id} admin={admin} /></div>
+        <div className="lg:col-span-3">{!e.demo && <FamilyMembers elderId={id} admin={admin} />}</div>
       </div>
       <FamilyEditor elderId={id} snapshot={s} admin={admin} />
     </FamilyShell>

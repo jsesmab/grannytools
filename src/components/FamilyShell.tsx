@@ -5,6 +5,9 @@ import { clearUnlock, needsUnlock, verifyBiometric } from "@/lib/biometrics";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { familyHeartbeat } from "@/lib/family.functions";
+import { claimSession } from "@/lib/session.functions";
+import { deviceId, KICKED_FLAG } from "@/lib/single-session";
+import { isTestPayments } from "@/lib/stripe";
 
 const NAV = [
   { to: "/family", label: "Mis personas" },
@@ -24,6 +27,23 @@ export function FamilyShell({ title, children, wide }: { title: string; children
   const [locked, setLocked] = useState(false);
   const beat = useServerFn(familyHeartbeat);
   useEffect(() => { setLocked(needsUnlock()); void beat().catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Sesión única: si la cuenta se abre en otro dispositivo, este se cierra solo.
+  const claim = useServerFn(claimSession);
+  useEffect(() => {
+    let stop = false;
+    const check = async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user || stop) return;
+      const { data } = await supabase.from("user_sessions").select("device_id").eq("user_id", u.user.id).maybeSingle();
+      if (!data) { await claim({ data: { deviceId: deviceId() } }).catch(() => {}); return; }
+      if (data.device_id !== deviceId()) { sessionStorage.setItem(KICKED_FLAG, "1"); await out(); }
+    };
+    void check();
+    const iv = setInterval(check, 20_000);
+    const vis = () => { if (document.visibilityState === "visible") void check(); };
+    document.addEventListener("visibilitychange", vis);
+    return () => { stop = true; clearInterval(iv); document.removeEventListener("visibilitychange", vis); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const unlock = async () => { if (await verifyBiometric()) setLocked(false); };
   useEffect(() => { if (locked) void unlock(); }, [locked]); // eslint-disable-line react-hooks/exhaustive-deps
   if (locked) {
@@ -41,12 +61,14 @@ export function FamilyShell({ title, children, wide }: { title: string; children
   }
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {isTestPayments() && <div className="bg-accent px-4 py-1 text-center text-xs font-semibold text-accent-foreground">Pagos en modo de prueba: no se cobra dinero real.</div>}
       <header className="border-b-2 border-border bg-card">
         <div className={`mx-auto flex items-start justify-between gap-3 px-4 pt-4 ${wide ? "max-w-7xl" : "max-w-4xl"}`}>
           <img src="/family-icon-192.png" alt="Grannytools Family" width={112} height={112} className="h-28 w-28 object-contain" />
           <div className="flex flex-col items-stretch gap-2">
             <button onClick={out} className="rounded-xl bg-muted px-4 py-2 text-sm font-bold text-foreground">Salir</button>
             <Link to="/family/perfil" className="rounded-xl bg-secondary px-4 py-2 text-center text-sm font-bold text-secondary-foreground">Mi perfil</Link>
+            <Link to="/family/planes" className="rounded-xl bg-secondary px-4 py-2 text-center text-sm font-bold text-secondary-foreground">Mi plan</Link>
           </div>
         </div>
         <div className={`mx-auto flex flex-wrap items-center gap-2 px-4 py-3 ${wide ? "max-w-7xl" : "max-w-4xl"}`}>
