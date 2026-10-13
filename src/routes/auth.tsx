@@ -28,6 +28,7 @@ function AuthPage() {
   const [name, setName] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [terms, setTerms] = useState(false);
 
   const claim = useServerFn(claimSession);
   useEffect(() => {
@@ -53,7 +54,7 @@ function AuthPage() {
       if (error) setMsg("Email o contraseña incorrectos.");
     } else {
       const { error } = await supabase.auth.signUp({ email, password: pass,
-        options: { emailRedirectTo: `${window.location.origin}/auth`, data: { full_name: name } } });
+        options: { emailRedirectTo: `${window.location.origin}/auth`, data: { full_name: name, terms_accepted_at: new Date().toISOString() } } });
       setMsg(error ? error.message : "Te hemos enviado un correo. Ábrelo para confirmar tu cuenta y vuelve aquí.");
     }
     setBusy(false);
@@ -74,10 +75,14 @@ function AuthPage() {
           <h1 className="text-3xl font-extrabold">{mode === "in" ? "Entrar" : "Crear cuenta"}</h1>
           <p className="mt-1 text-muted-foreground">Para familiares y cuidadores.</p>
         </div>
-        <button onClick={google} className="w-full rounded-2xl bg-secondary py-3 text-lg font-bold text-secondary-foreground">
+        <label className="flex items-start gap-3 rounded-xl bg-muted p-3 text-sm font-semibold">
+          <input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" checked={terms} onChange={(e) => setTerms(e.target.checked)} />
+          <span>He leído y acepto los <a className="underline" href="/terminos" target="_blank">Términos de uso</a> y la <a className="underline" href="/privacidad" target="_blank">Política de privacidad</a>, y consiento el tratamiento de datos de salud y medicación de las personas que vincule.</span>
+        </label>
+        <button onClick={() => (terms ? google() : setMsg("Marca la casilla de aceptación para continuar."))} className="w-full rounded-2xl bg-secondary py-3 text-lg font-bold text-secondary-foreground">
           Continuar con Google
         </button>
-        <form onSubmit={submit} className="space-y-3">
+        <form onSubmit={(e) => { if (!terms) { e.preventDefault(); setMsg("Marca la casilla de aceptación para continuar."); return; } void submit(e); }} className="space-y-3">
           {mode === "up" && (
             <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre"
               className="w-full rounded-xl border-2 border-input bg-background px-4 py-3 text-lg" />
@@ -95,6 +100,7 @@ function AuthPage() {
           {mode === "in" ? "¿No tienes cuenta? Créala" : "Ya tengo cuenta"}
         </button>
         <a href="/demo" className="block w-full rounded-2xl border-2 border-primary py-3 text-center text-lg font-bold text-primary">👁️ Ver demostración sin registrarse</a>
+        <p className="text-center text-sm text-muted-foreground"><a className="underline" href="/privacidad">Privacidad</a> · <a className="underline" href="/terminos">Términos</a></p>
       </div>
     </main>
   );
