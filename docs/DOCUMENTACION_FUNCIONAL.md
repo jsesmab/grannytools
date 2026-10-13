@@ -181,3 +181,8 @@ Todos los planes se cobran con IVA incluido: el importe pagado es exactamente el
 
 ## Demostración sin registro
 En la pantalla de acceso de Family, «Ver demostración sin registrarse» abre la persona de ejemplo «Carmen» (panel del día y medicinas) sin crear cuenta.
+
+## Demostración interactiva, desvincular y aviso de plan
+- La demostración (/demo) permite abrir las pantallas de añadir, modificar y borrar citas, tareas, medicinas y turnos; los cambios solo se ven en pantalla y no se guardan.
+- En «Mis personas», cada persona tiene el botón «Desvincular», que libera un hueco del plan. Si quien se va era el único Administrador, otro familiar pasa a serlo.
+- Al vincular, primero se comprueba el cupo del plan: si está lleno, aparece el aviso de cambio de plan aunque el código no sea válido.

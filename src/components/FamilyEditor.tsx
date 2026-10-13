@@ -25,10 +25,13 @@ const pendingQuery = (elderId: string) => ({
 const LABEL: Record<Kind, string> = { med: "Medicinas", cita: "Citas", task: "Tareas", turno: "Turnos" };
 const ORDER: Kind[] = ["cita", "task", "med", "turno"];
 
-export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; snapshot: Snapshot; admin: boolean }) {
+/** En la demostración, los cambios se aplican solo en pantalla mediante `demoApply`. */
+export type DemoApply = (kind: "med" | "cita" | "task", op: "upsert" | "delete", key: string, item: Record<string, unknown> | null) => void;
+
+export function FamilyEditor({ elderId, snapshot, admin, demoApply }: { elderId: string; snapshot: Snapshot; admin: boolean; demoApply?: DemoApply }) {
   const qc = useQueryClient();
   const send = useServerFn(familyChange);
-  const { data: pending = [] } = useQuery(pendingQuery(elderId));
+  const { data: pending = [] } = useQuery({ ...pendingQuery(elderId), enabled: !demoApply });
   const [edit, setEdit] = useState<{ kind: Kind; key?: string; d: Draft } | null>(null);
   const [err, setErr] = useState("");
   const [openK, setOpenK] = useState<Kind[]>([]);
@@ -82,6 +85,7 @@ export function FamilyEditor({ elderId, snapshot, admin }: { elderId: string; sn
     } else if (!confirm("¿Borrar? Se quitará del teléfono al conectarse.")) return;
     const key = edit.key ?? String(item?.[kind === "med" ? "name" : "id"]);
     try {
+      if (demoApply) { demoApply(kind === "turno" ? "cita" : kind, op, key, item); setEdit(null); return; }
       await send({ data: { elderId, kind: kind === "turno" ? "cita" : kind, op, key, item: item ? (JSON.parse(JSON.stringify(item)) as Record<string, any>) : null } });
       setEdit(null);
       qc.invalidateQueries({ queryKey: ["family", "pending", elderId] });

@@ -182,3 +182,8 @@ El checkout crea la línea con `price_data` y `tax_behavior: "inclusive"` (copia
 
 ## Ruta /demo
 Ruta pública `src/routes/demo.tsx`: usa `demoElder()` y `dayItems()` en el navegador; no consulta la base de datos. Enlazada desde `/auth`.
+
+## Demo interactiva / leaveElder / orden en redeemInvite
+- `FamilyEditor` acepta `demoApply`; con él no llama al servidor ni consulta cambios pendientes. `/demo` mantiene el snapshot en estado local.
+- `leaveElder` (server fn autenticada) borra la membresía propia y promueve al miembro más antiguo si no queda Administrador.
+- `redeemInvite` valida el límite de `planLimit` antes de validar el código (salvo si el código es de una persona ya vinculada).
