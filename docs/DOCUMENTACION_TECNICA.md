@@ -167,3 +167,11 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 ## Family: navegación
 - NAV de FamilyShell: Mis personas, Panel del día, Histórico. /family/vincular se enlaza desde family.index.tsx.
 - Los títulos de family.hoy y family.historico incluyen el nombre del selector `who`.
+
+## Pagos, planes y sesión única (Family)
+- Pagos integrados (Stripe vía pasarela Lovable): `src/lib/stripe.server.ts` (cliente + `verifyWebhook` + `allowedEnv`), `src/lib/stripe.ts` (clave pública; si falta `VITE_PAYMENTS_CLIENT_TOKEN` usa la de prueba), `src/lib/payments.functions.ts` (`createCheckoutSession` con `managed_payments`, `createPortalSession`), webhook `src/routes/api/public/payments/webhook.ts` → tabla `subscriptions` (con `quantity`).
+- Catálogo (lookup keys): `family_basico_yearly`, `family_extendido_yearly`, `empresa_10_monthly`, `empresa_25_monthly`, `empresa_plus_monthly` (por unidad, 26–1000). Definición y límites en `src/lib/plans.ts` (`planLimit`).
+- `redeemInvite` calcula el límite con `planLimit` sobre `subscriptions`; sin plan devuelve `needPlan`.
+- Demo: `eldersQuery` devuelve `demoElder()` (id `00000000-…`, rol consulta, `demo: true`) si no hay vínculos.
+- Sesión única: tabla `user_sessions (user_id, device_id)`; `claimSession` (servidor) al iniciar sesión (marca `gt.justLoggedIn` en sessionStorage); `FamilyShell` compara cada 20 s y al volver visible con `localStorage gt.deviceId`, y si no coincide cierra la sesión.
+- Ruta `/family/planes` con Embedded Checkout; retorno `?ok=1` refresca el plan.

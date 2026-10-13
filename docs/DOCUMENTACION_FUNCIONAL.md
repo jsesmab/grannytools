@@ -166,3 +166,11 @@ La instalación web tiene nombre, icono y dirección inicial propios desde que s
 ## Family: Vincular dentro de «Mis personas»
 - «Vincular» ya no está en el menú diario; está en «Mis personas» con el botón «+ Vincular otra persona».
 - Panel del día e Histórico muestran en el título la persona elegida (o «Todas las personas»).
+
+## Family: descarga gratuita, planes y sesión única
+- **Descarga gratis con datos de ejemplo:** quien no tiene a nadie vinculado ve «Carmen (ejemplo)» con citas, tareas, medicinas (una ya terminada, para el Histórico) y un turno. Solo se puede mirar; no se guardan cambios.
+- **Planes (botón «Mi plan» arriba a la derecha):** Familia Básico 4,99 €/año (2 personas), Familia Extendido 9,99 €/año (5), Empresa 10 19,99 €/mes, Empresa 25 39,99 €/mes, Empresa a medida 1,50 €/mes por persona (mínimo 26). Cada plan muestra con ✓ lo que permite y con ✕ lo que no.
+- **Vincular** exige un plan: sin plan, o con el cupo lleno, aparece el aviso y el botón «Ver planes».
+- **Gestionar o dar de baja:** abre la página segura de pagos para cambiar tarjeta, cambiar de plan o cancelar.
+- **Modo de prueba:** mientras no se activen los cobros reales aparece una franja «Pagos en modo de prueba». Tarjeta de prueba: 4242 4242 4242 4242, fecha futura, cualquier CVC.
+- **Sesión única:** una cuenta solo puede estar abierta en un dispositivo. Al entrar en otro, el anterior se cierra solo (en menos de 20 segundos o al volver a la app) y muestra el aviso.
