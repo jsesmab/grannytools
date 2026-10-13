@@ -187,3 +187,8 @@ Ruta pública `src/routes/demo.tsx`: usa `demoElder()` y `dayItems()` en el nave
 - `FamilyEditor` acepta `demoApply`; con él no llama al servidor ni consulta cambios pendientes. `/demo` mantiene el snapshot en estado local.
 - `leaveElder` (server fn autenticada) borra la membresía propia y promueve al miembro más antiguo si no queda Administrador.
 - `redeemInvite` valida el límite de `planLimit` antes de validar el código (salvo si el código es de una persona ya vinculada).
+
+
+## Legal
+- src/components/LegalPage.tsx (OWNER con marcadores), rutas src/routes/privacidad.tsx y terminos.tsx.
+- Onboarding guarda fecha de aceptación en localStorage `grannytools.terms`; signUp guarda `terms_accepted_at` en metadatos del usuario.

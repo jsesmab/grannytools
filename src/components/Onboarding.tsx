@@ -38,6 +38,7 @@ export function Onboarding() {
   const [show, setShow] = useState(false);
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const [granted, setGranted] = useState<Partial<Record<Perm, boolean>>>({});
   const [cName, setCName] = useState("");
   const [cPhone, setCPhone] = useState("");
@@ -75,7 +76,14 @@ export function Onboarding() {
             <h1 className="text-center text-3xl font-black">¡Bienvenido a Grannytools!</h1>
             <label className="text-2xl font-bold" htmlFor="ob-name">¿Cómo te llamas?</label>
             <input id="ob-name" className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Carmen" />
-            <button className={`${big} bg-primary text-primary-foreground`} onClick={() => setStep(1)}>Siguiente</button>
+            <div className="rounded-2xl border-2 border-border bg-card p-4 text-base">
+              <p>⚠️ Grannytools es una ayuda: <b>no sustituye a un audífono, al médico ni al 112</b>. Tus datos se guardan en este móvil.</p>
+              <label className="mt-3 flex items-start gap-3 text-lg font-bold">
+                <input type="checkbox" className="mt-1 h-7 w-7" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
+                <span>Acepto los <a className="underline" href="/terminos" target="_blank">términos</a> y la <a className="underline" href="/privacidad" target="_blank">privacidad</a></span>
+              </label>
+            </div>
+            <button disabled={!accepted} className={`${big} bg-primary text-primary-foreground disabled:opacity-50`} onClick={() => { try { localStorage.setItem("grannytools.terms", new Date().toISOString()); } catch { /* ignore */ } setStep(1); }}>Siguiente</button>
           </>
         )}
         {step === 1 && (

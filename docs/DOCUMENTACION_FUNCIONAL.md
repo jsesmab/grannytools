@@ -186,3 +186,9 @@ En la pantalla de acceso de Family, «Ver demostración sin registrarse» abre l
 - La demostración (/demo) permite abrir las pantallas de añadir, modificar y borrar citas, tareas, medicinas y turnos; los cambios solo se ven en pantalla y no se guardan.
 - En «Mis personas», cada persona tiene el botón «Desvincular», que libera un hueco del plan. Si quien se va era el único Administrador, otro familiar pasa a serlo.
 - Al vincular, primero se comprueba el cupo del plan: si está lleno, aparece el aviso de cambio de plan aunque el código no sea válido.
+
+
+## Textos legales y aceptación
+- Páginas públicas /privacidad y /terminos (titular pendiente de completar).
+- Grannytools: casilla obligatoria de aceptación en el primer paso de bienvenida (aviso: no sustituye audífono, médico ni 112).
+- Family: casilla obligatoria antes de Entrar, Crear cuenta o Google; consentimiento de datos de salud.
