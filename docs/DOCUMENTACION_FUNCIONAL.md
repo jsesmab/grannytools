@@ -192,3 +192,9 @@ En la pantalla de acceso de Family, «Ver demostración sin registrarse» abre l
 - Páginas públicas /privacidad y /terminos (titular pendiente de completar).
 - Grannytools: casilla obligatoria de aceptación en el primer paso de bienvenida (aviso: no sustituye audífono, médico ni 112).
 - Family: casilla obligatoria antes de Entrar, Crear cuenta o Google; consentimiento de datos de salud.
+
+
+## Textos legales (oct 2026)
+- Grannytools: /terminos y /privacidad (uso independiente: pago único 4,99 € IVA incluido, datos locales; uso vinculado: sincronización voluntaria con Family).
+- Family: /family-terminos y /family-privacidad (descarga y demo gratis, planes de pago).
+- En las pantallas de aceptación los textos se abren en un visor dentro de la app con botón Volver/Cerrar.

@@ -192,3 +192,8 @@ Ruta pública `src/routes/demo.tsx`: usa `demoElder()` y `dayItems()` en el nave
 ## Legal
 - src/components/LegalPage.tsx (OWNER con marcadores), rutas src/routes/privacidad.tsx y terminos.tsx.
 - Onboarding guarda fecha de aceptación en localStorage `grannytools.terms`; signUp guarda `terms_accepted_at` en metadatos del usuario.
+
+
+## Legal
+- Textos en src/components/LegalTexts.tsx (GrannyTerms/Privacy, FamilyTerms/Privacy) y visor modal LegalViewer usado en Onboarding y /auth (evita target=_blank en PWA).
+- LegalPage: Volver usa history.back si hay historial interno; si no, va a / (Grannytools) o /auth (Family).
