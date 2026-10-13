@@ -5,6 +5,9 @@ import { useState } from "react";
 import { eldersQuery, syncLabel } from "@/lib/family-data";
 import { FamilyEditor } from "@/components/FamilyEditor";
 import { FamilyMembers } from "@/components/FamilyMembers";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { leaveElder } from "@/lib/family.functions";
 
 export const Route = createFileRoute("/_authenticated/family/")({
   head: () => ({
@@ -26,6 +29,13 @@ export const Route = createFileRoute("/_authenticated/family/")({
 function Personas() {
   const { data: elders } = useSuspenseQuery(eldersQuery);
   const [open, setOpen] = useState<string[]>([]);
+  const leave = useServerFn(leaveElder);
+  const qc = useQueryClient();
+  const unlink = async (id: string, name: string) => {
+    if (!confirm(`¿Desvincular a ${name || "esta persona"}? Dejarás de ver sus datos y se libera un hueco de tu plan. Podrás volver a vincularla con un código nuevo.`)) return;
+    await leave({ data: { elderId: id } });
+    await qc.invalidateQueries({ queryKey: ["family"] });
+  };
   return (
     <FamilyShell title="Mis personas" wide>
       {elders[0]?.demo && (
@@ -62,6 +72,7 @@ function Personas() {
                   <p className="text-sm text-muted-foreground">{syncLabel(e.last_sync)}{!admin && " · solo ver"} · <Link to="/family/persona/$id" params={{ id: e.id }} className="text-primary underline">Ficha completa</Link></p>
                   <FamilyEditor elderId={e.id} snapshot={e.snapshot} admin={admin} />
                   {!e.demo && <FamilyMembers elderId={e.id} admin={admin} />}
+                  {!e.demo && <button onClick={() => unlink(e.id, e.name)} className="w-full rounded-2xl bg-destructive py-3 text-lg font-bold text-destructive-foreground">Desvincular a {e.name || "esta persona"}</button>}
                 </div>
               )}
             </div>
