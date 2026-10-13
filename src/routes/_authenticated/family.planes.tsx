@@ -80,7 +80,7 @@ function Planes() {
           <p className="text-xl font-extrabold">{p.name}</p>
           <p className="text-sm text-muted-foreground">{p.for}</p>
         </div>
-        <p><span className="text-3xl font-black">{p.price}</span> <span className="text-muted-foreground">{p.period}</span></p>
+        <p><span className="text-3xl font-black">{p.price}</span> <span className="text-muted-foreground">{p.period} · IVA incluido</span></p>
         <List can={p.can} cannot={p.cannot} />
         <div className="mt-auto">
           {current ? <p className="rounded-xl bg-primary/10 p-2 text-center font-bold text-primary">Tu plan actual</p>

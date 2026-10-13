@@ -175,3 +175,7 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 - Demo: `eldersQuery` devuelve `demoElder()` (id `00000000-…`, rol consulta, `demo: true`) si no hay vínculos.
 - Sesión única: tabla `user_sessions (user_id, device_id)`; `claimSession` (servidor) al iniciar sesión (marca `gt.justLoggedIn` en sessionStorage); `FamilyShell` compara cada 20 s y al volver visible con `localStorage gt.deviceId`, y si no coincide cierra la sesión.
 - Ruta `/family/planes` con Embedded Checkout; retorno `?ok=1` refresca el plan.
+
+
+## Precios con IVA incluido
+El checkout crea la línea con `price_data` y `tax_behavior: "inclusive"` (copiando importe, producto e intervalo del precio del catálogo) y guarda el plan en `metadata.lovable_external_id`, que lee el webhook.

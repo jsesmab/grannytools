@@ -174,3 +174,7 @@ La instalación web tiene nombre, icono y dirección inicial propios desde que s
 - **Gestionar o dar de baja:** abre la página segura de pagos para cambiar tarjeta, cambiar de plan o cancelar.
 - **Modo de prueba:** mientras no se activen los cobros reales aparece una franja «Pagos en modo de prueba». Tarjeta de prueba: 4242 4242 4242 4242, fecha futura, cualquier CVC.
 - **Sesión única:** una cuenta solo puede estar abierta en un dispositivo. Al entrar en otro, el anterior se cierra solo (en menos de 20 segundos o al volver a la app) y muestra el aviso.
+
+
+## Precios
+Todos los planes se cobran con IVA incluido: el importe pagado es exactamente el anunciado (p. ej. 4,99 €).
