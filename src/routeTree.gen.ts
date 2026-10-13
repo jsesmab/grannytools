@@ -14,6 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CitasRouteImport } from './routes/citas'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as FamilyPrivacidadRouteImport } from './routes/family-privacidad'
+import { Route as FamilyTerminosRouteImport } from './routes/family-terminos'
 import { Route as LupaRouteImport } from './routes/lupa'
 import { Route as OirRouteImport } from './routes/oir'
 import { Route as PanicoRouteImport } from './routes/panico'
@@ -54,6 +56,16 @@ const CitasRoute = CitasRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamilyPrivacidadRoute = FamilyPrivacidadRouteImport.update({
+  id: '/family-privacidad',
+  path: '/family-privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamilyTerminosRoute = FamilyTerminosRouteImport.update({
+  id: '/family-terminos',
+  path: '/family-terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LupaRoute = LupaRouteImport.update({
@@ -155,6 +167,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
   '/demo': typeof DemoRoute
+  '/family-privacidad': typeof FamilyPrivacidadRoute
+  '/family-terminos': typeof FamilyTerminosRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
@@ -178,6 +192,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
   '/demo': typeof DemoRoute
+  '/family-privacidad': typeof FamilyPrivacidadRoute
+  '/family-terminos': typeof FamilyTerminosRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
@@ -203,6 +219,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/citas': typeof CitasRoute
   '/demo': typeof DemoRoute
+  '/family-privacidad': typeof FamilyPrivacidadRoute
+  '/family-terminos': typeof FamilyTerminosRoute
   '/lupa': typeof LupaRoute
   '/oir': typeof OirRoute
   '/panico': typeof PanicoRoute
@@ -228,6 +246,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/citas'
     | '/demo'
+    | '/family-privacidad'
+    | '/family-terminos'
     | '/lupa'
     | '/oir'
     | '/panico'
@@ -251,6 +271,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/citas'
     | '/demo'
+    | '/family-privacidad'
+    | '/family-terminos'
     | '/lupa'
     | '/oir'
     | '/panico'
@@ -275,6 +297,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/citas'
     | '/demo'
+    | '/family-privacidad'
+    | '/family-terminos'
     | '/lupa'
     | '/oir'
     | '/panico'
@@ -300,6 +324,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CitasRoute: typeof CitasRoute
   DemoRoute: typeof DemoRoute
+  FamilyPrivacidadRoute: typeof FamilyPrivacidadRoute
+  FamilyTerminosRoute: typeof FamilyTerminosRoute
   LupaRoute: typeof LupaRoute
   OirRoute: typeof OirRoute
   PanicoRoute: typeof PanicoRoute
@@ -346,6 +372,20 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/family-privacidad': {
+      id: '/family-privacidad'
+      path: '/family-privacidad'
+      fullPath: '/family-privacidad'
+      preLoaderRoute: typeof FamilyPrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/family-terminos': {
+      id: '/family-terminos'
+      path: '/family-terminos'
+      fullPath: '/family-terminos'
+      preLoaderRoute: typeof FamilyTerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/lupa': {
@@ -501,6 +541,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CitasRoute: CitasRoute,
   DemoRoute: DemoRoute,
+  FamilyPrivacidadRoute: FamilyPrivacidadRoute,
+  FamilyTerminosRoute: FamilyTerminosRoute,
   LupaRoute: LupaRoute,
   OirRoute: OirRoute,
   PanicoRoute: PanicoRoute,

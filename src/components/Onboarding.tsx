@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { loadContacts, saveContactsToStorage } from "@/lib/contacts";
 import { requestMotionPermission, setEmergencyPhone, setFallEnabled } from "@/lib/fall-detection";
 import { HomeWidgetOffer } from "@/components/HomeWidgetOffer";
+import { LegalViewer, type LegalDoc } from "@/components/LegalTexts";
 
 export const ONBOARDED_KEY = "grannytools.onboarded";
 const USER_NAME_KEY = "grannytools.username";
@@ -39,6 +40,7 @@ export function Onboarding() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [accepted, setAccepted] = useState(false);
+  const [doc, setDoc] = useState<LegalDoc | null>(null);
   const [granted, setGranted] = useState<Partial<Record<Perm, boolean>>>({});
   const [cName, setCName] = useState("");
   const [cPhone, setCPhone] = useState("");
@@ -80,9 +82,14 @@ export function Onboarding() {
               <p>⚠️ Grannytools es una ayuda: <b>no sustituye a un audífono, al médico ni al 112</b>. Tus datos se guardan en este móvil.</p>
               <label className="mt-3 flex items-start gap-3 text-lg font-bold">
                 <input type="checkbox" className="mt-1 h-7 w-7" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-                <span>Acepto los <a className="underline" href="/terminos" target="_blank">términos</a> y la <a className="underline" href="/privacidad" target="_blank">privacidad</a></span>
+                <span>Acepto los términos y la privacidad</span>
               </label>
+              <div className="mt-3 flex gap-2">
+                <button type="button" data-flat-button className="flex-1 rounded-xl border-2 border-primary py-2 font-bold text-primary" onClick={() => setDoc("granny-terms")}>Leer términos</button>
+                <button type="button" data-flat-button className="flex-1 rounded-xl border-2 border-primary py-2 font-bold text-primary" onClick={() => setDoc("granny-privacy")}>Leer privacidad</button>
+              </div>
             </div>
+            {doc && <LegalViewer doc={doc} onClose={() => setDoc(null)} />}
             <button disabled={!accepted} className={`${big} bg-primary text-primary-foreground disabled:opacity-50`} onClick={() => { try { localStorage.setItem("grannytools.terms", new Date().toISOString()); } catch { /* ignore */ } setStep(1); }}>Siguiente</button>
           </>
         )}
