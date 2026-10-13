@@ -93,7 +93,7 @@ export const eldersQuery = queryOptions({
     const { data: mem, error } = await supabase.from("elder_members").select("elder_id, role").eq("user_id", u.user!.id);
     if (error) throw error;
     const ids = (mem ?? []).map((m) => m.elder_id);
-    if (!ids.length) return [];
+    if (!ids.length) return [demoElder()];
     const { data: el, error: e2 } = await supabase.from("elders").select("id, name, care_mode, last_sync, snapshot").in("id", ids);
     if (e2) throw e2;
     return (el ?? []).map((e) => ({ ...e, snapshot: (e.snapshot ?? {}) as Snapshot, role: mem!.find((m) => m.elder_id === e.id)!.role as Role }))

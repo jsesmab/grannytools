@@ -26,6 +26,7 @@ import { Route as AuthenticatedFamilyPerfilRouteImport } from './routes/_authent
 import { Route as AuthenticatedFamilyVincularRouteImport } from './routes/_authenticated/family.vincular'
 import { Route as AuthenticatedFamilyEditarIdRouteImport } from './routes/_authenticated/family.editar.$id'
 import { Route as AuthenticatedFamilyPersonaIdRouteImport } from './routes/_authenticated/family.persona.$id'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -117,6 +118,12 @@ const AuthenticatedFamilyPersonaIdRoute =
     path: '/family/persona/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/family/': typeof AuthenticatedFamilyIndexRoute
   '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -153,6 +161,7 @@ export interface FileRoutesByTo {
   '/family': typeof AuthenticatedFamilyIndexRoute
   '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -173,6 +182,7 @@ export interface FileRoutesById {
   '/_authenticated/family/': typeof AuthenticatedFamilyIndexRoute
   '/_authenticated/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/_authenticated/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/family/'
     | '/family/editar/$id'
     | '/family/persona/$id'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/family'
     | '/family/editar/$id'
     | '/family/persona/$id'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -230,6 +242,7 @@ export interface FileRouteTypes {
     | '/_authenticated/family/'
     | '/_authenticated/family/editar/$id'
     | '/_authenticated/family/persona/$id'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -243,6 +256,7 @@ export interface RootRouteChildren {
   PastillasRoute: typeof PastillasRoute
   UbicacionRoute: typeof UbicacionRoute
   VincularRoute: typeof VincularRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -366,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyPersonaIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -403,6 +424,7 @@ const rootRouteChildren: RootRouteChildren = {
   PastillasRoute: PastillasRoute,
   UbicacionRoute: UbicacionRoute,
   VincularRoute: VincularRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
