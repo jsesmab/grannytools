@@ -179,3 +179,6 @@ deviceSync ya no acepta el care_mode enviado por el teléfono. Si el mayor no ti
 
 ## Precios con IVA incluido
 El checkout crea la línea con `price_data` y `tax_behavior: "inclusive"` (copiando importe, producto e intervalo del precio del catálogo) y guarda el plan en `metadata.lovable_external_id`, que lee el webhook.
+
+## Ruta /demo
+Ruta pública `src/routes/demo.tsx`: usa `demoElder()` y `dayItems()` en el navegador; no consulta la base de datos. Enlazada desde `/auth`.

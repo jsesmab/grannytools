@@ -178,3 +178,6 @@ La instalación web tiene nombre, icono y dirección inicial propios desde que s
 
 ## Precios
 Todos los planes se cobran con IVA incluido: el importe pagado es exactamente el anunciado (p. ej. 4,99 €).
+
+## Demostración sin registro
+En la pantalla de acceso de Family, «Ver demostración sin registrarse» abre la persona de ejemplo «Carmen» (panel del día y medicinas) sin crear cuenta.

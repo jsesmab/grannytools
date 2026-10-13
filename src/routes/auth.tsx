@@ -94,6 +94,7 @@ function AuthPage() {
         <button data-flat-button onClick={() => { setMode(mode === "in" ? "up" : "in"); setMsg(""); }} className="w-full text-center font-semibold text-primary underline">
           {mode === "in" ? "¿No tienes cuenta? Créala" : "Ya tengo cuenta"}
         </button>
+        <a href="/demo" className="block w-full rounded-2xl border-2 border-primary py-3 text-center text-lg font-bold text-primary">👁️ Ver demostración sin registrarse</a>
       </div>
     </main>
   );

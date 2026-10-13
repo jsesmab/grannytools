@@ -24,3 +24,4 @@
 
 - [x] Panel del día Family: corregir citas/tareas/medicinas/turnos y mostrar toda la información (web completa, móvil desplegable)
 - [x] Medicinas: mostrar hasta cuándo dura el tratamiento
+- [x] Personas de prueba Antonio/María y demo sin registro (/demo)
