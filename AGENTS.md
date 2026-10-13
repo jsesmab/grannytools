@@ -9,3 +9,5 @@
 - Native packages use separate Capacitor configurations and platform directories selected by scripts/prepare-native.mjs so building one product never overwrites the other.
 - Home widgets use a registered Capacitor bridge and native Android/WidgetKit sources; browsers only display installation guidance because web apps cannot pin native widgets.
 - Web installation identity is selected in the root head from matched pathnames, including client-only Family routes and auth; never mutate installation tags in an effect, because installers need correct initial HTML and a single manifest.
+- Family plan limits are computed server-side from the `subscriptions` table (filled only by the signed payments webhook) via `planLimit` in src/lib/plans.ts — clients cannot grant themselves seats.
+- Single session per Family account: `user_sessions` stores the last device that signed in; FamilyShell signs out any other device — keeps the "1 active device" rule enforceable without push.

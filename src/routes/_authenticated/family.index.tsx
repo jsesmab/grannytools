@@ -28,6 +28,16 @@ function Personas() {
   const [open, setOpen] = useState<string[]>([]);
   return (
     <FamilyShell title="Mis personas" wide>
+      {elders[0]?.demo && (
+        <div className="rounded-3xl border-2 border-primary bg-primary/10 p-5">
+          <p className="text-lg font-extrabold">Estás viendo una persona de ejemplo</p>
+          <p className="mt-1">Los datos son simulados para que pruebes Family: ábrela, mira el Panel del día y el Histórico. Para cuidar a una persona real, vincúlala y elige un plan.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link to="/family/vincular" className="rounded-2xl bg-primary px-5 py-3 font-bold text-primary-foreground">Vincular a una persona real</Link>
+            <Link to="/family/planes" className="rounded-2xl bg-secondary px-5 py-3 font-bold text-secondary-foreground">Ver planes</Link>
+          </div>
+        </div>
+      )}
       {elders.length === 0 && (
         <div className="rounded-3xl border-2 border-dashed border-border p-8 text-center">
           <p className="text-xl font-bold">Aún no cuidas a nadie.</p>
@@ -51,14 +61,14 @@ function Personas() {
                 <div className="space-y-3 pl-2 sm:pl-6">
                   <p className="text-sm text-muted-foreground">{syncLabel(e.last_sync)}{!admin && " · solo ver"} · <Link to="/family/persona/$id" params={{ id: e.id }} className="text-primary underline">Ficha completa</Link></p>
                   <FamilyEditor elderId={e.id} snapshot={e.snapshot} admin={admin} />
-                  <FamilyMembers elderId={e.id} admin={admin} />
+                  {!e.demo && <FamilyMembers elderId={e.id} admin={admin} />}
                 </div>
               )}
             </div>
           );
         })}
       </div>
-      {elders.length > 0 && (
+      {elders.length > 0 && !elders[0]?.demo && (
         <Link to="/family/vincular" className="mt-6 block rounded-3xl border-2 border-dashed border-primary p-5 text-center text-xl font-bold text-primary">
           + Vincular otra persona
         </Link>

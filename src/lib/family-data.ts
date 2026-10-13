@@ -12,7 +12,38 @@ export type Snapshot = {
   contacts?: { name: string; phone: string }[];
   emergency?: string;
 };
-export type Elder = { id: string; name: string; care_mode: string; last_sync: string | null; snapshot: Snapshot; role: Role };
+export type Elder = { id: string; name: string; care_mode: string; last_sync: string | null; snapshot: Snapshot; role: Role; demo?: boolean };
+
+export const DEMO_ID = "00000000-0000-0000-0000-000000000000";
+/** Persona de ejemplo (datos simulados) para probar Family sin vincular a nadie. */
+export function demoElder(): Elder {
+  const t = new Date(), day = ymd(t);
+  const add = (n: number) => { const d = new Date(t); d.setDate(d.getDate() + n); return ymd(d); };
+  const all = [0, 1, 2, 3, 4, 5, 6];
+  return {
+    id: DEMO_ID, name: "Carmen (ejemplo)", care_mode: "autonomo", last_sync: new Date().toISOString(), role: "consulta", demo: true,
+    snapshot: {
+      people: [{ id: "p1", name: "Lucía" }],
+      entries: [
+        { id: "e1", title: "Revisión de tensión", kind: "fija", date: day, start: "10:30", end: "11:15", who: "Dra. Pérez", companion: "Javier" },
+        { id: "e2", title: "Fisioterapia", kind: "fija", date: add(2), start: "17:00", end: "18:00", who: "Centro de salud" },
+        { id: "e3", title: "Mañanas", kind: "periodica", days: all, start: "09:00", end: "14:00", who: "Lucía", personId: "p1" },
+      ],
+      meds: [
+        { name: "Omeprazol", times: ["08:00"] },
+        { name: "Paracetamol", times: ["09:00", "15:00", "21:00"], from: add(-3), until: add(4) },
+        { name: "Amoxicilina", times: ["08:00", "20:00"], from: add(-20), until: add(-10) },
+      ],
+      tomadas: { [`${day}|Omeprazol|08:00`]: `${day}T08:05` },
+      tasks: [
+        { id: "t1", title: "Paseo de 20 minutos", time: "12:00", days: all },
+        { id: "t2", title: "Llamar a la farmacia", time: "18:00", date: day },
+      ],
+      taskStatus: { [`t1:${add(-1)}`]: "hecha" },
+      contacts: [{ name: "Javier", phone: "600000000" }],
+    },
+  };
+}
 
 export const ymd = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -93,7 +124,7 @@ export const eldersQuery = queryOptions({
     const { data: mem, error } = await supabase.from("elder_members").select("elder_id, role").eq("user_id", u.user!.id);
     if (error) throw error;
     const ids = (mem ?? []).map((m) => m.elder_id);
-    if (!ids.length) return [];
+    if (!ids.length) return [demoElder()];
     const { data: el, error: e2 } = await supabase.from("elders").select("id, name, care_mode, last_sync, snapshot").in("id", ids);
     if (e2) throw e2;
     return (el ?? []).map((e) => ({ ...e, snapshot: (e.snapshot ?? {}) as Snapshot, role: mem!.find((m) => m.elder_id === e.id)!.role as Role }))

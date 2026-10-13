@@ -23,9 +23,11 @@ import { Route as AuthenticatedFamilyIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedFamilyHistoricoRouteImport } from './routes/_authenticated/family.historico'
 import { Route as AuthenticatedFamilyHoyRouteImport } from './routes/_authenticated/family.hoy'
 import { Route as AuthenticatedFamilyPerfilRouteImport } from './routes/_authenticated/family.perfil'
+import { Route as AuthenticatedFamilyPlanesRouteImport } from './routes/_authenticated/family.planes'
 import { Route as AuthenticatedFamilyVincularRouteImport } from './routes/_authenticated/family.vincular'
 import { Route as AuthenticatedFamilyEditarIdRouteImport } from './routes/_authenticated/family.editar.$id'
 import { Route as AuthenticatedFamilyPersonaIdRouteImport } from './routes/_authenticated/family.persona.$id'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -99,6 +101,12 @@ const AuthenticatedFamilyPerfilRoute =
     path: '/family/perfil',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedFamilyPlanesRoute =
+  AuthenticatedFamilyPlanesRouteImport.update({
+    id: '/family/planes',
+    path: '/family/planes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFamilyVincularRoute =
   AuthenticatedFamilyVincularRouteImport.update({
     id: '/family/vincular',
@@ -117,6 +125,12 @@ const AuthenticatedFamilyPersonaIdRoute =
     path: '/family/persona/$id',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -131,10 +145,12 @@ export interface FileRoutesByFullPath {
   '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/family/planes': typeof AuthenticatedFamilyPlanesRoute
   '/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/family/': typeof AuthenticatedFamilyIndexRoute
   '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -149,10 +165,12 @@ export interface FileRoutesByTo {
   '/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/family/planes': typeof AuthenticatedFamilyPlanesRoute
   '/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/family': typeof AuthenticatedFamilyIndexRoute
   '/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -169,10 +187,12 @@ export interface FileRoutesById {
   '/_authenticated/family/historico': typeof AuthenticatedFamilyHistoricoRoute
   '/_authenticated/family/hoy': typeof AuthenticatedFamilyHoyRoute
   '/_authenticated/family/perfil': typeof AuthenticatedFamilyPerfilRoute
+  '/_authenticated/family/planes': typeof AuthenticatedFamilyPlanesRoute
   '/_authenticated/family/vincular': typeof AuthenticatedFamilyVincularRoute
   '/_authenticated/family/': typeof AuthenticatedFamilyIndexRoute
   '/_authenticated/family/editar/$id': typeof AuthenticatedFamilyEditarIdRoute
   '/_authenticated/family/persona/$id': typeof AuthenticatedFamilyPersonaIdRoute
+  '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -189,10 +209,12 @@ export interface FileRouteTypes {
     | '/family/historico'
     | '/family/hoy'
     | '/family/perfil'
+    | '/family/planes'
     | '/family/vincular'
     | '/family/'
     | '/family/editar/$id'
     | '/family/persona/$id'
+    | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -207,10 +229,12 @@ export interface FileRouteTypes {
     | '/family/historico'
     | '/family/hoy'
     | '/family/perfil'
+    | '/family/planes'
     | '/family/vincular'
     | '/family'
     | '/family/editar/$id'
     | '/family/persona/$id'
+    | '/api/public/payments/webhook'
   id:
     | '__root__'
     | '/'
@@ -226,10 +250,12 @@ export interface FileRouteTypes {
     | '/_authenticated/family/historico'
     | '/_authenticated/family/hoy'
     | '/_authenticated/family/perfil'
+    | '/_authenticated/family/planes'
     | '/_authenticated/family/vincular'
     | '/_authenticated/family/'
     | '/_authenticated/family/editar/$id'
     | '/_authenticated/family/persona/$id'
+    | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -243,6 +269,7 @@ export interface RootRouteChildren {
   PastillasRoute: typeof PastillasRoute
   UbicacionRoute: typeof UbicacionRoute
   VincularRoute: typeof VincularRoute
+  ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -345,6 +372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyPerfilRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/family/planes': {
+      id: '/_authenticated/family/planes'
+      path: '/family/planes'
+      fullPath: '/family/planes'
+      preLoaderRoute: typeof AuthenticatedFamilyPlanesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/family/vincular': {
       id: '/_authenticated/family/vincular'
       path: '/family/vincular'
@@ -366,6 +400,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFamilyPersonaIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -373,6 +414,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFamilyHistoricoRoute: typeof AuthenticatedFamilyHistoricoRoute
   AuthenticatedFamilyHoyRoute: typeof AuthenticatedFamilyHoyRoute
   AuthenticatedFamilyPerfilRoute: typeof AuthenticatedFamilyPerfilRoute
+  AuthenticatedFamilyPlanesRoute: typeof AuthenticatedFamilyPlanesRoute
   AuthenticatedFamilyVincularRoute: typeof AuthenticatedFamilyVincularRoute
   AuthenticatedFamilyIndexRoute: typeof AuthenticatedFamilyIndexRoute
   AuthenticatedFamilyEditarIdRoute: typeof AuthenticatedFamilyEditarIdRoute
@@ -383,6 +425,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFamilyHistoricoRoute: AuthenticatedFamilyHistoricoRoute,
   AuthenticatedFamilyHoyRoute: AuthenticatedFamilyHoyRoute,
   AuthenticatedFamilyPerfilRoute: AuthenticatedFamilyPerfilRoute,
+  AuthenticatedFamilyPlanesRoute: AuthenticatedFamilyPlanesRoute,
   AuthenticatedFamilyVincularRoute: AuthenticatedFamilyVincularRoute,
   AuthenticatedFamilyIndexRoute: AuthenticatedFamilyIndexRoute,
   AuthenticatedFamilyEditarIdRoute: AuthenticatedFamilyEditarIdRoute,
@@ -403,6 +446,7 @@ const rootRouteChildren: RootRouteChildren = {
   PastillasRoute: PastillasRoute,
   UbicacionRoute: UbicacionRoute,
   VincularRoute: VincularRoute,
+  ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

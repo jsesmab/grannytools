@@ -2,6 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { useServerFn } from "@tanstack/react-start";
+import { claimSession } from "@/lib/session.functions";
+import { deviceId, KICKED_FLAG, LOGIN_FLAG } from "@/lib/single-session";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -26,14 +29,25 @@ function AuthPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const claim = useServerFn(claimSession);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { if (data.session) nav({ to: "/family", replace: true }); });
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => { if (s) nav({ to: "/family", replace: true }); });
+    if (sessionStorage.getItem(KICKED_FLAG)) { sessionStorage.removeItem(KICKED_FLAG); setMsg("Has entrado con tu cuenta en otro dispositivo y aquí se ha cerrado la sesión. Solo puede estar abierta en uno a la vez."); }
+    // Al entrar, este dispositivo pasa a ser el único activo (los demás se cierran solos).
+    const enter = async () => {
+      if (sessionStorage.getItem(LOGIN_FLAG)) {
+        sessionStorage.removeItem(LOGIN_FLAG);
+        await claim({ data: { deviceId: deviceId() } }).catch(() => {});
+      }
+      nav({ to: "/family", replace: true });
+    };
+    supabase.auth.getSession().then(({ data }) => { if (data.session) void enter(); });
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => { if (s) void enter(); });
     return () => data.subscription.unsubscribe();
-  }, [nav]);
+  }, [nav]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setMsg("");
+    sessionStorage.setItem(LOGIN_FLAG, "1");
     if (mode === "in") {
       const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
       if (error) setMsg("Email o contraseña incorrectos.");
@@ -46,6 +60,7 @@ function AuthPage() {
   };
 
   const google = async () => {
+    sessionStorage.setItem(LOGIN_FLAG, "1");
     const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/auth` });
     if (r.error) setMsg("No se pudo entrar con Google.");
   };

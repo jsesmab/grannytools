@@ -110,11 +110,17 @@ export const redeemInvite = createServerFn({ method: "POST" })
     const { data: inv } = await db.from("elder_invites").select("*").eq("code", data.code).maybeSingle();
     if (!inv || inv.used_at || new Date(inv.expires_at).getTime() < Date.now())
       return { ok: false as const, error: "El código no existe, ya se usó o ha caducado. Pide uno nuevo en el teléfono." };
-    // Plan incluido en la descarga: hasta 2 personas atendidas. Desde la 3.ª, plan profesional (suscripción).
+    // La descarga es gratis (demo). Vincular personas reales requiere un plan; el límite depende del plan.
     const { data: mine } = await db.from("elder_members").select("elder_id").eq("user_id", context.userId);
     const already = (mine ?? []).some((m) => m.elder_id === inv.elder_id);
-    if (!already && (mine?.length ?? 0) >= 2)
-      return { ok: false as const, error: "Tu plan incluye hasta 2 personas atendidas. Para cuidar a más (profesionales o residencias) necesitas el plan profesional por suscripción." };
+    if (!already) {
+      const { planLimit } = await import("@/lib/plans");
+      const { data: subs } = await db.from("subscriptions").select("price_id, quantity, status, current_period_end").eq("user_id", context.userId);
+      const { limit } = planLimit(subs ?? []);
+      if (limit === 0) return { ok: false as const, needPlan: true, error: "Para vincular a una persona real necesitas contratar un plan." };
+      if ((mine?.length ?? 0) >= limit)
+        return { ok: false as const, needPlan: true, error: `Tu plan permite ${limit} personas y ya las tienes. Cambia a un plan mayor para vincular más.` };
+    }
     const { count } = await db.from("elder_members").select("id", { count: "exact", head: true }).eq("elder_id", inv.elder_id);
     const { error } = await db.from("elder_members").upsert(
       { elder_id: inv.elder_id, user_id: context.userId, role: count ? "consulta" : "admin" },

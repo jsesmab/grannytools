@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { myPlanQuery } from "@/lib/my-plan";
 import { useCallback, useState } from "react";
 import { QrScanner } from "@/components/QrScanner";
 import { FamilyShell } from "@/components/FamilyShell";
@@ -29,6 +31,8 @@ function Vincular() {
   const [busy, setBusy] = useState(false);
 
   const [scan, setScan] = useState(false);
+  const [needPlan, setNeedPlan] = useState(false);
+  const { data: plan } = useQuery(myPlanQuery);
   const go = async (e?: React.FormEvent, raw?: string) => {
     e?.preventDefault(); setBusy(true); setMsg("");
     try {
@@ -36,7 +40,7 @@ function Vincular() {
       let c = (raw ?? code).trim();
       try { const j = JSON.parse(c); if (j?.code) c = j.code; } catch { /* código escrito */ }
       const r = await redeem({ data: { code: c } });
-      if (!r.ok) { setMsg(r.error); return; }
+      if (!r.ok) { setMsg(r.error); setNeedPlan(!!(r as { needPlan?: boolean }).needPlan); return; }
       await qc.invalidateQueries({ queryKey: ["family"] });
       nav({ to: "/family/persona/$id", params: { id: r.elderId } });
     } catch { setMsg("Código no válido. Debe ser como GT-ABC123."); }
@@ -47,6 +51,15 @@ function Vincular() {
 
   return (
     <FamilyShell title="Vincular persona">
+      {plan && (plan.limit === 0 ? (
+        <div className="max-w-md rounded-3xl border-2 border-primary bg-primary/10 p-5">
+          <p className="text-lg font-extrabold">Para vincular a una persona real necesitas un plan</p>
+          <p className="mt-1">Desde 4,99 € al año para 2 personas. Mira qué incluye cada uno.</p>
+          <Link to="/family/planes" className="mt-3 inline-block rounded-2xl bg-primary px-5 py-3 font-bold text-primary-foreground">Ver planes</Link>
+        </div>
+      ) : (
+        <p className="max-w-md rounded-2xl bg-muted p-3 font-semibold">Tu plan: {plan.name} · {plan.used} de {plan.limit} personas vinculadas</p>
+      ))}
       <form onSubmit={go} className="max-w-md space-y-4 rounded-3xl border-2 border-border bg-card p-6">
         <p>En el teléfono de la persona: rueda de <b>Ajustes</b> → <b>Vincular con un familiar</b>. Escanea el QR o escribe el código que aparece (caduca en 10 min).</p>
         {scan ? <QrScanner onCode={onQr} onClose={() => setScan(false)} />
@@ -56,6 +69,7 @@ function Vincular() {
           className="w-full rounded-xl border-2 border-input bg-background px-4 py-4 text-center text-3xl font-black tracking-widest" />
         <button disabled={busy} className="w-full rounded-2xl bg-primary py-3 text-lg font-bold text-primary-foreground">Vincular</button>
         {msg && <p className="rounded-xl bg-destructive/10 p-3 font-semibold text-destructive">{msg}</p>}
+        {needPlan && <Link to="/family/planes" className="block w-full rounded-2xl bg-primary py-3 text-center text-lg font-bold text-primary-foreground">Ver planes</Link>}
         <p className="text-sm text-muted-foreground">La primera persona que se vincula es Administrador. Las siguientes entran como Consultas y un Administrador puede cambiarlo.</p>
       </form>
     </FamilyShell>
